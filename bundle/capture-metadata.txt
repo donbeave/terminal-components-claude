@@ -2,4 +2,7 @@ before_commit=cae32f882697cf92f7bdbe18e8292e7d1ff47a60
 after_commit=18d37bec6e460d66f403efa4b14d700647f19b60
 capture_harness=crates/tui/tests/render_components.rs::capture_exhaustive_bundle
 matrix_dimensions=38 cases x 8 cells (120x40/40x10 x junie/paper x truecolor/mono)
+style_evidence=60 keys per phase; exact ratatui fg/bg/modifier per cell plus ANSI and HTML
+contrast_result=0 unresolved after-style colours; 0 new non-disabled low-contrast cells; 158 disabled-state low-contrast cells; 26 pre-existing low-contrast marker cells
+state_result=0 style-only state collisions; 0 unexpected visual-state collisions
 baseline_write=forbidden; no BLESS environment used

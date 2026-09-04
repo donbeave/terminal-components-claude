@@ -10,7 +10,11 @@ Read-only ratatui/test-harness capture. No baseline was read for writing, rewrit
 - Old capture matches checked-in baseline: 304/304
 - Digest changes: 296/304
 - Text-frame changes: 236/304
-- Style-only digest changes (ambiguous without cell styles): 60
+- Style-only digest changes now style-dumped: 60
+- Exact style-cell changes across those cells: 24818 (1536 on visible symbols; 0 symbol mismatches)
+- After-style contrast unresolved because of Reset/inherited colour: 0
+- After-style visible cells below 3:1 contrast: 184 (26 pre-existing; 158 disabled-state; 0 new non-disabled)
+- Style-only state digest collisions: 0 (0 unexpected)
 - Collision rows: 88; unclassified collisions: 0
 
 ## Case coverage
@@ -62,8 +66,8 @@ See `collisions.tsv`. Rows marked `documented-exemption-candidate` are emitted f
 
 ## Evidence layout
 
-`before/frames/` and `after/frames/` contain one plain textual frame per exact matrix key. `records.tsv` pairs every old/new digest with both frame paths. `baseline-before.tsv` proves the old capture matches the checked-in baseline. `state-comparison.tsv` provides all eight states for every affected component.
+`before/frames/` and `after/frames/` contain one plain textual frame per exact matrix key. The 60 style-only keys additionally have exact ratatui cell dumps in `before/styles/` and `after/styles/`, viewable ANSI in `before/ansi/` and `after/ansi/`, and browser-viewable HTML in `before/html/` and `after/html/`. `records.tsv` pairs every old/new digest with all evidence paths. `style-cell-diff.tsv` records every changed cell style and contrast ratio; `style-view-validation.txt` confirms ANSI/HTML strip back to the corresponding text frames. `baseline-before.tsv` proves the old capture matches the checked-in baseline. `state-comparison.tsv` provides all eight states for every affected component.
 
 ## Verdict
 
-PASS for capture evidence: all 38 cases and 304 matrix keys are present; old frames match baseline; no unclassified state collision was found. This is evidence only, not a baseline blessing.
+PASS for capture evidence: all 38 cases and 304 matrix keys are present; all 60 style-only keys have exact style/ANSI/HTML evidence; old frames match baseline; no symbol mismatch, unresolved after-style colour, non-disabled low-contrast row, or unclassified state collision was found. Low-contrast rows are explicitly recorded (184: 26 pre-existing and 158 disabled-state styling); disabled styling remains a product/design judgement, not an unreported ambiguity. This is evidence only, not a baseline blessing.

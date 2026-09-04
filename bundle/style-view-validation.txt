@@ -1,0 +1,6 @@
+PASS
+60 style-only keys have before/after exact ratatui style dumps.
+60 before ANSI views and 60 after ANSI views strip to their matching textual frames.
+60 before HTML views and 60 after HTML views strip to their matching textual frames.
+0 symbol mismatches in style-cell-diff.tsv.
+0 unresolved after-style colours.
