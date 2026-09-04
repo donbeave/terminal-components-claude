@@ -1,9 +1,6 @@
 //! Modal confirmation and prompt flows.
 
-use tui_next::{
-    ActionKey, Button, Cx, Dialog, DialogAction, DialogState, Id, Rect, Response, Ui, Variant, id,
-    layout,
-};
+use tui_next::{ActionKey, Button, Cx, Dialog, DialogAction, DialogState, Id, Rect, Response, Ui, Variant, id, layout};
 
 use super::{Page, frame, lines};
 
@@ -16,14 +13,6 @@ const DIALOG_LABEL_PATCH: tui_next::StylePatch = tui_next::StylePatch::new()
     .add(tui_next::Modifier::BOLD);
 const DIALOG_PARTS: &[(tui_next::Part, tui_next::StylePatch)] =
     &[(tui_next::Part::TITLE, DIALOG_LABEL_PATCH)];
-
-fn confirm_button() -> Button<'static> {
-    Button::new(OPEN_CONFIRM, "Run task now").variant(Variant::PRIMARY)
-}
-
-fn prompt_button() -> Button<'static> {
-    Button::new(OPEN_PROMPT, "Rename task").variant(Variant::SECONDARY)
-}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum OpenDialog {
@@ -52,16 +41,13 @@ impl DialogsPage {
     }
 
     fn confirm() -> Dialog<'static> {
-        Dialog::confirm(
-            CONFIRM,
-            "Run task now?",
-            "The task will be queued for the workspace.",
-        )
-        .patch_part(DIALOG_PARTS)
+        Dialog::confirm(CONFIRM, "Run task now?", "The task will be queued for the workspace.")
+            .patch_part(DIALOG_PARTS)
     }
 
     fn prompt() -> Dialog<'static> {
-        Dialog::prompt(PROMPT, "Rename task", "Task name").patch_part(DIALOG_PARTS)
+        Dialog::prompt(PROMPT, "Rename task", "Task name")
+            .patch_part(DIALOG_PARTS)
     }
 
     fn close(&mut self, cx: &mut Cx<'_>, id: Id) {
@@ -85,88 +71,87 @@ impl Page for DialogsPage {
 
     fn update(&mut self, cx: &mut Cx<'_>) -> Response<()> {
         let mut response = Response::ignored();
-        let confirm_button = confirm_button().update(cx);
+        let confirm_button = Button::new(OPEN_CONFIRM, "Run task now")
+            .variant(Variant::PRIMARY)
+            .update(cx);
         if confirm_button.activated() && !cx.is_open(CONFIRM) {
             self.open = OpenDialog::Confirm;
             cx.open_layer(CONFIRM, Self::confirm().layer(cx));
         }
         response |= confirm_button.erase();
-        let prompt_button = prompt_button().update(cx);
+        let prompt_button = Button::new(OPEN_PROMPT, "Rename task")
+            .variant(Variant::SECONDARY)
+            .update(cx);
         if prompt_button.activated() && !cx.is_open(PROMPT) {
             self.open = OpenDialog::Prompt;
             cx.open_layer(PROMPT, Self::prompt().layer(cx));
         }
         response |= prompt_button.erase();
 
-        // Update layers unconditionally. A dismissed layer is removed by the
-        // runtime before the app update, and Dialog drains that dismissal
-        // action from its durable state on the following frame.
-        let action = Self::confirm().update(cx, &mut self.confirm_state);
-        if self.open == OpenDialog::Confirm
-            && let Some(action) = action.action_ref()
-        {
-            match action {
-                DialogAction::Action(key) if *key == ActionKey::CONFIRM => {
-                    self.result = String::from("Task started");
-                    self.close(cx, CONFIRM);
-                }
-                DialogAction::Action(_) | DialogAction::Dismissed(_) => {
-                    self.result = String::from("Cancelled");
-                    self.close(cx, CONFIRM);
+        if cx.is_open(CONFIRM) {
+            let action = Self::confirm().update(cx, &mut self.confirm_state);
+            if let Some(action) = action.action_ref() {
+                match action {
+                    DialogAction::Action(key) if *key == ActionKey::CONFIRM => {
+                        self.result = String::from("Task started");
+                        self.close(cx, CONFIRM);
+                    }
+                    DialogAction::Action(_) | DialogAction::Dismissed(_) => {
+                        self.result = String::from("Cancelled");
+                        self.close(cx, CONFIRM);
+                    }
                 }
             }
+            response |= action.erase();
         }
-        response |= action.erase();
-        let action = Self::prompt().update(cx, &mut self.prompt_state);
-        if self.open == OpenDialog::Prompt
-            && let Some(action) = action.action_ref()
-        {
-            match action {
-                DialogAction::Action(key) if *key == ActionKey::CONFIRM => {
-                    let name = self.prompt_state.draft().trim();
-                    if name.is_empty() {
-                        self.result = String::from("Name cannot be empty");
-                    } else {
-                        self.result = format!("Task: {name}");
+        if cx.is_open(PROMPT) {
+            let action = Self::prompt().update(cx, &mut self.prompt_state);
+            if let Some(action) = action.action_ref() {
+                match action {
+                    DialogAction::Action(key) if *key == ActionKey::CONFIRM => {
+                        let name = self.prompt_state.draft().trim();
+                        if name.is_empty() {
+                            self.result = String::from("Name cannot be empty");
+                        } else {
+                            self.result = format!("Task: {name}");
+                            self.close(cx, PROMPT);
+                        }
+                    }
+                    DialogAction::Action(_) | DialogAction::Dismissed(_) => {
+                        self.result = String::from("Rename cancelled");
                         self.close(cx, PROMPT);
                     }
                 }
-                DialogAction::Action(_) | DialogAction::Dismissed(_) => {
-                    self.result = String::from("Rename cancelled");
-                    self.close(cx, PROMPT);
-                }
             }
+            response |= action.erase();
         }
-        response |= action.erase();
         response
     }
 
     fn draw(&self, ui: &mut Ui<'_>, area: Rect) {
-        frame(
-            ui,
-            area,
-            self.title(),
-            "layers · focus trap · Esc dismiss",
-            |ui, body| {
-                let (actions, status) = layout::split_v(body, 4);
-                let action_rows = super::rows(actions, 2);
-                confirm_button().draw(ui, action_rows.first().copied().unwrap_or(actions));
-                prompt_button().draw(ui, action_rows.get(1).copied().unwrap_or(actions));
-                let _ = ui.paint_str(status, &self.result, ui.surface_style());
-                lines(
-                    ui,
-                    Rect {
-                        y: status.y.saturating_add(1),
-                        height: status.height.saturating_sub(1),
-                        ..status
-                    },
-                    &[
-                        "A modal traps focus in its prompt/actions and restores the launcher.",
-                        "Prompt submission rejects empty values before closing the layer.",
-                    ],
-                );
-            },
-        );
+        frame(ui, area, self.title(), "layers · focus trap · Esc dismiss", |ui, body| {
+            let (actions, status) = layout::split_v(body, 4);
+            let action_rows = super::rows(actions, 2);
+            Button::new(OPEN_CONFIRM, "Run task now")
+                .variant(Variant::PRIMARY)
+                .draw(ui, action_rows.first().copied().unwrap_or(actions));
+            Button::new(OPEN_PROMPT, "Rename task")
+                .variant(Variant::SECONDARY)
+                .draw(ui, action_rows.get(1).copied().unwrap_or(actions));
+            let _ = ui.paint_str(status, &self.result, ui.surface_style());
+            lines(
+                ui,
+                Rect {
+                    y: status.y.saturating_add(1),
+                    height: status.height.saturating_sub(1),
+                    ..status
+                },
+                &[
+                    "A modal traps focus in its prompt/actions and restores the launcher.",
+                    "Prompt submission rejects empty values before closing the layer.",
+                ],
+            );
+        });
         ui.layer(CONFIRM, |ui, layer| {
             Self::confirm().draw(ui, layer, &self.confirm_state, |ui, body| {
                 let _ = ui.paint_str(body, "Enter confirms · Esc cancels", ui.surface_style());

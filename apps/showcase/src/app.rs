@@ -1,13 +1,11 @@
 //! Application shell for the migrated showcase binary.
 
 use tui_next::{
-    ActionKey, App as TuiApp, Brand, Chord, ColorLevel, Cx, Dialog, DialogAction, DialogState, Id,
+    ActionKey, App as TuiApp, Chord, ColorLevel, Cx, Dialog, DialogAction, DialogState, Id,
     ItemKey, KeyCode, KeyMap, KeyPhase, NavList, NavListAction, NavListState, Panel, PanelKind,
     Response, Size, Status, StatusBar, StatusItem, Theme, TooSmall, Ui, id, layout,
 };
 
-use crate::pages::forms::SUBMIT as FORM_SUBMIT;
-use crate::pages::taskrunner::RUN_COMMAND;
 use crate::pages::{
     Page, buttons::ButtonsPage, chips::ChipsPage, chrome::ChromePage, dialogs::DialogsPage,
     editable::EditablePage, editor::EditorPage, forms::FormsPage, grid::GridPage,
@@ -16,6 +14,7 @@ use crate::pages::{
     sidebars::SidebarsPage, tables::TablesPage, taskrunner::TaskRunnerPage, terminal::TerminalPage,
     textareas::TextAreasPage, trees::TreesPage,
 };
+use crate::pages::forms::SUBMIT as FORM_SUBMIT;
 
 const NAV: Id = id!("navigation");
 const BRAND: Id = id!("brand");
@@ -176,7 +175,7 @@ impl PageId {
         let normalized = |input: &str| {
             input
                 .chars()
-                .filter(char::is_ascii_alphanumeric)
+                .filter(|character| character.is_ascii_alphanumeric())
                 .map(|character| character.to_ascii_lowercase())
                 .collect::<String>()
         };
@@ -203,8 +202,6 @@ pub struct NavEntry {
     pub label: &'static str,
     /// Visual section heading.
     pub section: &'static str,
-    /// Stable navigation glyph.
-    pub icon: &'static str,
 }
 
 /// The complete migrated navigation surface.
@@ -213,133 +210,111 @@ pub const NAV_ENTRIES: &[NavEntry] = &[
         id: PageId::Overview,
         label: "Overview",
         section: "Foundations",
-        icon: "•",
     },
     NavEntry {
         id: PageId::Buttons,
         label: "Buttons",
         section: "Components",
-        icon: "•",
     },
     NavEntry {
         id: PageId::Inputs,
         label: "Inputs",
         section: "Components",
-        icon: "•",
     },
     NavEntry {
         id: PageId::TextAreas,
         label: "Text areas",
         section: "Components",
-        icon: "•",
     },
     NavEntry {
         id: PageId::Forms,
         label: "Forms",
         section: "Components",
-        icon: "•",
     },
     NavEntry {
         id: PageId::Lists,
         label: "Lists",
         section: "Components",
-        icon: "•",
     },
     NavEntry {
         id: PageId::Trees,
         label: "Trees",
         section: "Components",
-        icon: "•",
     },
     NavEntry {
         id: PageId::Tables,
         label: "Tables",
         section: "Components",
-        icon: "•",
     },
     NavEntry {
         id: PageId::Editable,
         label: "Editable tables",
         section: "Components",
-        icon: "•",
     },
     NavEntry {
         id: PageId::Panels,
         label: "Panels",
         section: "Components",
-        icon: "•",
     },
     NavEntry {
         id: PageId::Sidebars,
         label: "Sidebars",
         section: "Components",
-        icon: "•",
     },
     NavEntry {
         id: PageId::Dialogs,
         label: "Dialogs",
         section: "Components",
-        icon: "•",
     },
     NavEntry {
         id: PageId::Progress,
         label: "Progress",
         section: "Components",
-        icon: "•",
     },
     NavEntry {
         id: PageId::Scrolling,
         label: "Scrolling",
         section: "Components",
-        icon: "•",
     },
     NavEntry {
         id: PageId::Terminal,
         label: "Terminal",
         section: "Components",
-        icon: "•",
     },
     NavEntry {
         id: PageId::Editor,
-        label: "Code editor",
+        label: "Editor",
         section: "Components",
-        icon: "•",
     },
     NavEntry {
         id: PageId::Grid,
         label: "Data grid",
         section: "Components",
-        icon: "•",
     },
     NavEntry {
         id: PageId::Chips,
         label: "Chips & selects",
         section: "Components",
-        icon: "•",
     },
     NavEntry {
         id: PageId::Pickers,
         label: "Pickers",
         section: "Components",
-        icon: "•",
     },
     NavEntry {
         id: PageId::Chrome,
         label: "Chrome",
         section: "Components",
-        icon: "•",
     },
     NavEntry {
         id: PageId::Settings,
         label: "Settings",
-        section: "Screens",
-        icon: "•",
+        section: "Components",
     },
     NavEntry {
         id: PageId::TaskRunner,
         label: "Task runner",
         section: "Screens",
-        icon: "•",
     },
 ];
 
@@ -355,8 +330,9 @@ fn nav_row(entry: &NavEntry, row: &mut tui_next::RowUi<'_>) {
     row.label(entry.label);
 }
 
-fn nav_icon(entry: &NavEntry) -> &str {
-    entry.icon
+#[allow(clippy::unnecessary_literal_bound)]
+fn nav_icon(_entry: &NavEntry) -> &str {
+    "•"
 }
 
 fn nav() -> NavList<
@@ -370,27 +346,6 @@ fn nav() -> NavList<
         .section(&nav_section)
         .icon(&nav_icon)
         .row(nav_row)
-}
-
-fn shell_brand() -> Brand<'static> {
-    Brand::new(BRAND, "SHOWCASE").tagline("public tui-next API")
-}
-
-fn shell_status() -> StatusBar<'static> {
-    StatusBar::new(STATUS)
-        .left(&STATUS_LEFT)
-        .right(&STATUS_RIGHT)
-        .status(Status::Ready)
-}
-
-fn missing_page_panel() -> Panel<'static> {
-    Panel::new(BRAND)
-        .kind(PanelKind::Framed)
-        .title("Missing page")
-}
-
-fn too_small_notice() -> TooSmall<'static> {
-    TooSmall::new(TOO_SMALL, "showcase").minimum(72, 20)
 }
 
 fn page(kind: PageId) -> Box<dyn Page> {
@@ -423,13 +378,6 @@ fn page(kind: PageId) -> Box<dyn Page> {
 fn keymap() -> KeyMap {
     KeyMap::new()
         .bind(KeyPhase::Bubble, Chord::key(KeyCode::Char('q')), QUIT)
-        // Capture keeps the global interrupt available while a text control
-        // owns printable-key handling.
-        .bind(
-            KeyPhase::Capture,
-            Chord::with(KeyCode::Char('c'), tui_next::KeyModifiers::CONTROL),
-            QUIT_CTRL,
-        )
         .bind(
             KeyPhase::Bubble,
             Chord::with(KeyCode::Char('c'), tui_next::KeyModifiers::CONTROL),
@@ -442,11 +390,6 @@ fn keymap() -> KeyMap {
         )
         .bind(KeyPhase::Bubble, Chord::key(KeyCode::Char(']')), NEXT_PAGE)
         .bind(KeyPhase::Bubble, Chord::key(KeyCode::Char('[')), PREV_PAGE)
-        .bind(
-            KeyPhase::Bubble,
-            Chord::key(KeyCode::Char('r')),
-            RUN_COMMAND,
-        )
         .bind(
             KeyPhase::Bubble,
             Chord::with(KeyCode::Char('s'), tui_next::KeyModifiers::CONTROL),
@@ -550,14 +493,6 @@ impl Default for App {
 impl TuiApp for App {
     fn update(&mut self, cx: &mut Cx<'_>) -> Response<()> {
         let mut response = Response::ignored();
-        response |= shell_brand().update(cx).erase();
-        response |= shell_status().update(cx).erase();
-        // These stateless shell props have no update phase of their own, but
-        // the same constructors must remain the source of truth in both
-        // runtime phases.  Calling them here also keeps the minimum-size and
-        // fallback branches construction-safe under the props guard.
-        let _ = too_small_notice();
-        let _ = missing_page_panel();
         let command = cx.command();
         match command {
             Some(QUIT | QUIT_CTRL) => {
@@ -565,24 +500,14 @@ impl TuiApp for App {
                 cx.quit();
             }
             Some(NEXT_PAGE) => {
-                let next = self
-                    .page
-                    .index()
-                    .checked_add(1)
-                    .and_then(|index| PageId::ALL.get(index).copied())
-                    .or_else(|| PageId::ALL.first().copied());
-                if let Some(page) = next {
+                let next = (self.page.index() + 1) % PageId::ALL.len();
+                if let Some(page) = PageId::ALL.get(next).copied() {
                     self.goto(page);
                 }
             }
             Some(PREV_PAGE) => {
-                let previous = self
-                    .page
-                    .index()
-                    .checked_sub(1)
-                    .and_then(|index| PageId::ALL.get(index).copied())
-                    .or_else(|| PageId::ALL.last().copied());
-                if let Some(page) = previous {
+                let previous = self.page.index().checked_sub(1).unwrap_or(PageId::ALL.len() - 1);
+                if let Some(page) = PageId::ALL.get(previous).copied() {
                     self.goto(page);
                 }
             }
@@ -591,17 +516,10 @@ impl TuiApp for App {
             }
             _ => {}
         }
-        if let Some(action) = command
-            && !matches!(
-                action,
-                QUIT | QUIT_CTRL | NEXT_PAGE | PREV_PAGE | HELP_COMMAND
-            )
-            && let Some(active) = self
-                .pages
-                .iter_mut()
-                .find(|candidate| candidate.title() == self.page.title())
-        {
-            response |= active.command(cx, action);
+        if command == Some(FORM_SUBMIT) {
+            if let Some(active) = self.pages.iter_mut().find(|candidate| candidate.title() == self.page.title()) {
+                response |= active.command(cx, FORM_SUBMIT);
+            }
         }
         response |= nav()
             .update(cx, &mut self.nav_state, NAV_ENTRIES)
@@ -627,22 +545,33 @@ impl TuiApp for App {
     fn draw(&self, ui: &mut Ui<'_>) {
         let full = ui.full();
         if full.width < 72 || full.height < 20 {
-            too_small_notice().draw(ui, full);
+            TooSmall::new(TOO_SMALL, "showcase")
+                .minimum(72, 20)
+                .draw(ui, full);
             return;
         }
         let (without_status, status_area) = layout::split_v(full, full.height.saturating_sub(1));
         let (header, body) = layout::split_v(without_status, 3);
         let (sidebar, content) = layout::split_h(body, 24);
-        shell_brand().draw(ui, header);
+        tui_next::Brand::new(BRAND, "SHOWCASE")
+            .tagline("public tui-next API")
+            .draw(ui, header);
         nav().draw(ui, sidebar, &self.nav_state, NAV_ENTRIES);
         if let Some(active) = self.active() {
             active.draw(ui, content);
         } else {
-            missing_page_panel().draw(ui, content, |ui, area| {
-                let _ = ui.paint_str(area, "No page selected", ui.surface_style());
-            });
+            Panel::new(BRAND)
+                .kind(PanelKind::Framed)
+                .title("Missing page")
+                .draw(ui, content, |ui, area| {
+                    let _ = ui.paint_str(area, "No page selected", ui.surface_style());
+                });
         }
-        shell_status().draw(ui, status_area);
+        StatusBar::new(STATUS)
+            .left(&STATUS_LEFT)
+            .right(&STATUS_RIGHT)
+            .status(Status::Ready)
+            .draw(ui, status_area);
         ui.layer(HELP, |ui, area| {
             Self::help_dialog().draw(ui, area, &self.help_state, |ui, body| {
                 let _ = ui.paint_str(body, "q quit   ? help   Esc close", ui.surface_style());

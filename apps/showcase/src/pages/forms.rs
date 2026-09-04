@@ -1,9 +1,6 @@
 //! Form-like composition with required-field validation.
 
-use tui_next::{
-    ActionKey, Button, Checkbox, Cx, Id, ItemKey, Rect, Response, Select, SelectState, TextArea,
-    TextAreaState, TextInput, TextInputState, Ui, Variant, id, layout,
-};
+use tui_next::{ActionKey, Button, Checkbox, Cx, Id, ItemKey, Rect, Response, Select, SelectState, TextArea, TextAreaState, TextInput, TextInputState, Ui, Variant, id, layout};
 
 use super::{Page, frame, lines, rows};
 
@@ -57,16 +54,6 @@ impl FormsPage {
         Select::new(PRIORITY).placeholder("Priority")
     }
 
-    fn confirmation() -> Checkbox<'static> {
-        Checkbox::new(CONFIRM, "I reviewed the rollback plan")
-    }
-
-    fn save_button(confirmed: bool) -> Button<'static> {
-        Button::new(SAVE, "Create task")
-            .variant(Variant::PRIMARY)
-            .disabled(!confirmed)
-    }
-
     fn validate(&mut self, cx: &mut Cx<'_>) -> Response<()> {
         if self.summary.trim().is_empty() {
             self.error = Some("Required: summary");
@@ -114,8 +101,13 @@ impl Page for FormsPage {
         result |= Self::priority()
             .update(cx, &mut self.priority, &["Normal", "High", "Urgent"])
             .erase();
-        result |= Self::confirmation().update(cx, &mut self.confirm).erase();
-        let save = Self::save_button(self.confirm).update(cx);
+        result |= Checkbox::new(CONFIRM, "I reviewed the rollback plan")
+            .update(cx, &mut self.confirm)
+            .erase();
+        let save = Button::new(SAVE, "Create task")
+            .variant(Variant::PRIMARY)
+            .disabled(!self.confirm)
+            .update(cx);
         if save.activated() {
             result |= self.validate(cx);
         }
@@ -124,55 +116,27 @@ impl Page for FormsPage {
     }
 
     fn draw(&self, ui: &mut Ui<'_>, area: Rect) {
-        frame(
-            ui,
-            area,
-            self.title(),
-            "controlled fields · Ctrl+S submit · validation",
-            |ui, body| {
-                let (left, right) = layout::split_h(body, body.width / 2);
-                let left_rows = rows(left, 4);
-                Self::summary().value(&self.summary).draw(
-                    ui,
-                    left_rows.first().copied().unwrap_or(left),
-                    &self.summary_state,
-                );
-                Self::details().value(&self.details).draw(
-                    ui,
-                    left_rows.get(1).copied().unwrap_or(left),
-                    &self.details_state,
-                );
-                Self::priority().draw(
-                    ui,
-                    left_rows.get(2).copied().unwrap_or(left),
-                    &self.priority,
-                    &["Normal", "High", "Urgent"],
-                );
-                Self::confirmation()
-                    .checked(self.confirm)
-                    .draw(ui, left_rows.get(3).copied().unwrap_or(left));
-                let right_rows = rows(right, 4);
-                Self::save_button(self.confirm)
-                    .draw(ui, right_rows.first().copied().unwrap_or(right));
-                let status = self.error.unwrap_or(if self.submitted {
-                    "Creating task"
-                } else {
-                    "Required fields are marked before submit"
-                });
-                let _ = ui.paint_str(
-                    right_rows.get(1).copied().unwrap_or(right),
-                    status,
-                    ui.surface_style(),
-                );
-                lines(
-                    ui,
-                    right_rows.get(2).copied().unwrap_or(right),
-                    &[
-                        "Summary is the first validation target.",
-                        "Select commits its value only after a choice.",
-                    ],
-                );
-            },
-        );
+        frame(ui, area, self.title(), "controlled fields · Ctrl+S submit · validation", |ui, body| {
+            let (left, right) = layout::split_h(body, body.width / 2);
+            let left_rows = rows(left, 4);
+            Self::summary().value(&self.summary).draw(ui, left_rows.first().copied().unwrap_or(left), &self.summary_state);
+            Self::details().value(&self.details).draw(ui, left_rows.get(1).copied().unwrap_or(left), &self.details_state);
+            Self::priority().draw(ui, left_rows.get(2).copied().unwrap_or(left), &self.priority, &["Normal", "High", "Urgent"]);
+            Checkbox::new(CONFIRM, "I reviewed the rollback plan")
+                .checked(self.confirm)
+                .draw(ui, left_rows.get(3).copied().unwrap_or(left));
+            let right_rows = rows(right, 4);
+            Button::new(SAVE, "Create task")
+                .variant(Variant::PRIMARY)
+                .disabled(!self.confirm)
+                .draw(ui, right_rows.first().copied().unwrap_or(right));
+            let status = self.error.unwrap_or(if self.submitted { "Creating task" } else { "Required fields are marked before submit" });
+            let _ = ui.paint_str(right_rows.get(1).copied().unwrap_or(right), status, ui.surface_style());
+            lines(
+                ui,
+                right_rows.get(2).copied().unwrap_or(right),
+                &["Summary is the first validation target.", "Select commits its value only after a choice."],
+            );
+        });
     }
 }
