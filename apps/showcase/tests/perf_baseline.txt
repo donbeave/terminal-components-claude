@@ -1,0 +1,9 @@
+# showcase performance baseline: test name ns allocs bytes — capture with the perf harness
+# Release measurements from the migrated public Harness path; review like a snapshot.
+frame_showcase_dialog_open 241802 129 13080 69 1
+frame_showcase_lists_120x40 135505 1 60 63 3
+frame_showcase_lists_80x24 71774 1 60 58 3
+key_showcase_down_lists 960 0 0
+mouse_move_showcase_frame 152070 0 0 63 3
+render_twice_allocates_the_same 125083 1 60
+wheel_showcase_lists 1125 0 0
