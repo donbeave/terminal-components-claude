@@ -131,35 +131,73 @@ fn route_title(route: Route) -> &'static str {
     }
 }
 
-fn draw_generic(ui: &mut public_tui::Ui<'_>, area: public_tui::Rect, app: &App) {
-    let title = route_title(app.route);
-    let panel = public_tui::Panel::new(public_tui::Id::root("jackin.public.route"))
+fn draw_chrome(ui: &mut public_tui::Ui<'_>, area: public_tui::Rect, app: &App) -> public_tui::Rect {
+    let head = public_tui::Rect { height: 1, ..area };
+    public_tui::Brand::new(
+        public_tui::Id::root("jackin.public.brand"),
+        crate::app::BRAND_MARK,
+    )
+    .compact(true)
+    .tagline(route_title(app.route))
+    .draw(ui, head);
+    if area.height < 3 {
+        return public_tui::Rect { height: 0, ..area };
+    }
+    let status_area = public_tui::Rect {
+        x: area.x,
+        y: area.bottom().saturating_sub(1),
+        width: area.width,
+        height: 1,
+    };
+    let status = app
+        .status
+        .as_ref()
+        .map(|(message, _, _)| message.as_str())
+        .unwrap_or("↑↓ navigate · Enter select · Esc back · q quit");
+    ui.paint_str(status_area, status, ui.surface_style());
+    public_tui::Rect {
+        x: area.x,
+        y: area.y.saturating_add(1),
+        width: area.width,
+        height: area.height.saturating_sub(2),
+    }
+}
+
+fn draw_transition(ui: &mut public_tui::Ui<'_>, area: public_tui::Rect, app: &App) {
+    let (title, line) = match app.route {
+        Route::Intro => (
+            "Prelude",
+            app.intro
+                .as_ref()
+                .map(|intro| format!("Intro · {:?} · frame {}", intro.phase(), intro.tick))
+                .unwrap_or_else(|| "Intro ready".into()),
+        ),
+        Route::Handoff => (
+            "Handoff",
+            app.handoff
+                .map(|tick| {
+                    format!(
+                        "Handoff · {:?} · frame {tick}",
+                        crate::rain::handoff_stage(tick)
+                    )
+                })
+                .unwrap_or_else(|| "Preparing Capsule".into()),
+        ),
+        Route::Outro => (
+            "Outro",
+            app.outro
+                .as_ref()
+                .and_then(crate::rain::OutroState::caption)
+                .unwrap_or_else(|| "Leaving the Construct".into()),
+        ),
+        _ => (route_title(app.route), "Transition".into()),
+    };
+    public_tui::Panel::new(public_tui::Id::root("jackin.public.transition"))
         .title(title)
-        .focused(true);
-    panel.draw(ui, area, |ui, inner| {
-        let lines = [
-            format!("Scenario: {:?}", app.scenario),
-            format!("Frame: {}", app.world.clock.now_ms),
-            format!("Workspaces: {}", app.world.workspaces.len()),
-            "Press Esc to return to Workspaces".to_owned(),
-        ];
-        for (offset, line) in lines.iter().enumerate() {
-            let y = inner.y.saturating_add(offset as u16);
-            if y >= inner.bottom() {
-                break;
-            }
-            ui.paint_str(
-                public_tui::Rect {
-                    x: inner.x,
-                    y,
-                    width: inner.width,
-                    height: 1,
-                },
-                line,
-                ui.surface_style(),
-            );
-        }
-    });
+        .focused(true)
+        .draw(ui, area, |ui, inner| {
+            ui.paint_str(inner, &line, ui.surface_style());
+        });
 }
 
 impl PublicApp for App {
@@ -227,36 +265,37 @@ impl PublicApp for App {
             .draw(ui, area);
             return;
         }
+        let body = draw_chrome(ui, area, self);
         match self.route {
-            Route::Manager => self.screens.manager.draw(ui, area, &self.world),
-            Route::Accounts => self.screens.accounts.draw(ui, area, &self.world),
-            Route::Usage => self.screens.usage.draw(ui, area, &self.world),
+            Route::Intro | Route::Handoff | Route::Outro => draw_transition(ui, body, self),
+            Route::Manager => self.screens.manager.draw(ui, body, &self.world),
+            Route::Accounts => self.screens.accounts.draw(ui, body, &self.world),
+            Route::Usage => self.screens.usage.draw(ui, body, &self.world),
             Route::Settings => {
                 if let Some(screen) = self.screens.settings.as_ref() {
-                    screen.draw(ui, area, &self.world);
+                    screen.draw(ui, body, &self.world);
                 }
             }
             Route::Prelude => {
                 if let Some(screen) = self.screens.prelude.as_ref() {
-                    screen.draw(ui, area, &self.world);
+                    screen.draw(ui, body, &self.world);
                 }
             }
             Route::Editor => {
                 if let Some(screen) = self.screens.editor.as_ref() {
-                    screen.draw(ui, area, &self.world);
+                    screen.draw(ui, body, &self.world);
                 }
             }
             Route::Cockpit => {
                 if let Some(screen) = self.screens.cockpit.as_ref() {
-                    screen.draw(ui, area, &self.world);
+                    screen.draw(ui, body, &self.world);
                 }
             }
             Route::Capsule => {
                 if let Some(screen) = self.screens.capsule.as_ref() {
-                    screen.draw(ui, area, &self.world);
+                    screen.draw(ui, body, &self.world);
                 }
             }
-            _ => draw_generic(ui, area, self),
         }
     }
 
