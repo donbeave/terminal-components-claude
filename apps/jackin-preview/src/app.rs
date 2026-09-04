@@ -6,10 +6,10 @@
 use std::time::Duration;
 
 use tui_next::{
-    ActionKey, App as TuiApp, AsItem, Button, Chord, Cx, Dialog, DialogAction, DialogState, Id,
-    FrameRead, Item, ItemKey, KeyCode, KeyMap, KeyPhase, List, ListAction, ListState, Panel, Picker,
-    PickerAction, PickerState, Rect, Response, StepState, Steps, StepsState, Tabs, TabsState,
-    TooSmall, Ui, UpdateCause, Variant,
+    ActionKey, App as TuiApp, AsItem, Button, Chord, Cx, Dialog, DialogAction, DialogState,
+    FrameRead, Id, Item, ItemKey, KeyCode, KeyMap, KeyPhase, List, ListAction, ListState, Panel,
+    Picker, PickerAction, PickerState, Rect, Response, StepState, Steps, StepsState, Tabs,
+    TabsState, TooSmall, Ui, UpdateCause, Variant,
 };
 
 use crate::domain::account::Account;
