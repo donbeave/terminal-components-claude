@@ -324,6 +324,10 @@ impl TextAreaState {
         self.draft.is_sensitive()
     }
 
+    pub(crate) const fn is_classified(&self) -> bool {
+        self.draft.is_classified()
+    }
+
     /// The vertical scroll.
     pub const fn scroll(&self) -> &ScrollState {
         &self.scroll

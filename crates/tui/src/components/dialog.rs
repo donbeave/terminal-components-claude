@@ -19,7 +19,7 @@ use crate::layer::{DismissReason, LayerEvent, LayerSize, LayerSpec};
 use crate::layout::{RowAlign, action_row};
 use crate::measure::{Constraints, Size};
 use crate::response::{Response, StateFlags};
-use crate::secret::{Secret, SecretPolicy};
+use crate::secret::{Secret, SecretPolicy, zeroize_string};
 use crate::text::{width, wrap, wrapped_rows};
 use crate::theme::{DesignTokens, Family, StylePatch, Surface, Variant};
 use crate::ui::{Cx, FrameRead, Ui};
@@ -170,14 +170,6 @@ impl DialogState {
         }
         self.input.set_sensitive(secret);
     }
-}
-
-fn zeroize_string(value: &mut String) {
-    let mut bytes = core::mem::take(value).into_bytes();
-    bytes.fill(0);
-    core::hint::black_box(&bytes);
-    core::sync::atomic::compiler_fence(core::sync::atomic::Ordering::SeqCst);
-    bytes.clear();
 }
 
 /// A titled surface with a description, an optional prompt or typed
