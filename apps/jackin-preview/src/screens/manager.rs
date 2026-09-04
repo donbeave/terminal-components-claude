@@ -1714,7 +1714,7 @@ impl Screen for ManagerScreen {
                             height: 1,
                         },
                         &line,
-                        crate::public_tui::Style::default(),
+                        ui.surface_style(),
                     );
                     y = y.saturating_add(1);
                     if y >= inner.bottom() {

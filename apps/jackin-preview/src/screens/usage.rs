@@ -1025,7 +1025,7 @@ impl super::Screen for UsageScreen {
                             height: 1,
                         },
                         line,
-                        crate::public_tui::Style::default(),
+                        ui.surface_style(),
                     );
                 }
             });

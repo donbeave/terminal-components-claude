@@ -161,7 +161,7 @@ fn draw_generic(ui: &mut public_tui::Ui<'_>, area: public_tui::Rect, app: &App) 
                     height: 1,
                 },
                 line,
-                public_tui::Style::default(),
+                ui.surface_style(),
             );
         }
     });
