@@ -17,7 +17,7 @@ const DERIVED_HINT_BAR: Id = id!("overview.derived-hint-bar");
 const HELP: Id = id!("overview.help");
 const TOO_SMALL: Id = id!("overview.too-small");
 const PROPS_ID: Id = id!("overview.props");
-const PROPS: [(&'static str, &'static str); 6] = [
+const PROPS: [(&str, &str); 6] = [
     ("Library", "tui-next"),
     ("Ownership", "application state"),
     ("Input", "runtime intents"),
