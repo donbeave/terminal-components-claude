@@ -538,6 +538,27 @@ fn capture_record(shots: &Path, case: CaptureCase) -> Result<CaptureRecord, Stri
     })
 }
 
+#[cfg(unix)]
+fn open_capture_artifact(path: &Path) -> Result<File, String> {
+    use std::os::unix::fs::OpenOptionsExt;
+
+    OpenOptions::new()
+        .read(true)
+        // O_NOFOLLOW closes the lstat/open symlink race. O_NONBLOCK keeps a
+        // raced FIFO/device from blocking before descriptor validation.
+        .custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK)
+        .open(path)
+        .map_err(|error| format!("cannot read capture artifact {}: {error}", path.display()))
+}
+
+#[cfg(not(unix))]
+fn open_capture_artifact(path: &Path) -> Result<File, String> {
+    Err(format!(
+        "cannot safely hash capture artifact without O_NOFOLLOW on this platform: {}",
+        path.display()
+    ))
+}
+
 fn file_digest(path: &Path) -> Result<(u64, String), String> {
     let metadata = fs::symlink_metadata(path).map_err(|error| {
         if error.kind() == std::io::ErrorKind::NotFound {
@@ -555,12 +576,19 @@ fn file_digest(path: &Path) -> Result<(u64, String), String> {
             path.display()
         ));
     }
-    if metadata.len() == 0 {
-        return Err(format!("capture artifact is zero-size: {}", path.display()));
+    let mut file = open_capture_artifact(path)?;
+    let opened_metadata = file.metadata().map_err(|error| {
+        format!(
+            "cannot inspect opened capture artifact {}: {error}",
+            path.display()
+        )
+    })?;
+    if !opened_metadata.is_file() || opened_metadata.len() == 0 {
+        return Err(format!(
+            "opened capture artifact is not a non-empty regular file: {}",
+            path.display()
+        ));
     }
-
-    let mut file = File::open(path)
-        .map_err(|error| format!("cannot read capture artifact {}: {error}", path.display()))?;
     let mut hasher = Sha256::new();
     let mut buffer = [0_u8; 16 * 1024];
     let mut bytes = 0_u64;
@@ -8801,6 +8829,9 @@ mv -f "$exit_tmp" "$exit_path"
         let cleanup_error = remove_file_if_present(&artifact)
             .expect_err("pre-clean must reject a symlink artifact");
         assert!(cleanup_error.contains("symlink"), "{cleanup_error}");
+        let open_error =
+            open_capture_artifact(&artifact).expect_err("O_NOFOLLOW open must reject a symlink");
+        assert!(open_error.contains("cannot read"), "{open_error}");
         let hash_error =
             file_digest(&artifact).expect_err("hashing must reject a symlink artifact");
         assert!(hash_error.contains("regular file"), "{hash_error}");
