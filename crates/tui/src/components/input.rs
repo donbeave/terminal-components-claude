@@ -16,7 +16,7 @@ use crate::intent::{Intent, Phase};
 use crate::keymap::{Binding, BindingState, Bindings};
 use crate::measure::{Constraints, Size};
 use crate::response::{Response, StateFlags};
-use crate::secret::{Secret, SecretPolicy};
+use crate::secret::{Secret, SecretPolicy, zeroize_string};
 use crate::text::measure::graphemes;
 use crate::text::{EditAction, EditOutcome, Extend, Motion, TextEditorCore, width};
 use crate::theme::{Family, GlyphRole, Slot, StylePatch, Variant};
@@ -36,7 +36,7 @@ mod text_target {
 /// forms to edit `Secret` in place, without cloning it or widening the API.
 pub(crate) trait TextTarget: text_target::Sealed {
     fn expose(&self) -> &str;
-    fn set(&mut self, value: &str);
+    fn set(&mut self, value: &str, sensitive: bool);
     fn is_sensitive(&self) -> bool;
 }
 
@@ -45,8 +45,12 @@ impl TextTarget for String {
         self
     }
 
-    fn set(&mut self, value: &str) {
-        self.clear();
+    fn set(&mut self, value: &str, sensitive: bool) {
+        if sensitive {
+            zeroize_string(self);
+        } else {
+            self.clear();
+        }
         self.push_str(value);
     }
 
@@ -60,7 +64,7 @@ impl TextTarget for Secret {
         Secret::expose(self)
     }
 
-    fn set(&mut self, value: &str) {
+    fn set(&mut self, value: &str, _sensitive: bool) {
         Secret::set(self, value);
     }
 
