@@ -28,7 +28,10 @@ use junie_tui::widgets::segments::Segment;
 use junie_tui::widgets::splitter::Splitter;
 
 use super::modals::{InfoDialog, InfoResult};
-use super::{Cx, Go, Modal, ModalResult, ModalTag, Screen, plural};
+use super::{
+    Cx, Go, Jx, LegacyScreen, Modal, ModalResult, ModalTag, Screen, PUBLIC_MANAGER_ACTIVATE,
+    PUBLIC_MANAGER_DOWN, PUBLIC_MANAGER_UP, plural,
+};
 use crate::domain::agent::Agent;
 use crate::domain::instance::{DaemonSnapshot, InstanceStatus};
 use crate::domain::workspace::WorkspaceId;
@@ -1616,6 +1619,128 @@ impl ManagerScreen {
     }
 }
 
+const PUBLIC_MANAGER_PANEL: crate::public_tui::Id =
+    crate::public_tui::Id::root("jackin.manager.panel");
+const PUBLIC_MANAGER_ACTIVATE_BUTTON: crate::public_tui::Id =
+    crate::public_tui::Id::root("jackin.manager.activate");
+
+impl Screen for ManagerScreen {
+    fn update(
+        &mut self,
+        cx: &mut crate::public_tui::Cx<'_>,
+        jx: &mut Jx<'_>,
+        world: &mut World,
+    ) -> crate::public_tui::Response<()> {
+        if !self.rows_match_shape(world) {
+            self.build_rows(world);
+        }
+
+        let activate = crate::public_tui::Button::new(PUBLIC_MANAGER_ACTIVATE_BUTTON, "Open")
+            .update(cx)
+            .activated();
+        match cx.command() {
+            Some(PUBLIC_MANAGER_UP) => {
+                self.move_cursor(-1);
+                crate::public_tui::Response::changed()
+            }
+            Some(PUBLIC_MANAGER_DOWN) => {
+                self.move_cursor(1);
+                crate::public_tui::Response::changed()
+            }
+            Some(PUBLIC_MANAGER_ACTIVATE) => {
+                match self.selected.clone() {
+                    RowKey::NewWorkspace => jx.go(Go::Prelude),
+                    RowKey::Workspace(id) => jx.go(Go::Editor {
+                        workspace: Some(id),
+                        pending: None,
+                    }),
+                    RowKey::Instance(id) => {
+                        if world
+                            .instance(&id)
+                            .is_some_and(|instance| instance.status == InstanceStatus::Running)
+                        {
+                            jx.go(Go::Attach {
+                                instance: id,
+                                pane: None,
+                            });
+                        } else {
+                            jx.status("Selected instance is not running");
+                        }
+                    }
+                    RowKey::CurrentDir => jx.go(Go::Prelude),
+                }
+                crate::public_tui::Response::changed()
+            }
+            _ if activate => {
+                match self.selected.clone() {
+                    RowKey::NewWorkspace | RowKey::CurrentDir => jx.go(Go::Prelude),
+                    RowKey::Workspace(id) => jx.go(Go::Editor {
+                        workspace: Some(id),
+                        pending: None,
+                    }),
+                    RowKey::Instance(id) => jx.go(Go::Attach {
+                        instance: id,
+                        pane: None,
+                    }),
+                }
+                crate::public_tui::Response::changed()
+            }
+            _ => crate::public_tui::Response::ignored(),
+        }
+    }
+
+    fn draw(
+        &self,
+        ui: &mut crate::public_tui::Ui<'_>,
+        area: crate::public_tui::Rect,
+        world: &World,
+    ) {
+        let title = format!("Workspaces · {}", world.workspaces.len());
+        crate::public_tui::Panel::new(PUBLIC_MANAGER_PANEL)
+            .title(&title)
+            .focused(true)
+            .draw(ui, area, |ui, inner| {
+                let mut y = inner.y;
+                for row in self.rows.iter().take(usize::from(inner.height)) {
+                    let indent = "  ".repeat(usize::from(row.depth));
+                    let line = format!("{indent}{} {}", row.glyph, row.label);
+                    ui.paint_str(
+                        crate::public_tui::Rect {
+                            x: inner.x,
+                            y,
+                            width: inner.width,
+                            height: 1,
+                        },
+                        &line,
+                        crate::public_tui::Style::default(),
+                    );
+                    y = y.saturating_add(1);
+                    if y >= inner.bottom() {
+                        break;
+                    }
+                }
+                if inner.height > 0 {
+                    let button_area = crate::public_tui::Rect {
+                        x: inner.x,
+                        y: inner.bottom().saturating_sub(1),
+                        width: inner.width,
+                        height: 1,
+                    };
+                    crate::public_tui::Button::new(PUBLIC_MANAGER_ACTIVATE_BUTTON, "Open")
+                        .draw(ui, button_area);
+                }
+            });
+    }
+
+    fn crumb(&self, _world: &World) -> String {
+        "Manager".to_owned()
+    }
+
+    fn primary_focus(&self) -> Option<crate::public_tui::Id> {
+        Some(PUBLIC_MANAGER_ACTIVATE_BUTTON)
+    }
+}
+
 /// Picker rows for every Agent with its resolved account and why.
 fn agent_rows(
     w: &World,
@@ -1664,7 +1789,7 @@ fn agent_rows(
     (items, targets)
 }
 
-impl Screen for ManagerScreen {
+impl LegacyScreen for ManagerScreen {
     fn enter(&mut self, w: &mut World, cx: &mut Cx) {
         self.build_rows(w);
         cx.focus.focus(TREE);

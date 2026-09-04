@@ -31,6 +31,7 @@
     reason = "all arithmetic is over bounded deterministic fixture values"
 )]
 pub extern crate tui_next as legacy_facade;
+pub extern crate tui_next_public as public_tui;
 
 extern crate self as junie_tui;
 

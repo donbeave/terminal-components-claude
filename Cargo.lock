@@ -565,6 +565,7 @@ version = "0.1.0"
 dependencies = [
  "junie-tui",
  "ratatui",
+ "tui-next",
  "unicode-segmentation",
 ]
 

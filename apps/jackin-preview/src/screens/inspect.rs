@@ -23,7 +23,7 @@ use junie_tui::widgets::splitter::Splitter;
 use junie_tui::widgets::tree::{TreeEvent, TreeNode, TreeView};
 
 use super::modals::modal_frame;
-use super::{CustomModal, ModalResult};
+use super::{LegacyCustomModal, ModalResult};
 use crate::sim::changes::{ChangeSet, ChangedFile, DiffStatus};
 use crate::sim::world::World;
 
@@ -605,7 +605,7 @@ fn build_tree(files: &[ChangedFile]) -> (Vec<TreeNode>, Vec<(Vec<usize>, usize)>
     (nodes, leaves)
 }
 
-impl CustomModal for InspectChanges {
+impl LegacyCustomModal for InspectChanges {
     fn on_key(&mut self, key: &Key, focus: &mut Focus, _ring: &FocusRing, _w: &World) -> Outcome {
         match key.code {
             KeyCode::Char('d') if key.plain() => {

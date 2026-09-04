@@ -30,7 +30,7 @@ use junie_tui::widgets::select::Select;
 use junie_tui::widgets::splitter::Splitter;
 
 use super::modals::{BrowserResult, FileBrowser, FormDialog, FormField, FormValues, OpFlow};
-use super::{Cx, Go, Modal, ModalResult, ModalTag, Screen, plural};
+use super::{Cx, Go, Modal, ModalResult, ModalTag, LegacyScreen, plural};
 use crate::domain::account::{
     Account, AccountId, AccountOrigin, CredentialSource, DetectedKind, DuplicateProbe, IssueCode,
     Lifecycle, ValidationState, fingerprint, masked, tail_of,
@@ -1865,7 +1865,7 @@ impl Account {
     }
 }
 
-impl Screen for AccountsScreen {
+impl LegacyScreen for AccountsScreen {
     fn enter(&mut self, w: &mut World, cx: &mut Cx) {
         self.build_rows(w);
         cx.focus.focus(TREE);

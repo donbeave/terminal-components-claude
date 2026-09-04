@@ -17,7 +17,7 @@ use junie_tui::widgets::keyhint::{Hint, hint};
 use junie_tui::widgets::picker::{Picker, PickerItem};
 
 use super::modals::{BrowserResult, ChoiceDialog, FileBrowser};
-use super::{Cx, Go, Modal, ModalResult, ModalTag, Screen};
+use super::{Cx, Go, Modal, ModalResult, ModalTag, LegacyScreen};
 use crate::domain::workspace::{Mount, Workspace};
 use crate::sim::world::World;
 
@@ -368,7 +368,7 @@ impl PreludeScreen {
     }
 }
 
-impl Screen for PreludeScreen {
+impl LegacyScreen for PreludeScreen {
     fn enter(&mut self, w: &mut World, cx: &mut Cx) {
         self.open(Step::Source, w, cx, None);
     }
