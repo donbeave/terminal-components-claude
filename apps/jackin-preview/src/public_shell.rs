@@ -69,8 +69,18 @@ fn apply_request(app: &mut App, request: PublicRequest) {
                 }
                 app.route = Route::Accounts;
             }
-            crate::screens::Go::Usage { .. } => app.route = Route::Usage,
-            crate::screens::Go::Editor { .. } => app.route = Route::Editor,
+            crate::screens::Go::Usage { select } => {
+                app.screens.usage.select(select);
+                app.route = Route::Usage;
+            }
+            crate::screens::Go::Editor { workspace, pending } => {
+                app.screens.editor = Some(crate::screens::editor::EditorScreen::new(
+                    &app.world,
+                    workspace,
+                    pending.map(|workspace| *workspace),
+                ));
+                app.route = Route::Editor;
+            }
             crate::screens::Go::Prelude => {
                 if app.screens.prelude.is_none() {
                     app.screens.prelude =
@@ -78,8 +88,28 @@ fn apply_request(app: &mut App, request: PublicRequest) {
                 }
                 app.route = Route::Prelude;
             }
-            crate::screens::Go::Launch { .. } => app.route = Route::Cockpit,
-            crate::screens::Go::Attach { .. } | crate::screens::Go::NewSession { .. } => {
+            crate::screens::Go::Launch {
+                workspace,
+                role,
+                agent,
+                account,
+                plan,
+            } => {
+                app.screens.cockpit = Some(crate::screens::cockpit::CockpitScreen::new(
+                    &app.world, workspace, role, agent, account, plan, app.motion,
+                ));
+                app.route = Route::Cockpit;
+            }
+            crate::screens::Go::Attach { instance, pane } => {
+                app.screens.capsule = Some(crate::screens::capsule::CapsuleScreen::new(
+                    &instance, &app.world, pane,
+                ));
+                app.route = Route::Capsule;
+            }
+            crate::screens::Go::NewSession { instance, .. } => {
+                app.screens.capsule = Some(crate::screens::capsule::CapsuleScreen::new(
+                    &instance, &app.world, None,
+                ));
                 app.route = Route::Capsule;
             }
             crate::screens::Go::Detach
@@ -151,6 +181,7 @@ impl PublicApp for App {
             match self.route {
                 Route::Manager => self.screens.manager.update(cx, &mut jx, &mut self.world),
                 Route::Accounts => self.screens.accounts.update(cx, &mut jx, &mut self.world),
+                Route::Usage => self.screens.usage.update(cx, &mut jx, &mut self.world),
                 Route::Settings => self
                     .screens
                     .settings
@@ -160,6 +191,24 @@ impl PublicApp for App {
                 Route::Prelude => self
                     .screens
                     .prelude
+                    .as_mut()
+                    .map(|screen| screen.update(cx, &mut jx, &mut self.world))
+                    .unwrap_or_else(public_tui::Response::ignored),
+                Route::Editor => self
+                    .screens
+                    .editor
+                    .as_mut()
+                    .map(|screen| screen.update(cx, &mut jx, &mut self.world))
+                    .unwrap_or_else(public_tui::Response::ignored),
+                Route::Cockpit => self
+                    .screens
+                    .cockpit
+                    .as_mut()
+                    .map(|screen| screen.update(cx, &mut jx, &mut self.world))
+                    .unwrap_or_else(public_tui::Response::ignored),
+                Route::Capsule => self
+                    .screens
+                    .capsule
                     .as_mut()
                     .map(|screen| screen.update(cx, &mut jx, &mut self.world))
                     .unwrap_or_else(public_tui::Response::ignored),
@@ -186,6 +235,7 @@ impl PublicApp for App {
         match self.route {
             Route::Manager => self.screens.manager.draw(ui, area, &self.world),
             Route::Accounts => self.screens.accounts.draw(ui, area, &self.world),
+            Route::Usage => self.screens.usage.draw(ui, area, &self.world),
             Route::Settings => {
                 if let Some(screen) = self.screens.settings.as_ref() {
                     screen.draw(ui, area, &self.world);
@@ -193,6 +243,21 @@ impl PublicApp for App {
             }
             Route::Prelude => {
                 if let Some(screen) = self.screens.prelude.as_ref() {
+                    screen.draw(ui, area, &self.world);
+                }
+            }
+            Route::Editor => {
+                if let Some(screen) = self.screens.editor.as_ref() {
+                    screen.draw(ui, area, &self.world);
+                }
+            }
+            Route::Cockpit => {
+                if let Some(screen) = self.screens.cockpit.as_ref() {
+                    screen.draw(ui, area, &self.world);
+                }
+            }
+            Route::Capsule => {
+                if let Some(screen) = self.screens.capsule.as_ref() {
                     screen.draw(ui, area, &self.world);
                 }
             }
@@ -229,6 +294,7 @@ impl PublicApp for App {
                             .accounts
                             .on_esc_top(cx, &mut jx, &mut self.world)
                     }
+                    Route::Usage => self.screens.usage.on_esc_top(cx, &mut jx, &mut self.world),
                     Route::Settings => self
                         .screens
                         .settings
@@ -238,6 +304,24 @@ impl PublicApp for App {
                     Route::Prelude => self
                         .screens
                         .prelude
+                        .as_mut()
+                        .map(|screen| screen.on_esc_top(cx, &mut jx, &mut self.world))
+                        .unwrap_or_else(public_tui::Response::ignored),
+                    Route::Editor => self
+                        .screens
+                        .editor
+                        .as_mut()
+                        .map(|screen| screen.on_esc_top(cx, &mut jx, &mut self.world))
+                        .unwrap_or_else(public_tui::Response::ignored),
+                    Route::Cockpit => self
+                        .screens
+                        .cockpit
+                        .as_mut()
+                        .map(|screen| screen.on_esc_top(cx, &mut jx, &mut self.world))
+                        .unwrap_or_else(public_tui::Response::ignored),
+                    Route::Capsule => self
+                        .screens
+                        .capsule
                         .as_mut()
                         .map(|screen| screen.on_esc_top(cx, &mut jx, &mut self.world))
                         .unwrap_or_else(public_tui::Response::ignored),
@@ -300,5 +384,34 @@ mod tests {
             app.screens.accounts.selected,
             crate::screens::accounts::Sel::Overview
         );
+    }
+
+    #[test]
+    fn public_route_requests_construct_remaining_screen_adapters() {
+        let mut app = App::for_scenario(Scenario::FirstUse, Motion::Reduced);
+        apply_request(
+            &mut app,
+            PublicRequest::Go(crate::screens::Go::Usage { select: None }),
+        );
+        assert_eq!(app.route, Route::Usage);
+        apply_request(
+            &mut app,
+            PublicRequest::Go(crate::screens::Go::Editor {
+                workspace: None,
+                pending: None,
+            }),
+        );
+        assert!(app.screens.editor.is_some());
+        apply_request(
+            &mut app,
+            PublicRequest::Go(crate::screens::Go::Launch {
+                workspace: None,
+                role: "the-architect".into(),
+                agent: crate::domain::agent::Agent::ClaudeCode,
+                account: None,
+                plan: crate::sim::launch::LaunchPlan::Clean,
+            }),
+        );
+        assert!(app.screens.cockpit.is_some());
     }
 }

@@ -2193,3 +2193,136 @@ impl LegacyScreen for EditorScreen {
         Outcome::Changed
     }
 }
+
+const PUBLIC_EDITOR_PANEL: crate::public_tui::Id =
+    crate::public_tui::Id::root("jackin.editor.panel");
+
+impl super::Screen for EditorScreen {
+    fn update(
+        &mut self,
+        cx: &mut crate::public_tui::Cx<'_>,
+        jx: &mut super::Jx<'_>,
+        _world: &mut World,
+    ) -> crate::public_tui::Response<()> {
+        match cx.command() {
+            Some(super::PUBLIC_NAV_UP) => {
+                let current = EdTab::ALL
+                    .iter()
+                    .position(|tab| *tab == self.tab)
+                    .unwrap_or(0);
+                self.tab = EdTab::ALL[current.saturating_sub(1)];
+            }
+            Some(super::PUBLIC_NAV_DOWN) => {
+                let current = EdTab::ALL
+                    .iter()
+                    .position(|tab| *tab == self.tab)
+                    .unwrap_or(0);
+                self.tab = EdTab::ALL[(current + 1).min(EdTab::ALL.len() - 1)];
+            }
+            Some(super::PUBLIC_ACTIVATE) => match self.tab {
+                EdTab::General => {
+                    self.pending.keep_awake = !self.pending.keep_awake;
+                    jx.status(format!(
+                        "Keep awake {}",
+                        if self.pending.keep_awake { "on" } else { "off" }
+                    ));
+                }
+                EdTab::Accounts => jx.status("Workspace accounts selected"),
+                EdTab::Roles => jx.status("Workspace roles selected"),
+                EdTab::Mounts | EdTab::Environments => {
+                    jx.status("Configuration rows are edited from the workspace form")
+                }
+            },
+            _ => return crate::public_tui::Response::ignored(),
+        }
+        crate::public_tui::Response::changed()
+    }
+
+    fn draw(
+        &self,
+        ui: &mut crate::public_tui::Ui<'_>,
+        area: crate::public_tui::Rect,
+        _world: &World,
+    ) {
+        let tab_index = EdTab::ALL
+            .iter()
+            .position(|tab| *tab == self.tab)
+            .unwrap_or(0);
+        crate::public_tui::Panel::new(PUBLIC_EDITOR_PANEL)
+            .title(if self.is_create() {
+                "Workspace editor · new"
+            } else {
+                "Workspace editor"
+            })
+            .focused(true)
+            .draw(ui, area, |ui, inner| {
+                let lines = [
+                    TAB_NAMES[tab_index].to_owned(),
+                    format!(
+                        "Name: {}",
+                        if self.pending.name.is_empty() {
+                            "(unnamed)"
+                        } else {
+                            &self.pending.name
+                        }
+                    ),
+                    format!("Working directory: {}", self.pending.workdir),
+                    format!(
+                        "Mounts: {} · Environment entries: {}",
+                        self.pending.mounts.len(),
+                        self.pending.env.len()
+                    ),
+                    format!(
+                        "{} · Accounts: {}",
+                        self.pending.roles.summary(),
+                        self.pending.accounts.enabled.len()
+                    ),
+                    format!(
+                        "Keep awake: {} · Git pull: {}",
+                        self.pending.keep_awake, self.pending.git_pull
+                    ),
+                    format!("Unsaved changes: {}", self.change_count()),
+                    "↑↓ tab · Enter edit · Esc back".into(),
+                ];
+                for (offset, line) in lines.iter().enumerate() {
+                    let y = inner.y.saturating_add(offset as u16);
+                    if y >= inner.bottom() {
+                        break;
+                    }
+                    ui.paint_str(
+                        crate::public_tui::Rect {
+                            x: inner.x,
+                            y,
+                            width: inner.width,
+                            height: 1,
+                        },
+                        line,
+                        crate::public_tui::Style::default(),
+                    );
+                }
+            });
+    }
+
+    fn crumb(&self, _world: &World) -> String {
+        if self.is_create() {
+            "Workspaces › new workspace › edit".into()
+        } else {
+            format!("Workspaces › {} › edit", self.original.name)
+        }
+    }
+
+    fn on_esc_top(
+        &mut self,
+        _cx: &mut crate::public_tui::Cx<'_>,
+        jx: &mut super::Jx<'_>,
+        _world: &mut World,
+    ) -> crate::public_tui::Response<()> {
+        if self.change_count() > 0 || self.is_create() {
+            jx.status("Unsaved workspace changes kept in the editor");
+            crate::public_tui::Response::consumed().repaint()
+        } else {
+            jx.go(super::Go::Manager);
+            crate::public_tui::Response::consumed().repaint()
+        }
+    }
+}

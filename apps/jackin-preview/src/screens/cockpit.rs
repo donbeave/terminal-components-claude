@@ -1010,3 +1010,86 @@ impl LegacyScreen for CockpitScreen {
         Outcome::Changed
     }
 }
+
+const PUBLIC_COCKPIT_PANEL: crate::public_tui::Id =
+    crate::public_tui::Id::root("jackin.cockpit.panel");
+
+impl super::Screen for CockpitScreen {
+    fn update(
+        &mut self,
+        cx: &mut crate::public_tui::Cx<'_>,
+        jx: &mut super::Jx<'_>,
+        _world: &mut World,
+    ) -> crate::public_tui::Response<()> {
+        match cx.command() {
+            Some(super::PUBLIC_ACTIVATE) => {
+                if self.run.is_terminal() {
+                    jx.status("Launch finished");
+                } else {
+                    jx.status("Launch is still running");
+                }
+                crate::public_tui::Response::changed()
+            }
+            Some(super::PUBLIC_NAV_UP | super::PUBLIC_NAV_DOWN) => {
+                crate::public_tui::Response::consumed()
+            }
+            _ => crate::public_tui::Response::ignored(),
+        }
+    }
+
+    fn draw(
+        &self,
+        ui: &mut crate::public_tui::Ui<'_>,
+        area: crate::public_tui::Rect,
+        _world: &World,
+    ) {
+        let (done, total) = self.run.counts();
+        let current = self
+            .run
+            .current
+            .and_then(|index| Stage::ALL.get(index))
+            .map_or("Waiting".to_owned(), |stage| stage.label().to_owned());
+        crate::public_tui::Panel::new(PUBLIC_COCKPIT_PANEL)
+            .title("Launch cockpit")
+            .meta(&format!("{done}/{total} stages"))
+            .focused(true)
+            .draw(ui, area, |ui, inner| {
+                let mut lines = vec![
+                    format!("Target: {}", self.target_label),
+                    format!("Role: {} · Agent: {}", self.role, self.agent.label()),
+                    format!("Current stage: {current}"),
+                    self.activity.clone(),
+                ];
+                if let Some(container) = &self.container {
+                    lines.push(format!("Container: {container}"));
+                }
+                if self.failure_shown {
+                    lines.push("Launch failed · inspect details before retry".into());
+                } else if self.run.is_terminal() {
+                    lines.push("Launch complete · Enter acknowledges".into());
+                } else {
+                    lines.push("Launch is deterministic and advances on virtual ticks".into());
+                }
+                for (offset, line) in lines.iter().enumerate() {
+                    let y = inner.y.saturating_add(offset as u16);
+                    if y >= inner.bottom() {
+                        break;
+                    }
+                    ui.paint_str(
+                        crate::public_tui::Rect {
+                            x: inner.x,
+                            y,
+                            width: inner.width,
+                            height: 1,
+                        },
+                        line,
+                        crate::public_tui::Style::default(),
+                    );
+                }
+            });
+    }
+
+    fn crumb(&self, _world: &World) -> String {
+        format!("Launch › {}", self.role)
+    }
+}

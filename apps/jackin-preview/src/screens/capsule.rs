@@ -2541,6 +2541,96 @@ impl LegacyScreen for CapsuleScreen {
     }
 }
 
+const PUBLIC_CAPSULE_PANEL: crate::public_tui::Id =
+    crate::public_tui::Id::root("jackin.capsule.panel");
+
+impl super::Screen for CapsuleScreen {
+    fn update(
+        &mut self,
+        cx: &mut crate::public_tui::Cx<'_>,
+        jx: &mut super::Jx<'_>,
+        world: &mut World,
+    ) -> crate::public_tui::Response<()> {
+        match cx.command() {
+            Some(super::PUBLIC_ACTIVATE) => {
+                if self.daemon(world).is_some() {
+                    jx.status("Capsule focused · Enter is reserved for the active PTY");
+                } else {
+                    jx.status("Capsule instance is no longer available");
+                }
+                crate::public_tui::Response::changed()
+            }
+            Some(super::PUBLIC_NAV_UP | super::PUBLIC_NAV_DOWN) => {
+                crate::public_tui::Response::consumed()
+            }
+            _ => crate::public_tui::Response::ignored(),
+        }
+    }
+
+    fn draw(
+        &self,
+        ui: &mut crate::public_tui::Ui<'_>,
+        area: crate::public_tui::Rect,
+        world: &World,
+    ) {
+        crate::public_tui::Panel::new(PUBLIC_CAPSULE_PANEL)
+            .title("Capsule")
+            .meta(&self.instance)
+            .focused(true)
+            .draw(ui, area, |ui, inner| {
+                let (tabs, panes) = self
+                    .daemon(world)
+                    .and_then(|daemon| {
+                        daemon
+                            .active_tab()
+                            .map(|tab| (daemon.tabs.len(), tab.leaves().len()))
+                    })
+                    .unwrap_or((0, 0));
+                let lines = [
+                    format!("Instance: {}", self.instance),
+                    format!("Mode: {:?} · tabs: {tabs} · panes: {panes}", self.mode()),
+                    format!(
+                        "Focused pane: {}",
+                        self.focused_pane(world)
+                            .map_or("none".into(), |pane| pane.to_string())
+                    ),
+                    "PTY input and split controls remain owned by the capsule route".into(),
+                    "Esc detaches · Enter focuses the active terminal".into(),
+                ];
+                for (offset, line) in lines.iter().enumerate() {
+                    let y = inner.y.saturating_add(offset as u16);
+                    if y >= inner.bottom() {
+                        break;
+                    }
+                    ui.paint_str(
+                        crate::public_tui::Rect {
+                            x: inner.x,
+                            y,
+                            width: inner.width,
+                            height: 1,
+                        },
+                        line,
+                        crate::public_tui::Style::default(),
+                    );
+                }
+            });
+    }
+
+    fn crumb(&self, _world: &World) -> String {
+        format!("Capsule › {}", self.instance.trim_start_matches("jk-"))
+    }
+
+    fn on_esc_top(
+        &mut self,
+        _cx: &mut crate::public_tui::Cx<'_>,
+        jx: &mut super::Jx<'_>,
+        _world: &mut World,
+    ) -> crate::public_tui::Response<()> {
+        jx.go(super::Go::Detach);
+        crate::public_tui::Response::consumed().repaint()
+    }
+}
+
 // ------------------------------------------------------------- usage dialog
 
 pub struct UsageDialog {

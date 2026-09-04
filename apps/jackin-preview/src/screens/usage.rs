@@ -934,3 +934,108 @@ impl LegacyScreen for UsageScreen {
         }
     }
 }
+
+const PUBLIC_USAGE_PANEL: crate::public_tui::Id = crate::public_tui::Id::root("jackin.usage.panel");
+
+impl super::Screen for UsageScreen {
+    fn update(
+        &mut self,
+        cx: &mut crate::public_tui::Cx<'_>,
+        jx: &mut super::Jx<'_>,
+        world: &mut World,
+    ) -> crate::public_tui::Response<()> {
+        self.build_rows(world);
+        match cx.command() {
+            Some(super::PUBLIC_NAV_UP) => self.move_cursor(-1),
+            Some(super::PUBLIC_NAV_DOWN) => self.move_cursor(1),
+            Some(super::PUBLIC_ACTIVATE) => {
+                self.show_detail = self.selected.is_some();
+                if let Some(id) = &self.selected
+                    && let Some(account) = world.accounts.get(id)
+                {
+                    jx.status(format!("{} · {}", account.title(), account.status_word()));
+                }
+            }
+            _ => return crate::public_tui::Response::ignored(),
+        }
+        crate::public_tui::Response::changed()
+    }
+
+    fn draw(
+        &self,
+        ui: &mut crate::public_tui::Ui<'_>,
+        area: crate::public_tui::Rect,
+        world: &World,
+    ) {
+        let refreshing = world
+            .accounts
+            .accounts
+            .iter()
+            .filter(|account| account.usage.freshness.phase == Freshness::Refreshing)
+            .count();
+        let meta = if refreshing == 0 {
+            "read-only"
+        } else {
+            "refreshing"
+        };
+        crate::public_tui::Panel::new(PUBLIC_USAGE_PANEL)
+            .title("Usage")
+            .meta(meta)
+            .focused(true)
+            .draw(ui, area, |ui, inner| {
+                let summary = OverallSummary::compute(&world.accounts.accounts);
+                let mut lines = vec![
+                    format!(
+                        "Overall: {} · {}",
+                        summary.health.label(),
+                        summary.issues_line()
+                    ),
+                    String::new(),
+                ];
+                for row in &self.rows {
+                    match row {
+                        Row::Overview => lines.push("Overview".into()),
+                        Row::Heading(surface) => lines.push(surface.surface_name().to_owned()),
+                        Row::Account(id) => {
+                            if let Some(account) = world.accounts.get(id) {
+                                let marker = if self.selected.as_deref() == Some(id) {
+                                    "▸"
+                                } else {
+                                    " "
+                                };
+                                lines.push(format!(
+                                    "{marker}   {} · {}",
+                                    account.title(),
+                                    account.status_word()
+                                ));
+                            }
+                        }
+                    }
+                }
+                for (offset, line) in lines.iter().enumerate() {
+                    let y = inner.y.saturating_add(offset as u16);
+                    if y >= inner.bottom() {
+                        break;
+                    }
+                    ui.paint_str(
+                        crate::public_tui::Rect {
+                            x: inner.x,
+                            y,
+                            width: inner.width,
+                            height: 1,
+                        },
+                        line,
+                        crate::public_tui::Style::default(),
+                    );
+                }
+            });
+    }
+
+    fn crumb(&self, world: &World) -> String {
+        self.selected
+            .as_ref()
+            .and_then(|id| world.accounts.get(id))
+            .map(|account| format!("Usage › {}", account.title()))
+            .unwrap_or_else(|| "Usage › Overview".into())
+    }
+}
