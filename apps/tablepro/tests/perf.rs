@@ -100,7 +100,9 @@ fn frame_tablepro_query_editor_2k_lines() {
         "-- generated query\n{}",
         "SELECT * FROM orders\n".repeat(2_000)
     );
-    let _ = app.run_query(query);
+    let outcome = app.run_query(query.clone());
+    assert!(matches!(outcome, QueryOutcome::Rejected { .. }));
+    assert_eq!(app.query(), query);
     let harness = Harness::new(app, Theme::junie(), 120, 40);
     assert!(harness.find("TablePro").is_some());
     assert!(harness.diagnostics().is_empty());
