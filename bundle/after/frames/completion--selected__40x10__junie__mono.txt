@@ -1,0 +1,10 @@
+╭──────────────────────────────────────╮
+│ › Ada Lovelace                analyst│
+│ Grace Hopper             rear admiral│
+│ Alan Turing                  logician│
+│                                      │
+│                                      │
+│                                      │
+│                                      │
+│                                      │
+╰──────────────────────────────────────╯

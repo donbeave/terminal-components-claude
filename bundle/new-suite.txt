@@ -1,0 +1,1714 @@
+---- render::components::button::selected stdout ----
+
+thread 'render::components::button::selected' (315725730) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::button::selected 120 40 junie truecolor` changed: baseline c3a5557f65a5ff3f, got a08a615b692ade44; classify the change against §20.10, capture it, then BLESS=1
+ ✓ Run task                                                                                                             
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- render::components::chip_bar::focused stdout ----
+
+thread 'render::components::chip_bar::focused' (315725743) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::chip_bar::focused 120 40 junie truecolor` changed: baseline ec65ee8e34084547, got 782d064c5cace447; classify the change against §20.10, capture it, then BLESS=1
+ Ada Lovelace ×   Grace Hopper ×   Alan Turing ×   Edsger Dijkstra ×   Barbara Liskov ×   Ken Thompson ×        engineer
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+
+---- render::components::code_editor::disabled stdout ----
+
+thread 'render::components::code_editor::disabled' (315725748) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::code_editor::disabled 120 40 junie truecolor` changed: baseline 8a0ebfab287b61ce, got da11a7c9b16acc2a; classify the change against §20.10, capture it, then BLESS=1
+    1 fn retry() {                                                                                                      
+    2   let attempts = 5;                                                                                               
+    3 }                                                                                                                 
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+
+---- render::components::completion::pressed stdout ----
+
+thread 'render::components::completion::pressed' (315725761) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::completion::pressed 120 40 junie truecolor` changed: baseline 9f4ca9af9726d314, got f7b389ebdfb56f5b; classify the change against §20.10, capture it, then BLESS=1
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│▎Ada Lovelace                                                                                                  analyst│
+│▎Grace Hopper                                                                                             rear admiral│
+│▎Alan Turing                                                                                                  logician│
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+---- render::components::completion::selected stdout ----
+
+thread 'render::components::completion::selected' (315725762) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::completion::selected 120 40 junie truecolor` changed: baseline 529d0b2b17216132, got c86abd37711baa7d; classify the change against §20.10, capture it, then BLESS=1
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › Ada Lovelace                                                                                                analyst│
+│ Grace Hopper                                                                                             rear admiral│
+│ Alan Turing                                                                                                  logician│
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+---- render::components::completion::focused stdout ----
+
+thread 'render::components::completion::focused' (315725759) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::completion::focused 120 40 junie truecolor` changed: baseline 529d0b2b17216132, got 1a890cdac19284f3; classify the change against §20.10, capture it, then BLESS=1
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│▎Ada Lovelace                                                                                                  analyst│
+│▎Grace Hopper                                                                                             rear admiral│
+│▎Alan Turing                                                                                                  logician│
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+---- render::components::dialog::disabled stdout ----
+
+thread 'render::components::dialog::disabled' (315725772) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::dialog::disabled 120 40 junie truecolor` changed: baseline 3b3a35187a544472, got 0b134dfe49fc91dc; classify the change against §20.10, capture it, then BLESS=1
+╭────────────────────────────────────────────────────╮                                                                  
+│   Delete table                                     │                                                                  
+│   This cannot be undone. Every row and every       │                                                                  
+│   index goes with it.                              │                                                                  
+│                                                    │                                                                  
+│                                     Cancel   OK    │                                                                  
+╰────────────────────────────────────────────────────╯                                                                  
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+
+---- render::components::context_menu::selected stdout ----
+
+thread 'render::components::context_menu::selected' (315725770) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::context_menu::selected 120 40 junie truecolor` changed: baseline 901d2f48c8a112ae, got 440b4817d3857677; classify the change against §20.10, capture it, then BLESS=1
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│› Save                                                                                                              s │
+│  Close                                                                                                               │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+---- render::components::filter_list::focused stdout ----
+
+thread 'render::components::filter_list::focused' (315725813) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::filter_list::focused 120 40 junie truecolor` changed: baseline 917af23a272149b8, got 3c317d296cfa0209; classify the change against §20.10, capture it, then BLESS=1
+▎Ada Lovelace                                                                                                    analyst
+ Grace Hopper                                                                                               rear admiral
+ Alan Turing                                                                                                    logician
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+
+---- render::components::filter_list::pressed stdout ----
+
+thread 'render::components::filter_list::pressed' (315725816) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::filter_list::pressed 120 40 junie truecolor` changed: baseline 917af23a272149b8, got a4cc19f8d477e695; classify the change against §20.10, capture it, then BLESS=1
+▎Ada Lovelace                                                                                                    analyst
+ Grace Hopper                                                                                               rear admiral
+ Alan Turing                                                                                                    logician
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+
+---- render::components::filter_list::selected stdout ----
+
+thread 'render::components::filter_list::selected' (315725817) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::filter_list::selected 120 40 junie truecolor` changed: baseline b7da71dfea121f8c, got 65b0aa26b58f144b; classify the change against §20.10, capture it, then BLESS=1
+ › Ada Lovelace                                                                                                  analyst
+ Grace Hopper                                                                                               rear admiral
+ Alan Turing                                                                                                    logician
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+
+---- render::components::menu_bar::disabled stdout ----
+
+thread 'render::components::menu_bar::disabled' (315725874) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::menu_bar::disabled 120 40 junie truecolor` changed: baseline 5cae5c8506ff7113, got ee73e38d0aac1d5f; classify the change against §20.10, capture it, then BLESS=1
+  File                                                                                                                  
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+
+---- render::components::list::pressed stdout ----
+
+thread 'render::components::list::pressed' (315725871) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::list::pressed 120 40 junie truecolor` changed: baseline d0e89104e36aa2ea, got 4f8509df4dd3d6a3; classify the change against §20.10, capture it, then BLESS=1
+▎  Ada Lovelace                                                                                                  analyst
+   Grace Hopper                                                                                             rear admiral
+   Alan Turing                                                                                                  logician
+   Edsger Dijkstra                                                                                             professor
+   Barbara Liskov                                                                                              professor
+   Ken Thompson                                                                                                 engineer
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+
+---- render::components::list::focused stdout ----
+
+thread 'render::components::list::focused' (315725869) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::list::focused 120 40 junie truecolor` changed: baseline ce3be201fd5894f6, got 82a91ae72dbb6f5f; classify the change against §20.10, capture it, then BLESS=1
+▎  Ada Lovelace                                                                                                  analyst
+   Grace Hopper                                                                                             rear admiral
+   Alan Turing                                                                                                  logician
+   Edsger Dijkstra                                                                                             professor
+   Barbara Liskov                                                                                              professor
+   Ken Thompson                                                                                                 engineer
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+
+---- render::components::list::disabled stdout ----
+
+thread 'render::components::list::disabled' (315725866) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::list::disabled 120 40 junie truecolor` changed: baseline ce3be201fd5894f6, got 75e65c95a31af14a; classify the change against §20.10, capture it, then BLESS=1
+   Ada Lovelace                                                                                                  analyst
+   Grace Hopper                                                                                             rear admiral
+   Alan Turing                                                                                                  logician
+   Edsger Dijkstra                                                                                             professor
+   Barbara Liskov                                                                                              professor
+   Ken Thompson                                                                                                 engineer
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+
+---- render::components::menu_bar::selected stdout ----
+
+thread 'render::components::menu_bar::selected' (315725880) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::menu_bar::selected 120 40 junie truecolor` changed: baseline 5cae5c8506ff7113, got 7ce2dcb96fe3ab74; classify the change against §20.10, capture it, then BLESS=1
+ ›File                                                                                                                  
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+
+---- render::components::nav_list::focused stdout ----
+
+thread 'render::components::nav_list::focused' (315725894) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::nav_list::focused 120 40 junie truecolor` changed: baseline aa170fa48c7bff95, got f554267b7ee8fc00; classify the change against §20.10, capture it, then BLESS=1
+ Core                                                                                                                   
+▎ › Ada Lovelace                                                                                               analyst 3
+                                                                                                                        
+ People                                                                                                                 
+  › Grace Hopper                                                                                            rear admiral
+  › Alan Turing                                                                                                 logician
+  › Edsger Dijkstra                                                                                            professor
+  › Barbara Liskov                                                                                             professor
+  › Ken Thompson                                                                                                engineer
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+
+---- render::components::nav_list::pressed stdout ----
+
+thread 'render::components::nav_list::pressed' (315725896) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::nav_list::pressed 120 40 junie truecolor` changed: baseline 49fcb62bf25e1aa1, got eb922fa4890e2230; classify the change against §20.10, capture it, then BLESS=1
+ Core                                                                                                                   
+▎ › Ada Lovelace                                                                                               analyst 3
+                                                                                                                        
+ People                                                                                                                 
+  › Grace Hopper                                                                                            rear admiral
+  › Alan Turing                                                                                                 logician
+  › Edsger Dijkstra                                                                                            professor
+  › Barbara Liskov                                                                                             professor
+  › Ken Thompson                                                                                                engineer
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+
+---- render::components::picker::focused stdout ----
+
+thread 'render::components::picker::focused' (315725910) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::picker::focused 120 40 junie truecolor` changed: baseline e86c596e8f67992e, got 535130592ffe9931; classify the change against §20.10, capture it, then BLESS=1
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│Choose                                                                                                                │
+│  Type to search…                                                                                                     │
+│                                                                                                                      │
+│▎Ada Lovelace                                                                                                  analyst│
+│ Grace Hopper                                                                                             rear admiral│
+│ Alan Turing                                                                                                  logician│
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+---- render::components::picker::pressed stdout ----
+
+thread 'render::components::picker::pressed' (315725912) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::picker::pressed 120 40 junie truecolor` changed: baseline e86c596e8f67992e, got de2267e2110c830b; classify the change against §20.10, capture it, then BLESS=1
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│Choose                                                                                                                │
+│  Type to search…                                                                                                     │
+│                                                                                                                      │
+│▎Ada Lovelace                                                                                                  analyst│
+│ Grace Hopper                                                                                             rear admiral│
+│ Alan Turing                                                                                                  logician│
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+---- render::components::picker::selected stdout ----
+
+thread 'render::components::picker::selected' (315725913) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::picker::selected 120 40 junie truecolor` changed: baseline 9b37264df946abc8, got fea42ba364322807; classify the change against §20.10, capture it, then BLESS=1
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│Choose                                                                                                                │
+│  Type to search…                                                                                                     │
+│                                                                                                                      │
+│ › Ada Lovelace                                                                                                analyst│
+│ Grace Hopper                                                                                             rear admiral│
+│ Alan Turing                                                                                                  logician│
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+---- render::components::picker_chain::selected stdout ----
+
+thread 'render::components::picker_chain::selected' (315725921) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::picker_chain::selected 120 40 junie truecolor` changed: baseline b7081733e2f45ede, got c606244a8c1a2098; classify the change against §20.10, capture it, then BLESS=1
+Account   Vault                                                                                                         
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+
+---- render::components::radio_group::focused stdout ----
+
+thread 'render::components::radio_group::focused' (315725934) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::radio_group::focused 120 40 junie truecolor` changed: baseline 57c4e8ba8931346e, got 84d18ca39b5fba5b; classify the change against §20.10, capture it, then BLESS=1
+▎(○) Ada Lovelace                                                                                                analyst
+ (○) Grace Hopper                                                                                           rear admiral
+ (○) Alan Turing                                                                                                logician
+ (○) Edsger Dijkstra                                                                                           professor
+ (○) Barbara Liskov                                                                                            professor
+ (○) Ken Thompson                                                                                               engineer
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+
+---- render::components::radio_group::pressed stdout ----
+
+thread 'render::components::radio_group::pressed' (315725936) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::radio_group::pressed 120 40 junie truecolor` changed: baseline 7c45f61130c600e6, got 7ffef17896cba04f; classify the change against §20.10, capture it, then BLESS=1
+▎(○) Ada Lovelace                                                                                                analyst
+ (○) Grace Hopper                                                                                           rear admiral
+ (○) Alan Turing                                                                                                logician
+ (○) Edsger Dijkstra                                                                                           professor
+ (○) Barbara Liskov                                                                                            professor
+ (○) Ken Thompson                                                                                               engineer
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+
+---- render::components::steps::disabled stdout ----
+
+thread 'render::components::steps::disabled' (315725981) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::steps::disabled 120 40 junie truecolor` changed: baseline 623bc6071dbf9908, got ed9df8a1994b1388; classify the change against §20.10, capture it, then BLESS=1
+ ✓ Ada Lovelace                                                                                             analyst done
+ ▪ Grace Hopper                                                                                     rear admiral running
+ ! Alan Turing                                                                                           logician failed
+ ▲ Edsger Dijkstra                                                                                     professor blocked
+ ▪ Barbara Liskov                                                                                      professor skipped
+ ▪ Ken Thompson                                                                                          engineer queued
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+
+---- render::components::steps::default stdout ----
+
+thread 'render::components::steps::default' (315725980) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::steps::default 120 40 junie truecolor` changed: baseline 1d00177b06f03b80, got 6f97c8f53eef8e7c; classify the change against §20.10, capture it, then BLESS=1
+ ✓ Ada Lovelace                                                                                             analyst done
+ ▪ Grace Hopper                                                                                     rear admiral running
+ ! Alan Turing                                                                                           logician failed
+ ▲ Edsger Dijkstra                                                                                     professor blocked
+ ▪ Barbara Liskov                                                                                      professor skipped
+ ▪ Ken Thompson                                                                                          engineer queued
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+
+---- render::components::steps::selected stdout ----
+
+thread 'render::components::steps::selected' (315726003) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::steps::selected 120 40 junie truecolor` changed: baseline 1d00177b06f03b80, got 6f97c8f53eef8e7c; classify the change against §20.10, capture it, then BLESS=1
+ ✓ Ada Lovelace                                                                                             analyst done
+ ▪ Grace Hopper                                                                                     rear admiral running
+ ! Alan Turing                                                                                           logician failed
+ ▲ Edsger Dijkstra                                                                                     professor blocked
+ ▪ Barbara Liskov                                                                                      professor skipped
+ ▪ Ken Thompson                                                                                          engineer queued
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+
+---- render::components::steps::hovered stdout ----
+
+thread 'render::components::steps::hovered' (315726001) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::steps::hovered 120 40 junie truecolor` changed: baseline 67b55aca61770e1a, got be5f542e73db3c06; classify the change against §20.10, capture it, then BLESS=1
+ ✓ Ada Lovelace                                                                                             analyst done
+ ▪ Grace Hopper                                                                                     rear admiral running
+ ! Alan Turing                                                                                           logician failed
+ ▲ Edsger Dijkstra                                                                                     professor blocked
+ ▪ Barbara Liskov                                                                                      professor skipped
+ ▪ Ken Thompson                                                                                          engineer queued
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+
+---- render::components::steps::pressed stdout ----
+
+thread 'render::components::steps::pressed' (315726002) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::steps::pressed 120 40 junie truecolor` changed: baseline 7835c2a984c9f970, got e7ee7a982b178431; classify the change against §20.10, capture it, then BLESS=1
+▎✓ Ada Lovelace                                                                                             analyst done
+ ▪ Grace Hopper                                                                                     rear admiral running
+ ! Alan Turing                                                                                           logician failed
+ ▲ Edsger Dijkstra                                                                                     professor blocked
+ ▪ Barbara Liskov                                                                                      professor skipped
+ ▪ Ken Thompson                                                                                          engineer queued
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+
+---- render::components::steps::focused stdout ----
+
+thread 'render::components::steps::focused' (315726000) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::steps::focused 120 40 junie truecolor` changed: baseline 1d00177b06f03b80, got d8ac5d6450160ea1; classify the change against §20.10, capture it, then BLESS=1
+▎✓ Ada Lovelace                                                                                             analyst done
+ ▪ Grace Hopper                                                                                     rear admiral running
+ ! Alan Turing                                                                                           logician failed
+ ▲ Edsger Dijkstra                                                                                     professor blocked
+ ▪ Barbara Liskov                                                                                      professor skipped
+ ▪ Ken Thompson                                                                                          engineer queued
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+
+---- render::components::tabs::focused stdout ----
+
+thread 'render::components::tabs::focused' (315726009) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::tabs::focused 120 40 junie truecolor` changed: baseline 345a10235d65f11f, got 9ecda219f913871c; classify the change against §20.10, capture it, then BLESS=1
+ General ×   Mounts ×   Roles ×   Audit ×   Advanced ×                                                               +  
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+
+---- render::components::steps::editing stdout ----
+
+thread 'render::components::steps::editing' (315725982) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::steps::editing 120 40 junie truecolor` changed: baseline 1d00177b06f03b80, got 6f97c8f53eef8e7c; classify the change against §20.10, capture it, then BLESS=1
+ ✓ Ada Lovelace                                                                                             analyst done
+ ▪ Grace Hopper                                                                                     rear admiral running
+ ! Alan Turing                                                                                           logician failed
+ ▲ Edsger Dijkstra                                                                                     professor blocked
+ ▪ Barbara Liskov                                                                                      professor skipped
+ ▪ Ken Thompson                                                                                          engineer queued
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+
+---- render::components::too_small::empty stdout ----
+
+thread 'render::components::too_small::empty' (315726065) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::too_small::empty 120 40 junie truecolor` changed: baseline 9ea56067744f820f, got 511be95f48f41361; classify the change against §20.10, capture it, then BLESS=1
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                         Junie                                                          
+                                                   Terminal too small                                                   
+                                                Need 72×20, have 120×40                                                 
+                                                                                                                        
+                                                         q Quit                                                         
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+
+---- render::components::tree::focused stdout ----
+
+thread 'render::components::tree::focused' (315726079) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::tree::focused 120 40 junie truecolor` changed: baseline 166c4078d8671dfc, got b8b1254d9cfd7c01; classify the change against §20.10, capture it, then BLESS=1
+▎▾ Workspace                                                                                                        root
+   ▾ crates                                                                                                          dir
+       tui                                                                                                           dir
+       tests                                                                                                         dir
+     Cargo.toml                                                                                                     file
+     README.md                                                                                                      file
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+
+---- render::components::wizard::focused stdout ----
+
+thread 'render::components::wizard::focused' (315726095) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::wizard::focused 120 40 junie truecolor` changed: baseline 8862c8bb099345a8, got 770d30d37083e354; classify the change against §20.10, capture it, then BLESS=1
+○ Account                               ● Details                               ○ Review                                
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+
+---- render::components::wizard::disabled stdout ----
+
+thread 'render::components::wizard::disabled' (315726092) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::wizard::disabled 120 40 junie truecolor` changed: baseline 8862c8bb099345a8, got 90c773fd36d4febe; classify the change against §20.10, capture it, then BLESS=1
+○ Account                               ○ Details                               ○ Review                                
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+
+---- render::components::tree::pressed stdout ----
+
+thread 'render::components::tree::pressed' (315726089) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::tree::pressed 120 40 junie truecolor` changed: baseline 166c4078d8671dfc, got be60fff850ff10b1; classify the change against §20.10, capture it, then BLESS=1
+▎▾ Workspace                                                                                                        root
+   ▾ crates                                                                                                          dir
+       tui                                                                                                           dir
+       tests                                                                                                         dir
+     Cargo.toml                                                                                                     file
+     README.md                                                                                                      file
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+
+---- render::components::wizard::pressed stdout ----
+
+thread 'render::components::wizard::pressed' (315726097) panicked at crates/tui-testing/src/digest.rs:253:9:
+digest of `render::components::wizard::pressed 120 40 junie truecolor` changed: baseline 8862c8bb099345a8, got 770d30d37083e354; classify the change against §20.10, capture it, then BLESS=1
+○ Account                               ● Details                               ○ Review                                
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+
+
+test result: FAILED. 298 passed; 38 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.93s
+[full output: "$HOME/Library/Application Support/rtk/tee/1788550948_cargo_test.log"]

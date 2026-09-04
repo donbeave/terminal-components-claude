@@ -1,0 +1,10 @@
+ ✓ Ada Lovelace             analyst done
+ ▪ Grace Hopper     rear admiral running
+ ! Alan Turing           logician failed
+ ▲ Edsger Dijkstra     professor blocked
+   Barbara Liskov      professor skipped
+   Ken Thompson          engineer queued
+                                        
+                                        
+                                        
+                                        

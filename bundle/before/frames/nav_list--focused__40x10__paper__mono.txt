@@ -1,0 +1,10 @@
+ Core                                   
+  › Ada Lovelace               analyst 3
+                                        
+ People                                 
+  › Grace Hopper            rear admiral
+  › Alan Turing                 logician
+  › Edsger Dijkstra            professor
+  › Barbara Liskov             professor
+  › Ken Thompson                engineer
+                                        

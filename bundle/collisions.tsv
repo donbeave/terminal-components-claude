@@ -1,0 +1,89 @@
+component	state_a	state_b	width	height	theme	color	digest	status	reason
+code_editor	default	selected	120	40	junie	mono	cece4c99eea46772	documented-exemption-candidate	CodeEditor selection is an edit range
+code_editor	default	selected	120	40	junie	truecolor	8a0ebfab287b61ce	documented-exemption-candidate	CodeEditor selection is an edit range
+code_editor	default	selected	120	40	paper	mono	4a5f3e9382a1db2a	documented-exemption-candidate	CodeEditor selection is an edit range
+code_editor	default	selected	120	40	paper	truecolor	6b645d24f89ac5e2	documented-exemption-candidate	CodeEditor selection is an edit range
+code_editor	default	selected	40	10	junie	mono	368236e005645fb2	documented-exemption-candidate	CodeEditor selection is an edit range
+code_editor	default	selected	40	10	junie	truecolor	a0a3a2ffbd50cbbe	documented-exemption-candidate	CodeEditor selection is an edit range
+code_editor	default	selected	40	10	paper	mono	951ae18216c6b7ea	documented-exemption-candidate	CodeEditor selection is an edit range
+code_editor	default	selected	40	10	paper	truecolor	221e5e3eda930862	documented-exemption-candidate	CodeEditor selection is an edit range
+dialog	default	selected	120	40	junie	mono	b737d61b383ec6f5	documented-exemption-candidate	Dialog actions are not a selection model
+dialog	default	selected	120	40	junie	truecolor	3b3a35187a544472	documented-exemption-candidate	Dialog actions are not a selection model
+dialog	default	selected	120	40	paper	mono	98782672ba8211f1	documented-exemption-candidate	Dialog actions are not a selection model
+dialog	default	selected	120	40	paper	truecolor	c32427125f196b4a	documented-exemption-candidate	Dialog actions are not a selection model
+dialog	default	selected	40	10	junie	mono	081728ded55d1575	documented-exemption-candidate	Dialog actions are not a selection model
+dialog	default	selected	40	10	junie	truecolor	bca990b4d6367868	documented-exemption-candidate	Dialog actions are not a selection model
+dialog	default	selected	40	10	paper	mono	f9fb14d2886dbe31	documented-exemption-candidate	Dialog actions are not a selection model
+dialog	default	selected	40	10	paper	truecolor	37273c6e6232fa10	documented-exemption-candidate	Dialog actions are not a selection model
+steps	default	selected	120	40	junie	mono	0dd35a5b77aaded0	documented-exemption-candidate	Steps is a lifecycle rail
+steps	default	selected	120	40	junie	truecolor	6f97c8f53eef8e7c	documented-exemption-candidate	Steps is a lifecycle rail
+steps	default	selected	120	40	paper	mono	a5f27324575ef5f0	documented-exemption-candidate	Steps is a lifecycle rail
+steps	default	selected	120	40	paper	truecolor	63e2941509496538	documented-exemption-candidate	Steps is a lifecycle rail
+steps	default	selected	40	10	junie	mono	02ada3dcd9d4ec10	documented-exemption-candidate	Steps is a lifecycle rail
+steps	default	selected	40	10	junie	truecolor	42efe2a721809b5c	documented-exemption-candidate	Steps is a lifecycle rail
+steps	default	selected	40	10	paper	mono	2d03e36f12991f50	documented-exemption-candidate	Steps is a lifecycle rail
+steps	default	selected	40	10	paper	truecolor	358155f904ae1808	documented-exemption-candidate	Steps is a lifecycle rail
+tabs	default	disabled	120	40	junie	mono	03263f48effb1240	documented-exemption-candidate	Tabs has no disabled prop
+tabs	default	disabled	120	40	junie	truecolor	345a10235d65f11f	documented-exemption-candidate	Tabs has no disabled prop
+tabs	default	disabled	120	40	paper	mono	ad59d0d63e9883e4	documented-exemption-candidate	Tabs has no disabled prop
+tabs	default	disabled	120	40	paper	truecolor	9aa17c11b0135f9e	documented-exemption-candidate	Tabs has no disabled prop
+tabs	default	disabled	40	10	junie	mono	8575598b028539ba	documented-exemption-candidate	Tabs has no disabled prop
+tabs	default	disabled	40	10	junie	truecolor	870f0d29c4b57860	documented-exemption-candidate	Tabs has no disabled prop
+tabs	default	disabled	40	10	paper	mono	a26add1c3797f552	documented-exemption-candidate	Tabs has no disabled prop
+tabs	default	disabled	40	10	paper	truecolor	2eb100378a3b3c43	documented-exemption-candidate	Tabs has no disabled prop
+too_small	default	focused	120	40	junie	mono	e37f4e0c8c41d85c	documented-exemption-candidate	TooSmall is passive
+too_small	default	disabled	120	40	junie	mono	e37f4e0c8c41d85c	documented-exemption-candidate	TooSmall has no disabled prop
+too_small	default	selected	120	40	junie	mono	e37f4e0c8c41d85c	documented-exemption-candidate	TooSmall is passive
+too_small	focused	disabled	120	40	junie	mono	e37f4e0c8c41d85c	documented-exemption-candidate	TooSmall is passive; TooSmall has no disabled prop
+too_small	focused	selected	120	40	junie	mono	e37f4e0c8c41d85c	documented-exemption-candidate	TooSmall is passive; TooSmall is passive
+too_small	disabled	selected	120	40	junie	mono	e37f4e0c8c41d85c	documented-exemption-candidate	TooSmall has no disabled prop; TooSmall is passive
+too_small	default	focused	120	40	junie	truecolor	511be95f48f41361	documented-exemption-candidate	TooSmall is passive
+too_small	default	disabled	120	40	junie	truecolor	511be95f48f41361	documented-exemption-candidate	TooSmall has no disabled prop
+too_small	default	selected	120	40	junie	truecolor	511be95f48f41361	documented-exemption-candidate	TooSmall is passive
+too_small	focused	disabled	120	40	junie	truecolor	511be95f48f41361	documented-exemption-candidate	TooSmall is passive; TooSmall has no disabled prop
+too_small	focused	selected	120	40	junie	truecolor	511be95f48f41361	documented-exemption-candidate	TooSmall is passive; TooSmall is passive
+too_small	disabled	selected	120	40	junie	truecolor	511be95f48f41361	documented-exemption-candidate	TooSmall has no disabled prop; TooSmall is passive
+too_small	default	focused	120	40	paper	mono	64212d720d76624a	documented-exemption-candidate	TooSmall is passive
+too_small	default	disabled	120	40	paper	mono	64212d720d76624a	documented-exemption-candidate	TooSmall has no disabled prop
+too_small	default	selected	120	40	paper	mono	64212d720d76624a	documented-exemption-candidate	TooSmall is passive
+too_small	focused	disabled	120	40	paper	mono	64212d720d76624a	documented-exemption-candidate	TooSmall is passive; TooSmall has no disabled prop
+too_small	focused	selected	120	40	paper	mono	64212d720d76624a	documented-exemption-candidate	TooSmall is passive; TooSmall is passive
+too_small	disabled	selected	120	40	paper	mono	64212d720d76624a	documented-exemption-candidate	TooSmall has no disabled prop; TooSmall is passive
+too_small	default	focused	120	40	paper	truecolor	8e35d33388e2d693	documented-exemption-candidate	TooSmall is passive
+too_small	default	disabled	120	40	paper	truecolor	8e35d33388e2d693	documented-exemption-candidate	TooSmall has no disabled prop
+too_small	default	selected	120	40	paper	truecolor	8e35d33388e2d693	documented-exemption-candidate	TooSmall is passive
+too_small	focused	disabled	120	40	paper	truecolor	8e35d33388e2d693	documented-exemption-candidate	TooSmall is passive; TooSmall has no disabled prop
+too_small	focused	selected	120	40	paper	truecolor	8e35d33388e2d693	documented-exemption-candidate	TooSmall is passive; TooSmall is passive
+too_small	disabled	selected	120	40	paper	truecolor	8e35d33388e2d693	documented-exemption-candidate	TooSmall has no disabled prop; TooSmall is passive
+too_small	default	focused	40	10	junie	mono	9dc2a8f43da5bbae	documented-exemption-candidate	TooSmall is passive
+too_small	default	disabled	40	10	junie	mono	9dc2a8f43da5bbae	documented-exemption-candidate	TooSmall has no disabled prop
+too_small	default	selected	40	10	junie	mono	9dc2a8f43da5bbae	documented-exemption-candidate	TooSmall is passive
+too_small	focused	disabled	40	10	junie	mono	9dc2a8f43da5bbae	documented-exemption-candidate	TooSmall is passive; TooSmall has no disabled prop
+too_small	focused	selected	40	10	junie	mono	9dc2a8f43da5bbae	documented-exemption-candidate	TooSmall is passive; TooSmall is passive
+too_small	disabled	selected	40	10	junie	mono	9dc2a8f43da5bbae	documented-exemption-candidate	TooSmall has no disabled prop; TooSmall is passive
+too_small	default	focused	40	10	junie	truecolor	6c9b7b495157c7c8	documented-exemption-candidate	TooSmall is passive
+too_small	default	disabled	40	10	junie	truecolor	6c9b7b495157c7c8	documented-exemption-candidate	TooSmall has no disabled prop
+too_small	default	selected	40	10	junie	truecolor	6c9b7b495157c7c8	documented-exemption-candidate	TooSmall is passive
+too_small	focused	disabled	40	10	junie	truecolor	6c9b7b495157c7c8	documented-exemption-candidate	TooSmall is passive; TooSmall has no disabled prop
+too_small	focused	selected	40	10	junie	truecolor	6c9b7b495157c7c8	documented-exemption-candidate	TooSmall is passive; TooSmall is passive
+too_small	disabled	selected	40	10	junie	truecolor	6c9b7b495157c7c8	documented-exemption-candidate	TooSmall has no disabled prop; TooSmall is passive
+too_small	default	focused	40	10	paper	mono	5384a23c1a196552	documented-exemption-candidate	TooSmall is passive
+too_small	default	disabled	40	10	paper	mono	5384a23c1a196552	documented-exemption-candidate	TooSmall has no disabled prop
+too_small	default	selected	40	10	paper	mono	5384a23c1a196552	documented-exemption-candidate	TooSmall is passive
+too_small	focused	disabled	40	10	paper	mono	5384a23c1a196552	documented-exemption-candidate	TooSmall is passive; TooSmall has no disabled prop
+too_small	focused	selected	40	10	paper	mono	5384a23c1a196552	documented-exemption-candidate	TooSmall is passive; TooSmall is passive
+too_small	disabled	selected	40	10	paper	mono	5384a23c1a196552	documented-exemption-candidate	TooSmall has no disabled prop; TooSmall is passive
+too_small	default	focused	40	10	paper	truecolor	b257d3ea9a3742e6	documented-exemption-candidate	TooSmall is passive
+too_small	default	disabled	40	10	paper	truecolor	b257d3ea9a3742e6	documented-exemption-candidate	TooSmall has no disabled prop
+too_small	default	selected	40	10	paper	truecolor	b257d3ea9a3742e6	documented-exemption-candidate	TooSmall is passive
+too_small	focused	disabled	40	10	paper	truecolor	b257d3ea9a3742e6	documented-exemption-candidate	TooSmall is passive; TooSmall has no disabled prop
+too_small	focused	selected	40	10	paper	truecolor	b257d3ea9a3742e6	documented-exemption-candidate	TooSmall is passive; TooSmall is passive
+too_small	disabled	selected	40	10	paper	truecolor	b257d3ea9a3742e6	documented-exemption-candidate	TooSmall has no disabled prop; TooSmall is passive
+wizard	default	selected	120	40	junie	mono	493c6b527c9bb2b8	documented-exemption-candidate	Wizard tracks progress
+wizard	default	selected	120	40	junie	truecolor	8862c8bb099345a8	documented-exemption-candidate	Wizard tracks progress
+wizard	default	selected	120	40	paper	mono	1f9a6c68f96d1140	documented-exemption-candidate	Wizard tracks progress
+wizard	default	selected	120	40	paper	truecolor	2a9991ed121f720a	documented-exemption-candidate	Wizard tracks progress
+wizard	default	selected	40	10	junie	mono	460f5c1ee441a9e0	documented-exemption-candidate	Wizard tracks progress
+wizard	default	selected	40	10	junie	truecolor	570b446a1182977c	documented-exemption-candidate	Wizard tracks progress
+wizard	default	selected	40	10	paper	mono	526eebbd75b93920	documented-exemption-candidate	Wizard tracks progress
+wizard	default	selected	40	10	paper	truecolor	5e4c34fbf5f8830a	documented-exemption-candidate	Wizard tracks progress

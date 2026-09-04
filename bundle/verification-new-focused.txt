@@ -1,0 +1,12 @@
+TEST focused_disabled_selected_states_are_digest_distinct
+cargo test: 1 passed, 336 filtered out (1 suite, 1.18s)
+TEST visual_state_gate_rejects_collisions_and_stale_exemptions
+cargo test: 1 passed, 336 filtered out (1 suite, 2.42s)
+TEST too_small_and_panel_fixtures_keep_their_stateful_content
+cargo test: 1 passed, 336 filtered out (1 suite, 0.00s)
+TEST selected_picker_rows_use_the_canonical_chosen_marker
+cargo test: 1 passed, 336 filtered out (1 suite, 0.01s)
+TEST selected_menu_titles_use_the_canonical_chosen_marker
+cargo test: 1 passed, 336 filtered out (1 suite, 0.00s)
+TEST button_checked_glyph_is_stable_across_colour_levels
+cargo test: 1 passed, 336 filtered out (1 suite, 0.00s)
