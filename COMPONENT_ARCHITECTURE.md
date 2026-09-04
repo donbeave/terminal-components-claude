@@ -4232,7 +4232,8 @@ Shared, contended files are handled by convention rather than by ownership: `com
 4. `tools/capture.sh`: `S=junie_cap` (tmux session name) and `BIN=${BIN:-target/debug/junie-tui}` — the latter is already stale (the package has no binary of that name) and becomes `BIN=${BIN:-target/debug/showcase}` in Slice 5 regardless of any rename.
 5. `README.md` and `DESIGN.md` prose, install snippets, and the `UPDATE_BASELINE` documentation.
 6. `tests/showcase_baseline.txt` moves to `apps/showcase/tests/baselines/showcase.txt` in Slice 5 regardless; its `CARGO_MANIFEST_DIR` anchor changes crates either way.
-7. `shots/` filenames are unaffected.
+7. `shots/` keeps one safe name per capture; each name is published as a
+   transactional directory containing `ansi`, `txt`, `cursor`, `html`, and `png`.
 8. `architecture::binary_names_are_preserved` and `architecture::msrv_and_edition_are_unchanged` are unaffected — the *binary* names never change.
 
 **Binary names are preserved exactly** (goal §21): `showcase`, `tablepro`, `jackin-preview`. Each becomes its own package whose single `[[bin]]` carries the required name, so `cargo run -p showcase` and `target/debug/showcase` both work and `cargo build --workspace` produces all three. The current `default-run = "showcase"` has no workspace equivalent and is dropped; `cargo run -p showcase` replaces it and is documented in `README.md`.

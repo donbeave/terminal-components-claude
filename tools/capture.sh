@@ -309,6 +309,46 @@ record_provenance() {
     --artifact "png=$png_path"
 }
 
+remove_generation_dir() {
+  local directory=$1 artifact path
+  if [[ -L "$directory" || ! -d "$directory" ]]; then
+    echo "capture failed: generation is not a real directory: $directory" >&2
+    return 1
+  fi
+  for artifact in ansi cursor txt html png; do
+    path=$directory/$artifact
+    if [[ -L "$path" ]]; then
+      echo "capture failed: refusing symlink generation artifact: $path" >&2
+      return 1
+    fi
+    if [[ -e "$path" && ! -f "$path" ]]; then
+      echo "capture failed: generation artifact is not a regular file: $path" >&2
+      return 1
+    fi
+    if [[ -e "$path" ]] && ! rm -f "$path"; then
+      echo "capture failed: cannot remove generation artifact: $path" >&2
+      return 1
+    fi
+  done
+  if ! rmdir "$directory"; then
+    echo "capture failed: generation directory is not empty: $directory" >&2
+    return 1
+  fi
+}
+
+move_failed_generation_aside() {
+  local source=$1 destination=$2
+  if [[ -L "$source" || ! -d "$source" ]]; then
+    echo "capture failed: cannot quarantine unsafe generation: $source" >&2
+    return 1
+  fi
+  if [[ -e "$destination" || -L "$destination" ]]; then
+    echo "capture failed: generation quarantine already exists: $destination" >&2
+    return 1
+  fi
+  mv "$source" "$destination"
+}
+
 load_run_state() {
   validate_run_id "$CAPTURE_RUN_ID"
   STATE_ROOT_PATH=$(absolute_path "$CAPTURE_STATE_DIR")
@@ -414,25 +454,21 @@ case "$cmd" in
     theme=$(capture_theme)
     case "$COLOR" in
       truecolor)
-        app_env=(env -u NO_COLOR TERM=xterm-256color COLORTERM=truecolor)
         effective_no_color='<unset>'
         effective_term=xterm-256color
         effective_colorterm=truecolor
         ;;
       256)
-        app_env=(env -u NO_COLOR -u COLORTERM TERM=xterm-256color)
         effective_no_color='<unset>'
         effective_term=xterm-256color
         effective_colorterm='<unset>'
         ;;
       16)
-        app_env=(env -u NO_COLOR -u COLORTERM TERM=xterm)
         effective_no_color='<unset>'
         effective_term=xterm
         effective_colorterm='<unset>'
         ;;
       mono)
-        app_env=(env NO_COLOR=1 TERM=xterm-256color COLORTERM=truecolor)
         effective_no_color=1
         effective_term=xterm-256color
         effective_colorterm=truecolor
@@ -513,7 +549,12 @@ case "$cmd" in
       --argv "${APP_ARGV[@]}"
     if ! actual_session_id=$(tmux -f /dev/null new-session -d -P -F '#{session_id}' \
       -s "$SESSION_NAME" -c "$ROOT_DIR" -x "$cols" -y "$rows" \
-      "${app_env[@]}" "$RUNNER" "$STDERR_FILE" "$RUN_EXIT_FILE" "${APP_ARGV[@]}" \
+      -e "CAPTURE_METADATA_FILE=$RUN_METADATA_FILE" \
+      -e "CAPTURE_RUN_ID=$CAPTURE_RUN_ID" \
+      -e "CAPTURE_STDERR_FILE=$STDERR_FILE" \
+      -e "CAPTURE_EXIT_FILE=$RUN_EXIT_FILE" \
+      -e "CAPTURE_COLOR_MODE=$COLOR" \
+      /bin/bash tools/capture_exec.sh \
     ); then
       # A server can create a session before reporting a command error.  The
       # printed id is authoritative only when the named session still has it;
@@ -600,54 +641,85 @@ case "$cmd" in
     cols=$(tmux display -p -t "$SESSION_NAME" '#{pane_width}')
     rows=$(tmux display -p -t "$SESSION_NAME" '#{pane_height}')
     validate_dimensions "$cols" "$rows"
-    base=$CAPTURE_DIR_PATH/$name
-    ansi_path=$base.ansi
-    cursor_path=$base.cursor
-    text_path=$base.txt
-    html_path=$base.html
-    png_path=$base.png
-    ensure_state_target "$ansi_path" "ANSI artifact"
-    ensure_state_target "$cursor_path" "cursor artifact"
-    ensure_state_target "$text_path" "text artifact"
-    ensure_state_target "$html_path" "HTML artifact"
-    ensure_state_target "$png_path" "PNG artifact"
-    for artifact in "$ansi_path" "$cursor_path" "$text_path" "$html_path" "$png_path"; do
-      if [[ -e "$artifact" ]]; then
-        rm -f "$artifact"
-      fi
-    done
+    final_dir=$CAPTURE_DIR_PATH/$name
+    if [[ -L "$final_dir" || ( -e "$final_dir" && ! -d "$final_dir" ) ]]; then
+      echo "capture failed: final generation is not a safe directory: $final_dir" >&2
+      exit 1
+    fi
+    ansi_path=$final_dir/ansi
+    cursor_path=$final_dir/cursor
+    text_path=$final_dir/txt
+    html_path=$final_dir/html
+    png_path=$final_dir/png
+    stage_dir=
+    backup_dir=$CAPTURE_DIR_PATH/.${name}.previous.$CAPTURE_RUN_ID
+    failed_dir=$CAPTURE_DIR_PATH/.${name}.failed.$CAPTURE_RUN_ID
+    if [[ -e "$backup_dir" || -L "$backup_dir" || -e "$failed_dir" || -L "$failed_dir" ]]; then
+      echo "capture failed: stale transactional capture state exists for $name" >&2
+      exit 1
+    fi
+    if ! stage_dir=$(mktemp -d "$CAPTURE_DIR_PATH/.${name}.staging.XXXXXX"); then
+      echo "capture failed: cannot create staging generation for $name" >&2
+      exit 1
+    fi
+    if [[ -L "$stage_dir" || ! -d "$stage_dir" ]]; then
+      echo "capture failed: staging generation is not a safe directory: $stage_dir" >&2
+      exit 1
+    fi
+    stage_ansi=$stage_dir/ansi
+    stage_cursor=$stage_dir/cursor
+    stage_text=$stage_dir/txt
+    stage_html=$stage_dir/html
+    stage_png=$stage_dir/png
     temporary_artifacts=()
+    staged_artifacts=("$stage_ansi" "$stage_cursor" "$stage_text" "$stage_html" "$stage_png")
     cleanup_temporary_artifacts() {
-      local temporary
+      local status=$? temporary artifact
+      trap - EXIT
       for temporary in "${temporary_artifacts[@]}"; do
-        [[ -e "$temporary" ]] && rm -f "$temporary" || true
+        if [[ -L "$temporary" ]]; then
+          echo "capture cleanup failed: refusing symlink temporary $temporary" >&2
+        elif [[ -e "$temporary" ]]; then
+          rm -f "$temporary" || true
+        fi
       done
+      for artifact in "${staged_artifacts[@]}"; do
+        if [[ -L "$artifact" ]]; then
+          echo "capture cleanup failed: refusing symlink staged artifact $artifact" >&2
+        elif [[ -e "$artifact" ]]; then
+          rm -f "$artifact" || true
+        fi
+      done
+      if [[ -n "$stage_dir" && -d "$stage_dir" && ! -L "$stage_dir" ]]; then
+        rmdir "$stage_dir" 2>/dev/null || true
+      fi
+      exit "$status"
     }
     trap cleanup_temporary_artifacts EXIT
-    ansi_tmp=$(mktemp "${ansi_path}.tmp.XXXXXX")
-    cursor_tmp=$(mktemp "${cursor_path}.tmp.XXXXXX")
-    text_tmp=$(mktemp "${text_path}.tmp.XXXXXX")
-    html_tmp=$(mktemp "${html_path}.tmp.XXXXXX")
-    png_tmp=$(mktemp "${png_path}.tmp.XXXXXX")
+    ansi_tmp=$(mktemp "$stage_dir/.ansi.XXXXXX")
+    cursor_tmp=$(mktemp "$stage_dir/.cursor.XXXXXX")
+    text_tmp=$(mktemp "$stage_dir/.txt.XXXXXX")
+    html_tmp=$(mktemp "$stage_dir/.html.XXXXXX")
+    png_tmp=$(mktemp "$stage_dir/.png.XXXXXX")
     temporary_artifacts=("$ansi_tmp" "$cursor_tmp" "$text_tmp" "$html_tmp" "$png_tmp")
     tmux capture-pane -t "$SESSION_NAME" -e -p -N > "$ansi_tmp"
     tmux display -p -t "$SESSION_NAME" '#{cursor_x} #{cursor_y} #{cursor_flag}' > "$cursor_tmp"
     tmux capture-pane -t "$SESSION_NAME" -p > "$text_tmp"
-    mv -f "$ansi_tmp" "$ansi_path"
-    mv -f "$cursor_tmp" "$cursor_path"
-    mv -f "$text_tmp" "$text_path"
+    mv -f "$ansi_tmp" "$stage_ansi"
+    mv -f "$cursor_tmp" "$stage_cursor"
+    mv -f "$text_tmp" "$stage_text"
     conversion_failed=0
-    if ! python3 "$ROOT_DIR/tools/ansi2html.py" "$ansi_path" "$html_tmp" "$cols" "$rows"; then
-      echo "capture failed: ansi2html could not convert $ansi_path" >&2
+    if ! python3 "$ROOT_DIR/tools/ansi2html.py" "$stage_ansi" "$html_tmp" "$cols" "$rows"; then
+      echo "capture failed: ansi2html could not convert $stage_ansi" >&2
       conversion_failed=1
     else
-      mv -f "$html_tmp" "$html_path"
+      mv -f "$html_tmp" "$stage_html"
     fi
-    if ! "$PYTHON_BIN" "$ROOT_DIR/tools/ansi2png.py" "$ansi_path" "$png_tmp" "$cols" "$rows" "$cursor_path"; then
-      echo "capture failed: ansi2png could not convert $ansi_path" >&2
+    if ! "$PYTHON_BIN" "$ROOT_DIR/tools/ansi2png.py" "$stage_ansi" "$png_tmp" "$cols" "$rows" "$stage_cursor"; then
+      echo "capture failed: ansi2png could not convert $stage_ansi" >&2
       conversion_failed=1
     else
-      mv -f "$png_tmp" "$png_path"
+      mv -f "$png_tmp" "$stage_png"
     fi
 
     exit_status=$(read_exit_status)
@@ -661,7 +733,7 @@ case "$cmd" in
     fi
 
     artifact_failed=0
-    for artifact in "$ansi_path" "$cursor_path" "$text_path" "$html_path" "$png_path"; do
+    for artifact in "${staged_artifacts[@]}"; do
       if [[ ! -s "$artifact" || -L "$artifact" || ! -f "$artifact" ]]; then
         echo "capture failed: artifact is missing, empty, or unsafe: $artifact" >&2
         artifact_failed=1
@@ -672,10 +744,67 @@ case "$cmd" in
     if (( conversion_failed != 0 || app_failed != 0 || artifact_failed != 0 )); then
       capture_status=failed
     fi
-    record_provenance "$name" "$cols" "$rows" "$capture_status" "$exit_status" \
-      "$ansi_path" "$cursor_path" "$text_path" "$html_path" "$png_path"
     if [[ "$capture_status" == failed ]]; then
+      # Failed conversions never replace an older complete generation.  The
+      # failure record points at the published paths, not ephemeral staging.
+      if ! record_provenance "$name" "$cols" "$rows" "$capture_status" "$exit_status" \
+        "$ansi_path" "$cursor_path" "$text_path" "$html_path" "$png_path"; then
+        echo "capture failed: cannot record failed capture provenance" >&2
+      fi
       exit 1
+    fi
+
+    backup_moved=0
+    if [[ -d "$final_dir" ]]; then
+      if ! mv "$final_dir" "$backup_dir"; then
+        echo "capture failed: cannot stage previous generation for $name" >&2
+        exit 1
+      fi
+      backup_moved=1
+    fi
+    if ! mv "$stage_dir" "$final_dir"; then
+      if (( backup_moved != 0 )); then
+        mv "$backup_dir" "$final_dir" || true
+        backup_moved=0
+      fi
+      echo "capture failed: cannot publish complete generation for $name" >&2
+      exit 1
+    fi
+    stage_dir=
+    staged_artifacts=()
+
+    rollback_publication() {
+      local rollback_failed=0
+      if [[ -d "$final_dir" && ! -L "$final_dir" ]]; then
+        if ! move_failed_generation_aside "$final_dir" "$failed_dir"; then
+          rollback_failed=1
+        fi
+      fi
+      if (( backup_moved != 0 )); then
+        if ! mv "$backup_dir" "$final_dir"; then
+          rollback_failed=1
+        else
+          backup_moved=0
+        fi
+      fi
+      if [[ -d "$failed_dir" && ! -L "$failed_dir" ]]; then
+        remove_generation_dir "$failed_dir" || rollback_failed=1
+      fi
+      return "$rollback_failed"
+    }
+    if ! record_provenance "$name" "$cols" "$rows" "$capture_status" "$exit_status" \
+      "$ansi_path" "$cursor_path" "$text_path" "$html_path" "$png_path"; then
+      if ! rollback_publication; then
+        echo "capture failed: provenance failed and previous generation rollback failed" >&2
+      fi
+      exit 1
+    fi
+    if (( backup_moved != 0 )); then
+      if ! remove_generation_dir "$backup_dir"; then
+        echo "capture warning: previous generation retained at $backup_dir" >&2
+      else
+        backup_moved=0
+      fi
     fi
     echo "$html_path ($cols x $rows; run=$CAPTURE_RUN_ID; color=$(state_value "$RUN_COLOR_FILE" "$COLOR"); provenance=$CAPTURE_MANIFEST_PATH)"
     ;;
