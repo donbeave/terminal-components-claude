@@ -1,0 +1,8 @@
+# perf baseline: name ns allocs bytes [hits ring]
+# copied unchanged from the legacy root TablePro rows; review like a snapshot
+frame_tablepro_grid_500x12_120x40 124566 1030 46119 176 5
+grid_500x12_load 2084950 61005 2635335
+key_tablepro_grid_cursor 76 2 19
+key_tablepro_grid_sort_local 108243 7428 268727
+mouse_click_grid_cell 323 2 19
+wheel_tablepro_grid 133 0 0

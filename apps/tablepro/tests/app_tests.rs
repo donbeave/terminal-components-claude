@@ -1,16 +1,29 @@
 //! End-to-end interaction tests through the real App on a TestBackend.
 
+#![allow(
+    clippy::all,
+    clippy::pedantic,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::indexing_slicing,
+    clippy::arithmetic_side_effects,
+    missing_docs,
+    missing_debug_implementations,
+    reason = "these are the unchanged legacy interaction assertions"
+)]
+
 use ratatui::Terminal;
 use ratatui::backend::TestBackend;
 use ratatui::crossterm::event::{KeyCode, KeyModifiers};
 use ratatui::layout::Position;
 
-use junie_tui::core::event::{Input, Key, Mouse, MouseKind, Outcome};
-use junie_tui::core::id::WidgetId;
-use junie_tui::theme::Theme;
+use tablepro_app::legacy_facade::core::event::{Input, Key, Mouse, MouseKind, Outcome};
+use tablepro_app::legacy_facade::core::id::WidgetId;
+use tablepro_app::legacy_facade::theme::Theme;
 
-use crate::app::{App, Modal, Screen};
-use crate::workbench::WorkTab;
+use tablepro_app::app::{App, Modal, Screen};
+use tablepro_app::workbench::WorkTab;
 
 pub struct H {
     pub app: App,
@@ -116,7 +129,7 @@ impl H {
     pub fn focus(&self) -> Option<WidgetId> {
         self.app.focus.current()
     }
-    pub fn wb(&self) -> &crate::workbench::Workbench {
+    pub fn wb(&self) -> &tablepro_app::workbench::Workbench {
         self.app.workbench.as_ref().unwrap()
     }
 }
@@ -417,7 +430,7 @@ fn safety_gate_typed_token_executes() {
 #[test]
 fn read_only_connection_refuses_writes() {
     let mut h = H::connected(120, 40);
-    h.app.workbench.as_mut().unwrap().connection.safe_mode = crate::db::SafeMode::ReadOnly;
+    h.app.workbench.as_mut().unwrap().connection.safe_mode = tablepro_app::db::SafeMode::ReadOnly;
     h.key(KeyCode::Tab);
     h.key(KeyCode::Char('i'));
     h.type_str("DELETE FROM orders WHERE id = 'x'");
@@ -431,7 +444,7 @@ fn read_only_connection_refuses_writes() {
 #[test]
 fn silent_level_runs_scoped_writes_but_confirms_destructive() {
     let mut h = H::connected(120, 40);
-    h.app.workbench.as_mut().unwrap().connection.safe_mode = crate::db::SafeMode::Silent;
+    h.app.workbench.as_mut().unwrap().connection.safe_mode = tablepro_app::db::SafeMode::Silent;
     h.key(KeyCode::Tab);
     h.key(KeyCode::Char('i'));
     h.type_str("UPDATE orders SET status = 'paid'");
@@ -572,7 +585,10 @@ fn safe_mode_picker_changes_level_and_strip() {
     assert!(h.text().contains("Safe Mode · this connection"));
     h.key(KeyCode::Down); // Safe Mode (Full)
     h.key(KeyCode::Enter);
-    assert_eq!(h.wb().connection.safe_mode, crate::db::SafeMode::SafeFull);
+    assert_eq!(
+        h.wb().connection.safe_mode,
+        tablepro_app::db::SafeMode::SafeFull
+    );
     assert!(h.text().contains("safe+"));
 }
 
@@ -641,7 +657,7 @@ fn every_screen_renders_at_representative_sizes() {
 }
 
 impl H {
-    pub fn wb_query(&self) -> &crate::tabs::QueryTab {
+    pub fn wb_query(&self) -> &tablepro_app::tabs::QueryTab {
         match self.wb().active_tab() {
             Some(WorkTab::Query(q)) => q,
             _ => panic!("active tab is not a query"),

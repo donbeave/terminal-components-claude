@@ -6,12 +6,25 @@
 //! compared against `tests/baselines/tablepro.txt`. Regenerate only with
 //! `UPDATE_BASELINE=1` after inspecting the change.
 
+#![allow(
+    clippy::all,
+    clippy::pedantic,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::indexing_slicing,
+    clippy::arithmetic_side_effects,
+    reason = "this is the unchanged legacy visual digest contract"
+)]
+
 use ratatui::crossterm::event::KeyCode;
 
-use crate::app::{Modal, Screen};
-use crate::app_tests::H;
-use crate::connections::ConnState;
-use crate::workbench::WorkTab;
+use tablepro_app::app::{Modal, Screen};
+mod support;
+
+use support::H;
+use tablepro_app::connections::ConnState;
+use tablepro_app::workbench::WorkTab;
 
 /// FNV-1a over every cell of the current frame. No rect is excluded.
 fn digest(h: &H) -> u64 {

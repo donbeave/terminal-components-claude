@@ -10,6 +10,21 @@
 //! `sql::ROW_CAP` = 500 rows, so the "500×12" benchmarks of the audit run
 //! on a 500×14 grid here.
 
+#![allow(
+    unsafe_code,
+    clippy::all,
+    clippy::pedantic,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::indexing_slicing,
+    clippy::arithmetic_side_effects,
+    clippy::undocumented_unsafe_blocks,
+    clippy::print_stdout,
+    unreachable_pub,
+    reason = "the legacy allocator gate intentionally uses unsafe GlobalAlloc"
+)]
+
 #[path = "../../../tests/perf_common.rs"]
 mod perf_common;
 
@@ -20,13 +35,13 @@ use ratatui::backend::TestBackend;
 use ratatui::crossterm::event::{KeyCode, KeyModifiers};
 use ratatui::layout::Position;
 
-use junie_tui::core::event::{Input, Key, Mouse, MouseKind};
-use junie_tui::theme::Theme;
+use tablepro_app::legacy_facade::core::event::{Input, Key, Mouse, MouseKind};
+use tablepro_app::legacy_facade::theme::Theme;
 
-use crate::app::App;
-use crate::tabs::TableTab;
-use crate::workbench::WorkTab;
 use perf_common::{Counting, bench, env_flag, iters, lock, report};
+use tablepro_app::app::App;
+use tablepro_app::tabs::TableTab;
+use tablepro_app::workbench::WorkTab;
 
 #[global_allocator]
 static GLOBAL: Counting = Counting;

@@ -211,6 +211,26 @@ The first generation is produced on the pre-refactor tree (Appendix A, WP‑0 �
 
 captures / classification: `(pending — filled when the change lands)`
 
+```
+- surface:   tablepro/legacy-renderer/first-generation @ {120x40,80x24} / junie / truecolor-compatible frame text
+- captures:  none under `shots/` — the legacy digest is produced headlessly by the retained `TestBackend`; the reviewable artefact is the unchanged frame-text dump represented by `tests/baselines/tablepro.txt` and the restored `tablepro_visual_baseline` test
+- tests:     `apps/tablepro/tests/baselines/tablepro.txt`, `tablepro_visual_baseline`
+- moved:     none
+- added:     42 keys: `{120x40,80x24} {connections,connections-failed,workbench-default,explorer-focused,table-grid,grid-cell-editing,pending-change-bar,structure-view,query-editing,completion-popup,results-grid,error-result,explain-plan,history-tab,quick-switcher,tab-list-picker,safe-mode-picker,filter-editor,safety-dialog-typed-ack,help-dialog,maximised-tab}`
+- class:     intended
+- reason:    §20.10 item 14. The unchanged legacy TablePro frame digest is now owned by the application package while the frozen root evidence remains untouched.
+```
+
+```
+- surface:   tablepro/legacy-renderer/performance-gates @ all retained benchmark surfaces / release allocator counts
+- captures:  none under `shots/` — allocator gates are headless; the reviewable artefact is the unchanged six-row TablePro slice copied from the frozen root performance evidence
+- tests:     `apps/tablepro/tests/perf_baseline.txt`, `frame_tablepro_grid_500x12_120x40`, `grid_500x12_load`, `key_tablepro_grid_cursor`, `key_tablepro_grid_sort_local`, `mouse_click_grid_cell`, `wheel_tablepro_grid`
+- moved:     none
+- added:     6 keys: `{frame_tablepro_grid_500x12_120x40,grid_500x12_load,key_tablepro_grid_cursor,key_tablepro_grid_sort_local,mouse_click_grid_cell,wheel_tablepro_grid}`
+- class:     intended
+- reason:    §20.10 item 14. The retained 254-line allocator harness now reads its six TablePro rows from the application-owned baseline without changing any recorded count.
+```
+
 ## Item 15 — Focus-ring composition changes in migrated screens (§21 item 33)
 
 Per affected test: old reachable count, new reachable count, the `Harness::ring().reachable()` listing, and the reason — written **before** the expected value in the test is edited. Also the home for `frame_showcase_lists_120x40`'s classified hit-count growth (§16.6, P8).

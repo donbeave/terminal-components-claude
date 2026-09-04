@@ -1,20 +1,6 @@
 //! TablePro, terminal edition: the core database workbench built on the
 //! Junie-inspired design system.
 
-mod app;
-#[cfg(test)]
-mod app_tests;
-mod connections;
-mod db;
-mod model;
-#[cfg(test)]
-mod perf_tests;
-mod sql;
-mod tabs;
-#[cfg(test)]
-mod visual_tests;
-mod workbench;
-
 use junie_tui::core::event::{Input, Outcome};
 use junie_tui::theme::{ColorLevel, Theme, ThemeKind};
 
@@ -73,7 +59,7 @@ fn parse_args() -> Options {
     }
 }
 
-fn main() -> std::io::Result<()> {
+pub fn run() -> std::io::Result<()> {
     let opts = parse_args();
     let theme = Theme::for_theme(opts.theme, opts.level);
     let mut app = App::new(theme);
