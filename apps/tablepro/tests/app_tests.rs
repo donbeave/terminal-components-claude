@@ -1,12 +1,4 @@
 //! Slice 6's preserved `TablePro` workflow scenarios.
-#![allow(
-    clippy::all,
-    clippy::pedantic,
-    clippy::indexing_slicing,
-    clippy::unwrap_used,
-    clippy::expect_used,
-    clippy::panic
-)]
 
 use tablepro_app::{
     QueryOutcome, Screen, Surface, TableProApp,
@@ -42,15 +34,19 @@ fn failed_connection_shows_error_and_retry() {
     assert!(app.connections_screen.error.is_some());
 }
 #[test]
-fn explorer_opens_table_and_grid_navigates() {
+fn explorer_opens_table_and_grid_navigates() -> Result<(), String> {
     let mut app = connected();
     assert!(app.workbench.open_table("orders"));
-    let tab = app.workbench.active_table().expect("table tab");
+    let tab = app
+        .workbench
+        .active_table()
+        .ok_or_else(|| "opening orders did not create a table tab".to_owned())?;
     assert_eq!(tab.result.row_count(), 500);
     assert_eq!(tab.table.name, "orders");
+    Ok(())
 }
 #[test]
-fn sort_and_filter_on_table_tab() {
+fn sort_and_filter_on_table_tab() -> Result<(), String> {
     let mut app = connected();
     assert!(app.workbench.open_table("orders"));
     let filter = Filter {
@@ -62,10 +58,13 @@ fn sort_and_filter_on_table_tab() {
     };
     assert!(app.workbench.apply_filter(filter.clone()));
     assert_eq!(filter.to_sql(), "status = 'pending'");
-    if let Some(tab) = app.workbench.active_table_mut() {
-        tab.sort(0, tui_next::SortDir::Desc);
-        assert_eq!(tab.filters.len(), 1);
-    }
+    let tab = app
+        .workbench
+        .active_table_mut()
+        .ok_or_else(|| "filtering orders did not create a table tab".to_owned())?;
+    tab.sort(0, tui_next::SortDir::Desc);
+    assert_eq!(tab.filters.len(), 1);
+    Ok(())
 }
 #[test]
 fn structure_view_toggle() {
@@ -75,13 +74,13 @@ fn structure_view_toggle() {
     assert!(
         app.workbench
             .active_table()
-            .is_some_and(|tab| tab.is_structure())
+            .is_some_and(tablepro_app::tabs::TableTab::is_structure)
     );
     assert!(app.workbench.toggle_structure());
     assert!(
         !app.workbench
             .active_table()
-            .is_some_and(|tab| tab.is_structure())
+            .is_some_and(tablepro_app::tabs::TableTab::is_structure)
     );
 }
 #[test]
@@ -108,16 +107,20 @@ fn execution_error_marks_editor_and_result() {
     assert!(app.status().contains("nope"));
 }
 #[test]
-fn cancel_running_query() {
+fn cancel_running_query() -> Result<(), String> {
     let mut app = connected();
     let index = app.workbench.new_query("SELECT * FROM orders");
-    if let Some(Tab::Query(query)) = app.workbench.tabs.get_mut(index) {
-        query.running = true;
-        query.running = false;
-        assert!(!query.running);
-    } else {
-        panic!("new query must be active");
-    }
+    let tab = app
+        .workbench
+        .tabs
+        .get_mut(index)
+        .ok_or_else(|| "new query tab was not created".to_owned())?;
+    let Tab::Query(query) = tab else {
+        return Err("new query was not a query tab".to_owned());
+    };
+    query.running = true;
+    query.running = false;
+    assert!(!query.running);
     assert!(
         app.workbench
             .history
@@ -125,18 +128,26 @@ fn cancel_running_query() {
             .iter()
             .all(|entry| !entry.sql.contains("running"))
     );
+    Ok(())
 }
 #[test]
-fn explain_opens_plan_tree() {
+fn explain_opens_plan_tree() -> Result<(), String> {
     let mut app = connected();
     let index = app.workbench.new_query("SELECT * FROM orders LIMIT 5");
     let catalog = app.workbench.catalog.clone();
-    if let Some(Tab::Query(query)) = app.workbench.tabs.get_mut(index) {
-        assert!(query.explain(&catalog).is_ok());
-        assert!(query.plan.is_some());
-    } else {
-        panic!("new query must be active");
-    }
+    let tab = app
+        .workbench
+        .tabs
+        .get_mut(index)
+        .ok_or_else(|| "new query tab was not created".to_owned())?;
+    let Tab::Query(query) = tab else {
+        return Err("new query was not a query tab".to_owned());
+    };
+    query
+        .explain(&catalog)
+        .map_err(|error| format!("explain failed: {error}"))?;
+    assert!(query.plan.is_some());
+    Ok(())
 }
 #[test]
 fn safety_gate_intercepts_dangerous_statement_on_production() {
@@ -176,11 +187,11 @@ fn read_only_connection_refuses_writes() {
     ));
 }
 #[test]
-fn silent_level_runs_scoped_writes_but_confirms_destructive() {
+fn silent_level_runs_scoped_writes_but_confirms_destructive() -> Result<(), String> {
     let mut app = connected();
     app.set_safe_mode(SafeMode::Silent);
     let statement = tablepro_app::sql::parse("UPDATE orders SET status = 'paid' WHERE id = 7")
-        .expect("write parses");
+        .map_err(|error| format!("write did not parse: {}", error.message))?;
     assert_eq!(
         tablepro_app::sql::gate(SafeMode::Silent, &statement),
         tablepro_app::sql::Decision::Run
@@ -189,6 +200,7 @@ fn silent_level_runs_scoped_writes_but_confirms_destructive() {
         app.run_query("TRUNCATE orders"),
         QueryOutcome::ConfirmationRequired { .. }
     ));
+    Ok(())
 }
 #[test]
 fn quick_switcher_opens_table() {
@@ -221,16 +233,20 @@ fn tab_strip_overflow_and_tab_list() {
     assert!(app.workbench.close_tab(0));
 }
 #[test]
-fn pending_edits_preview_and_save() {
+fn pending_edits_preview_and_save() -> Result<(), String> {
     let mut app = connected();
     assert!(app.workbench.open_table("orders"));
-    let tab = app.workbench.active_table_mut().expect("table tab");
+    let tab = app
+        .workbench
+        .active_table_mut()
+        .ok_or_else(|| "opening orders did not create a table tab".to_owned())?;
     let edit = tab.result.commit_cell(0, 6, "EUR");
     assert!(edit.is_ok(), "edit result: {edit:?}");
     assert!(tab.result.pending_total() > 0);
     assert!(!tab.preview().is_empty());
     tab.result.discard();
     assert_eq!(tab.result.pending_total(), 0);
+    Ok(())
 }
 #[test]
 fn safe_mode_picker_changes_level_and_strip() {
@@ -287,11 +303,20 @@ fn mouse_flow_full_journey() {
     );
 }
 #[test]
-fn connection_form_keyboard_and_mouse_reach_every_field() {
+fn connection_form_keyboard_and_mouse_reach_every_field() -> Result<(), String> {
     let fields = tablepro_app::connections::form_fields();
     assert_eq!(fields.len(), 15);
     let ids: Vec<_> = fields.iter().map(|field| field.id).collect();
-    ids.windows(2).for_each(|pair| assert_ne!(pair[0], pair[1]));
+    for pair in ids.windows(2) {
+        let first = pair
+            .first()
+            .ok_or_else(|| "field pair had no first id".to_owned())?;
+        let second = pair
+            .get(1)
+            .ok_or_else(|| "field pair had no second id".to_owned())?;
+        assert_ne!(first, second);
+    }
+    Ok(())
 }
 #[test]
 fn connection_form_focuses_the_first_invalid_field() {
@@ -343,13 +368,16 @@ fn pending_edits_keep_original_keys() {
     assert_eq!(pending.value(0, 0), Some(&Value::Int(7)));
 }
 #[test]
-fn preview_uses_application_grid_adapter() {
+fn preview_uses_application_grid_adapter() -> Result<(), String> {
     let app = connected();
     let catalog = db::Catalog::acme_prod();
-    let table = catalog.find(Some("public"), "orders").expect("orders");
+    let table = catalog
+        .find(Some("public"), "orders")
+        .ok_or_else(|| "orders was absent from the demo catalog".to_owned())?;
     let grid = tablepro_app::domain::ResultGrid::empty();
     assert!(grid_model::preview_for(table, &grid).is_empty());
     assert!(app.result().row_count() > 0);
+    Ok(())
 }
 #[test]
 fn history_search_is_multi_term_and() {
