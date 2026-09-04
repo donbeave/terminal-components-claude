@@ -1,177 +1,177 @@
 # digest baseline: name w h theme color hash — regenerate with BLESS=1, review like source
-Buttons 120 40 junie mono 42248b34e1332d05
-Buttons 120 40 junie truecolor 1cccd554f6dfe23c
-Buttons 120 40 paper mono 0ddc21ec1306be15
-Buttons 120 40 paper truecolor 8e637804bc017a7f
-Buttons 80 24 junie mono 46f321e30d633cac
-Buttons 80 24 junie truecolor 17f62af81527c567
-Buttons 80 24 paper mono edce7b1544234f64
-Buttons 80 24 paper truecolor c26b2562d1020400
-Chips & selects 120 40 junie mono 5dc37a423df0177d
-Chips & selects 120 40 junie truecolor ea575b64b8585f91
-Chips & selects 120 40 paper mono 8b19759dfc084943
-Chips & selects 120 40 paper truecolor 567b309bf0c71091
-Chips & selects 80 24 junie mono ed2b7e92c18964f9
-Chips & selects 80 24 junie truecolor 5350f58b18db3da2
-Chips & selects 80 24 paper mono 17e6017b36a901cb
-Chips & selects 80 24 paper truecolor 9a58e023e890c235
-Chrome 120 40 junie mono fcb825d51258c32a
-Chrome 120 40 junie truecolor d7762bd14a39cb51
-Chrome 120 40 paper mono 4554bdfd92687838
-Chrome 120 40 paper truecolor 8b6642797f7bd41b
-Chrome 80 24 junie mono de6f6ab53953ff3c
-Chrome 80 24 junie truecolor b0d84676f4396c6f
-Chrome 80 24 paper mono 269600a13505d882
-Chrome 80 24 paper truecolor 3f57e53d742418eb
-Data grid 120 40 junie mono 0c441bd74d5125fb
-Data grid 120 40 junie truecolor daa8ad4b9839010a
-Data grid 120 40 paper mono 83c2d5d609e948c3
-Data grid 120 40 paper truecolor 142bc2c18a2c09b5
-Data grid 80 24 junie mono e432625459a6553c
-Data grid 80 24 junie truecolor a9436a2241d89e34
-Data grid 80 24 paper mono 6187a37ce338aab8
-Data grid 80 24 paper truecolor 62eeff6c1e6c4de2
-Dialogs 120 40 junie mono ab3abbf2dae0818e
-Dialogs 120 40 junie truecolor 5e6b02cea610f9a9
-Dialogs 120 40 paper mono 639947494184eb42
-Dialogs 120 40 paper truecolor dcad2f39fb105148
-Dialogs 80 24 junie mono af646fa2a258bc80
-Dialogs 80 24 junie truecolor 4a53be17c39fdcac
-Dialogs 80 24 paper mono 2f0042aa9cfefb10
-Dialogs 80 24 paper truecolor 0ea01442871e6fe8
-Editable tables 120 40 junie mono 099482437f5a6df0
-Editable tables 120 40 junie truecolor 7add20360a5d3293
-Editable tables 120 40 paper mono 0dbb6086d46c5830
-Editable tables 120 40 paper truecolor daac6fa0a2366a42
-Editable tables 80 24 junie mono 83ec876beed529b9
-Editable tables 80 24 junie truecolor ee904c74188660f8
-Editable tables 80 24 paper mono 3095b8bbd3130271
-Editable tables 80 24 paper truecolor f490691ce2d34023
-Editor 120 40 junie mono f780bdc7bc8913fa
-Editor 120 40 junie truecolor bf8f681bac3fbe52
-Editor 120 40 paper mono bf2b556c9dced13c
-Editor 120 40 paper truecolor a4d60cb9c8111935
-Editor 80 24 junie mono b60ec2c4aa233326
-Editor 80 24 junie truecolor 868aa6d91492d1f9
-Editor 80 24 paper mono c323699e27fb0970
-Editor 80 24 paper truecolor ff60ffbfc168cf43
-Forms 120 40 junie mono f0a6ebdd1b51ed90
-Forms 120 40 junie truecolor f123e9160302fcf9
-Forms 120 40 paper mono 7363e93f7b0ffc58
-Forms 120 40 paper truecolor d04000e2dc85d64e
-Forms 80 24 junie mono 146d553f70d1f640
-Forms 80 24 junie truecolor d26298f2c20f65e5
-Forms 80 24 paper mono 9c9bcf07f8b60868
-Forms 80 24 paper truecolor 89bcb05978d59eea
-Inputs 120 40 junie mono da31ef852a21567b
-Inputs 120 40 junie truecolor e4d6f38e41b91367
-Inputs 120 40 paper mono 9271b2cf47bdc125
-Inputs 120 40 paper truecolor 95167b4b3c615a54
-Inputs 80 24 junie mono 1749c5c717bb4c28
-Inputs 80 24 junie truecolor 8df2d4b3e82596d6
-Inputs 80 24 paper mono 3285ea2096248012
-Inputs 80 24 paper truecolor 10473f3003826de9
-Lists 120 40 junie mono 38b1a3561b734af6
-Lists 120 40 junie truecolor 270c09e1a87d0e44
-Lists 120 40 paper mono 85a501f5b93e7cd4
-Lists 120 40 paper truecolor e0f97f52dec6176e
-Lists 80 24 junie mono abf363a5bfec70c9
-Lists 80 24 junie truecolor 6a4364bc6ef78755
-Lists 80 24 paper mono 4da4cb0181857267
-Lists 80 24 paper truecolor 001579b6262fed05
-Overview 120 40 junie mono 5133e07acc33903d
-Overview 120 40 junie truecolor cc34342da455dd4b
-Overview 120 40 paper mono 4392ce192c745587
-Overview 120 40 paper truecolor 2ae46cbdc9c33824
-Overview 80 24 junie mono 003ef6d37aa72cad
-Overview 80 24 junie truecolor a3f3b7b9a15b8747
-Overview 80 24 paper mono 6fe990b86741f96f
-Overview 80 24 paper truecolor 636ecd2ce760dada
-Panels 120 40 junie mono a3beb243e8b2ebb0
-Panels 120 40 junie truecolor 725852b248a088b0
-Panels 120 40 paper mono 323f8dd236a9fb82
-Panels 120 40 paper truecolor 5c9881a43f2bec71
-Panels 80 24 junie mono e9b3dfb1d03d0572
-Panels 80 24 junie truecolor a37b44bf80937b32
-Panels 80 24 paper mono 7d9fbc7ed1f7cd34
-Panels 80 24 paper truecolor 42ba5d51a02c5e59
-Pickers 120 40 junie mono 7663f51a0ca5d1c6
-Pickers 120 40 junie truecolor eed168c9c09832e2
-Pickers 120 40 paper mono 97cce9b7d496a6cc
-Pickers 120 40 paper truecolor 19e9d6f72bfb2748
-Pickers 80 24 junie mono 3ae5d80da8a52865
-Pickers 80 24 junie truecolor a68495abf5abbfc4
-Pickers 80 24 paper mono 0038a1fdfac0114b
-Pickers 80 24 paper truecolor ff4ed2862dfe731b
-Progress 120 40 junie mono 63980df620bfd319
-Progress 120 40 junie truecolor c414c5a02e6fe009
-Progress 120 40 paper mono 8017307ee6c61079
-Progress 120 40 paper truecolor 5a12e8d22b432731
-Progress 80 24 junie mono e958494cd6ccf6ed
-Progress 80 24 junie truecolor c14018570256e6fe
-Progress 80 24 paper mono d533ce9e2781d825
-Progress 80 24 paper truecolor 8341f76e65497769
-Scrolling 120 40 junie mono 35cef82c3eb65de1
-Scrolling 120 40 junie truecolor 81d398b0ac3b4382
-Scrolling 120 40 paper mono fa55eb44826974d5
-Scrolling 120 40 paper truecolor ff326b8168e1a94a
-Scrolling 80 24 junie mono 7d5f091fbf29aaa1
-Scrolling 80 24 junie truecolor 5219aca69cfab155
-Scrolling 80 24 paper mono 9dd2b28ba12758a5
-Scrolling 80 24 paper truecolor 987ef3ae5c8cbac6
-Settings 120 40 junie mono 140b59e38ab776df
-Settings 120 40 junie truecolor 0d13f86ab686b0c8
-Settings 120 40 paper mono 5e39ab95fe0c8be5
-Settings 120 40 paper truecolor a6532e18746eb4e3
-Settings 80 24 junie mono f2e3eb655c182327
-Settings 80 24 junie truecolor a1f585bfbc4d58fc
-Settings 80 24 paper mono 8630fd3697853845
-Settings 80 24 paper truecolor 3d5e8491098cba8b
-Sidebars 120 40 junie mono a306fbfda00eb8f5
-Sidebars 120 40 junie truecolor 22eca8a15039fcc9
-Sidebars 120 40 paper mono cdfd8403cfad005f
-Sidebars 120 40 paper truecolor d3980b20b8504bb4
-Sidebars 80 24 junie mono 7ab3393849f2e665
-Sidebars 80 24 junie truecolor 1c993c70cdb27f15
-Sidebars 80 24 paper mono d3ae1ab5e9c461b7
-Sidebars 80 24 paper truecolor 32e8eb4a74f6545a
-Tables 120 40 junie mono 0ce6d40d9f00b85c
-Tables 120 40 junie truecolor d6240e5864080635
-Tables 120 40 paper mono e80a63b131f2630c
-Tables 120 40 paper truecolor 2dc8ba56da66c52d
-Tables 80 24 junie mono 22ce68d799d4b59b
-Tables 80 24 junie truecolor fa925a17431814e0
-Tables 80 24 paper mono 9be9747fb170eb33
-Tables 80 24 paper truecolor 941db5f907df6844
-Task runner 120 40 junie mono e73ca2f5ac291d77
-Task runner 120 40 junie truecolor e3e1f1e3be4c5570
-Task runner 120 40 paper mono a12701441555506d
-Task runner 120 40 paper truecolor b139cae019b2406c
-Task runner 80 24 junie mono a4e2d741f9cb395b
-Task runner 80 24 junie truecolor be42efadc6a555da
-Task runner 80 24 paper mono 218d9bee19138a51
-Task runner 80 24 paper truecolor bdf9b9d68f46fbb2
-Terminal 120 40 junie mono 005b04b1dca3329c
-Terminal 120 40 junie truecolor f64cef27bbe676ea
-Terminal 120 40 paper mono d6e3cfba584d804a
-Terminal 120 40 paper truecolor bcaf7679c6f0900b
-Terminal 80 24 junie mono 2ad9b8faf90b88ce
-Terminal 80 24 junie truecolor 8e39421fa44d12fb
-Terminal 80 24 paper mono e2097fea1b7f0154
-Terminal 80 24 paper truecolor 9f39c27a14425c21
-Text areas 120 40 junie mono bc56694083fc9e97
-Text areas 120 40 junie truecolor 96fb09f66258eee9
-Text areas 120 40 paper mono 7423d9816b7183b9
-Text areas 120 40 paper truecolor 91c5408f75705952
-Text areas 80 24 junie mono 3955277c4384a027
-Text areas 80 24 junie truecolor dcd9d3d3aa43d50d
-Text areas 80 24 paper mono e483bb87b7e74469
-Text areas 80 24 paper truecolor e21315d349096362
-Trees 120 40 junie mono 5a12e0cfa58c56a0
-Trees 120 40 junie truecolor 56ca8e0e6a59fa21
-Trees 120 40 paper mono a6344e8527fac488
-Trees 120 40 paper truecolor afd3488dc179e55f
-Trees 80 24 junie mono c43ff19ac011cfb6
-Trees 80 24 junie truecolor 53ff721d8277923b
-Trees 80 24 paper mono daed5f308a327b92
-Trees 80 24 paper truecolor 5cf554468f4a26b9
+Buttons 120 40 junie mono 9b0b1928d15eebe9
+Buttons 120 40 junie truecolor aa32eaa617e59a60
+Buttons 120 40 paper mono cc4341ab54e18c43
+Buttons 120 40 paper truecolor 4a4cb291486d433e
+Buttons 80 24 junie mono 40fb0759f9b2e9a3
+Buttons 80 24 junie truecolor ca3758558a094452
+Buttons 80 24 paper mono 54f154c419d693a5
+Buttons 80 24 paper truecolor 179b4b0d37f72af0
+Chips & selects 120 40 junie mono 5084f3973eac50d9
+Chips & selects 120 40 junie truecolor ceb9f7911b5460e3
+Chips & selects 120 40 paper mono 651e68ab986bf7a3
+Chips & selects 120 40 paper truecolor b3b5214e8a26e20e
+Chips & selects 80 24 junie mono 8228e4c5b6152b1c
+Chips & selects 80 24 junie truecolor 44c7b5ea3d3501d3
+Chips & selects 80 24 paper mono 6257902e4fd1e41c
+Chips & selects 80 24 paper truecolor 4f9dc25458911ce4
+Chrome 120 40 junie mono 07bfd1dfeb299611
+Chrome 120 40 junie truecolor 79c9845d274844f9
+Chrome 120 40 paper mono 16a5827559e90021
+Chrome 120 40 paper truecolor b5e07e4563d8184e
+Chrome 80 24 junie mono c67b53b9217f29c2
+Chrome 80 24 junie truecolor 19498a91dcf81ab9
+Chrome 80 24 paper mono b0fd52ac4094d410
+Chrome 80 24 paper truecolor d873abd7e7a66b6a
+Data grid 120 40 junie mono 6b2620fdc3e1f68d
+Data grid 120 40 junie truecolor c7bd155f49f381de
+Data grid 120 40 paper mono b3a3c2aa05fedb5d
+Data grid 120 40 paper truecolor d0c8bf4cc0944277
+Data grid 80 24 junie mono 15b23e303b4c45f5
+Data grid 80 24 junie truecolor 3c342771d5a2e88a
+Data grid 80 24 paper mono e996ab5da19383fb
+Data grid 80 24 paper truecolor 485881cb4e3d7a5a
+Dialogs 120 40 junie mono f9f039f2a73132a4
+Dialogs 120 40 junie truecolor 26af41e370c51a11
+Dialogs 120 40 paper mono 5f1e943e612b0e84
+Dialogs 120 40 paper truecolor ca397aa2f4d389a7
+Dialogs 80 24 junie mono a3d7f8942f52e410
+Dialogs 80 24 junie truecolor 49612960528e2661
+Dialogs 80 24 paper mono 7d8ccbbd95e4a33e
+Dialogs 80 24 paper truecolor 74c053fd86800231
+Editable tables 120 40 junie mono 687663d46a5cc5d0
+Editable tables 120 40 junie truecolor cdd68dbad4dd41ed
+Editable tables 120 40 paper mono 8a9c82e3dc33811a
+Editable tables 120 40 paper truecolor 4c53753fa1dcaa56
+Editable tables 80 24 junie mono 6079dc6edf3cabc5
+Editable tables 80 24 junie truecolor 88f8f4b96bab2eb9
+Editable tables 80 24 paper mono af93f3f5997c9e1f
+Editable tables 80 24 paper truecolor a3dc2f8178623a24
+Editor 120 40 junie mono a022583f2d5f645f
+Editor 120 40 junie truecolor 91221577d8f7704b
+Editor 120 40 paper mono 009cf8643aa67a06
+Editor 120 40 paper truecolor 2a5c8b88cbcbaf7f
+Editor 80 24 junie mono 70fbc42db207d40c
+Editor 80 24 junie truecolor 27b628da98a717e7
+Editor 80 24 paper mono 284a5cb1e2bfaa5b
+Editor 80 24 paper truecolor 4fde1cb4e22ea19e
+Forms 120 40 junie mono eedfbe5c071734ec
+Forms 120 40 junie truecolor 9b20f8e805cfbe08
+Forms 120 40 paper mono a95736bb592c80c6
+Forms 120 40 paper truecolor 1ceb0558669e7cf3
+Forms 80 24 junie mono 54d15a058dbf0613
+Forms 80 24 junie truecolor 7cfafb141d3eb9cc
+Forms 80 24 paper mono 0a5cc1067904c377
+Forms 80 24 paper truecolor 1596c80349b81cef
+Inputs 120 40 junie mono 21c9f37457802c8b
+Inputs 120 40 junie truecolor 85a8013f249be938
+Inputs 120 40 paper mono d4684158b44e847d
+Inputs 120 40 paper truecolor 17f114436983ea64
+Inputs 80 24 junie mono 09cd9ff8f942e99e
+Inputs 80 24 junie truecolor 4ec9358e7b939ed5
+Inputs 80 24 paper mono 81de008fe8dbb09c
+Inputs 80 24 paper truecolor df353aa9aca5a379
+Lists 120 40 junie mono 545550de4c652293
+Lists 120 40 junie truecolor fe7dde3327d17fc6
+Lists 120 40 paper mono 9c491e413ed6f3e3
+Lists 120 40 paper truecolor 671145a00619df5e
+Lists 80 24 junie mono 209b96c6cd99713d
+Lists 80 24 junie truecolor 0d28ab8e19c39b84
+Lists 80 24 paper mono b716393fe6655199
+Lists 80 24 paper truecolor f139ee1a159247d3
+Overview 120 40 junie mono afdb2c54f8a90b05
+Overview 120 40 junie truecolor 3f4b194a396a85c4
+Overview 120 40 paper mono 77859495f928a6d7
+Overview 120 40 paper truecolor ee851cec28f01d64
+Overview 80 24 junie mono da598f1435126341
+Overview 80 24 junie truecolor 1599134c3af5b50d
+Overview 80 24 paper mono 12b433b7e90bede9
+Overview 80 24 paper truecolor b0a23356e8d81b2e
+Panels 120 40 junie mono 4d6f97ddce28072f
+Panels 120 40 junie truecolor eb8859bb3b460fe7
+Panels 120 40 paper mono 0300192897c71e03
+Panels 120 40 paper truecolor 9a4069e50d067177
+Panels 80 24 junie mono 2347f23146249b4f
+Panels 80 24 junie truecolor bb83ed27f8bbe1eb
+Panels 80 24 paper mono 06da6e0b1a92c681
+Panels 80 24 paper truecolor c9ade5693bde35cc
+Pickers 120 40 junie mono b5958ee5a4c1d27f
+Pickers 120 40 junie truecolor d9a911e94145cea7
+Pickers 120 40 paper mono b2c056ce99622d27
+Pickers 120 40 paper truecolor bd71987b925d1e74
+Pickers 80 24 junie mono 2450921ed70cf0d4
+Pickers 80 24 junie truecolor 9c98651b6b0c03aa
+Pickers 80 24 paper mono cafefc14aa4a471c
+Pickers 80 24 paper truecolor 90884bbb26984c65
+Progress 120 40 junie mono 6e0f17be94947187
+Progress 120 40 junie truecolor 4f94119bf4157633
+Progress 120 40 paper mono 6b68570f5715368f
+Progress 120 40 paper truecolor 653e60c01dc38e50
+Progress 80 24 junie mono b2bed497e9be52fc
+Progress 80 24 junie truecolor 0fe3388c1c8e9687
+Progress 80 24 paper mono 32fa94a668d2d6d2
+Progress 80 24 paper truecolor c0b09f185b7dd5b2
+Scrolling 120 40 junie mono 2006c84b8251de03
+Scrolling 120 40 junie truecolor 0cd3eef81e8573b5
+Scrolling 120 40 paper mono fc57534441990925
+Scrolling 120 40 paper truecolor 52d6fe6c0e778b5a
+Scrolling 80 24 junie mono 64bf1fd681293c90
+Scrolling 80 24 junie truecolor 12b87bf65193ca33
+Scrolling 80 24 paper mono 1848aad53d2f5530
+Scrolling 80 24 paper truecolor a90bd44c58cf7609
+Settings 120 40 junie mono 8f2ed7f1b00800aa
+Settings 120 40 junie truecolor b70b3f917941faec
+Settings 120 40 paper mono 3844ca57f924efa2
+Settings 120 40 paper truecolor 14fed8514fec5167
+Settings 80 24 junie mono cd016a7ca9d40e95
+Settings 80 24 junie truecolor 130dc48e7f6f06d6
+Settings 80 24 paper mono d8ab540109969a83
+Settings 80 24 paper truecolor cc3098984b35f70c
+Sidebars 120 40 junie mono 205ed79fbc6f94bc
+Sidebars 120 40 junie truecolor e714d947dca6b424
+Sidebars 120 40 paper mono 197e184f86c43f5e
+Sidebars 120 40 paper truecolor 8d8719ef079c0502
+Sidebars 80 24 junie mono 923a6f01479dfd11
+Sidebars 80 24 junie truecolor 4efdfb35f3f1d445
+Sidebars 80 24 paper mono efba6e90bee38f8d
+Sidebars 80 24 paper truecolor e3cd2d1f1ac18173
+Tables 120 40 junie mono 55047980a0debf95
+Tables 120 40 junie truecolor 4b98cf510470ad63
+Tables 120 40 paper mono 6fbb0e8d1663471f
+Tables 120 40 paper truecolor b791d1b83375f3e8
+Tables 80 24 junie mono 5f7c3b28f7f52f0e
+Tables 80 24 junie truecolor 1a45b77039ebfa81
+Tables 80 24 paper mono 1967bccff65bfdaa
+Tables 80 24 paper truecolor f37467f92ae8ec15
+Task runner 120 40 junie mono a3355efaa2ddb6c5
+Task runner 120 40 junie truecolor 7ea65b59a6863a3a
+Task runner 120 40 paper mono bc44a44d2f5109d9
+Task runner 120 40 paper truecolor a6be8588ad760571
+Task runner 80 24 junie mono 4228c21c2fb05326
+Task runner 80 24 junie truecolor 0746c5aab095a072
+Task runner 80 24 paper mono ab24234c23e3cc54
+Task runner 80 24 paper truecolor 70d1b4b857878ec1
+Terminal 120 40 junie mono 0dd84415166ac92c
+Terminal 120 40 junie truecolor 2ad482776f3c67e8
+Terminal 120 40 paper mono b2ec9c9974d075a2
+Terminal 120 40 paper truecolor 668e1b703ef6d8b6
+Terminal 80 24 junie mono 3a380d6f4d571e27
+Terminal 80 24 junie truecolor 8f05e85f37527fc5
+Terminal 80 24 paper mono f357c1f2f5ed8d6b
+Terminal 80 24 paper truecolor c25d4eb7a9925cf9
+Text areas 120 40 junie mono 4bfeaee148c2a0e4
+Text areas 120 40 junie truecolor 0cdf766038c24eea
+Text areas 120 40 paper mono d83bbc5f56149052
+Text areas 120 40 paper truecolor fa635d7444d8acda
+Text areas 80 24 junie mono 1b98158b2733297f
+Text areas 80 24 junie truecolor 6e33c9a7c4ff199b
+Text areas 80 24 paper mono 43ab22905746513d
+Text areas 80 24 paper truecolor 92993796ca292ec3
+Trees 120 40 junie mono 2219e6ac8d224542
+Trees 120 40 junie truecolor 7c8a0e2ba7814ec2
+Trees 120 40 paper mono ca13bb3744c1bad6
+Trees 120 40 paper truecolor 48c096496365e596
+Trees 80 24 junie mono a286f628e2be37e0
+Trees 80 24 junie truecolor 3087f19dc5e74044
+Trees 80 24 paper mono 70575774e831f784
+Trees 80 24 paper truecolor 621fe52fc373aff4
