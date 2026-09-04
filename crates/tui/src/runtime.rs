@@ -963,9 +963,9 @@ impl<A: App> Runtime<A> {
         self.pump_layer_events();
         let mut key_input: Option<Key> = None;
         let mut update_cause = UpdateCause::Event;
-        match input {
+        match &mut input {
             Input::Resize(w, h) => {
-                self.resize(w, h);
+                self.resize(*w, *h);
                 // step 1 then the ordinary update pass: the `FocusOut`/
                 // `FocusIn` pair staged for a `pending_focus` is already in
                 // the queue and must reach `app.update` before `finish`
@@ -994,19 +994,20 @@ impl<A: App> Runtime<A> {
             Input::Key(k) => {
                 // step 2: capture chords first
                 let swallows = self.swallows_typing();
-                if let Some(cmd) = self.core.keymap.lookup(KeyPhase::Capture, &k, swallows) {
+                if let Some(cmd) = self.core.keymap.lookup(KeyPhase::Capture, k, swallows) {
                     let r = self.run_update(Some(cmd), UpdateCause::Event);
                     return self.finish(r);
                 }
-                key_input = Some(k);
-                self.enqueue_key(k);
+                key_input = Some(*k);
+                self.enqueue_key(*k);
             }
-            Input::Mouse(m) => self.enqueue_mouse(m),
+            Input::Mouse(m) => self.enqueue_mouse(*m),
             Input::Paste(s) => {
                 if let Some(owner) = self.focus.current()
                     && self.focused_is_editing()
                 {
-                    self.intents.paste(owner, &s);
+                    let text = core::mem::take(s);
+                    self.intents.paste_owned(owner, text);
                 }
             }
         }

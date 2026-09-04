@@ -440,6 +440,14 @@ impl FieldSlot {
             FieldShape::Other => false,
         }
     }
+
+    fn is_classified(&self) -> bool {
+        match self.shape {
+            FieldShape::Text => self.input.is_classified(),
+            FieldShape::Area => self.area.is_classified(),
+            FieldShape::Other => true,
+        }
+    }
 }
 
 impl fmt::Debug for FieldSlot {
@@ -548,8 +556,10 @@ impl FormState {
             if self.slot_is_sensitive(id) {
                 discard_error(error);
                 ErrorState::sensitive()
-            } else {
+            } else if self.slot_is_classified(id) {
                 ErrorState::Plain(error)
+            } else {
+                ErrorState::Pending(error)
             }
         });
         if let Some(index) = self.errors.iter().position(|(key, _)| *key == id) {
@@ -572,6 +582,13 @@ impl FormState {
             .iter()
             .find(|slot| slot.id == id)
             .is_some_and(FieldSlot::is_sensitive)
+    }
+
+    fn slot_is_classified(&self, id: Id) -> bool {
+        self.slots
+            .iter()
+            .find(|slot| slot.id == id)
+            .is_some_and(FieldSlot::is_classified)
     }
 
     fn redact_error(&mut self, id: Id) {

@@ -17,6 +17,7 @@ use crate::action::ActionKey;
 use crate::event::{Axis, Key, KeyModifiers};
 use crate::id::{Id, PartRef};
 use crate::layer::LayerEvent;
+use crate::secret::zeroize_string;
 
 /// What a component actually receives.
 #[non_exhaustive]
@@ -324,8 +325,18 @@ impl IntentQueue {
     }
 
     pub(crate) fn paste(&mut self, owner: Id, text: &str) {
+        self.paste_owned(owner, text.to_owned());
+    }
+
+    pub(crate) fn paste_owned(&mut self, owner: Id, text: String) {
         let start = self.arena.len() as u32;
-        self.arena.push_str(text);
+        if self.arena.is_empty() {
+            self.arena = text;
+        } else {
+            self.arena.push_str(&text);
+            let mut text = text;
+            zeroize_string(&mut text);
+        }
         let end = self.arena.len() as u32;
         self.push(owner, Stored::Paste(start, end));
     }
@@ -530,15 +541,6 @@ impl Drop for IntentQueue {
     fn drop(&mut self) {
         zeroize_string(&mut self.arena);
     }
-}
-
-fn zeroize_string(value: &mut String) {
-    let mut bytes = core::mem::take(value).into_bytes();
-    bytes.fill(0);
-    core::hint::black_box(&bytes);
-    core::sync::atomic::compiler_fence(core::sync::atomic::Ordering::SeqCst);
-    bytes.clear();
-    *value = String::new();
 }
 
 /// Iterator over one owner's intents for the frame. A named type so it can

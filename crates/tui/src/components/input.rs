@@ -348,7 +348,10 @@ impl Default for EditorDraft {
 
 impl EditorDraft {
     pub(crate) const fn is_sensitive(&self) -> bool {
-        matches!(self, EditorDraft::Secret(_) | EditorDraft::RedactedSecret(_))
+        matches!(
+            self,
+            EditorDraft::Secret(_) | EditorDraft::RedactedSecret(_)
+        )
     }
 
     pub(crate) const fn is_classified(&self) -> bool {
@@ -458,18 +461,14 @@ impl EditorDraft {
             EditorDraft::Unclassified(editor)
             | EditorDraft::Plain(editor)
             | EditorDraft::Secret(editor)
-            | EditorDraft::RedactedSecret(editor) => {
-                editor.scroll_into_view(width)
-            }
+            | EditorDraft::RedactedSecret(editor) => editor.scroll_into_view(width),
         }
     }
 
     pub(crate) fn apply(&mut self, action: EditAction<'_>) -> EditOutcome {
         match self {
             EditorDraft::Plain(editor) | EditorDraft::Secret(editor) => editor.apply(action),
-            EditorDraft::Unclassified(_) | EditorDraft::RedactedSecret(_) => {
-                EditOutcome::Rejected
-            }
+            EditorDraft::Unclassified(_) | EditorDraft::RedactedSecret(_) => EditOutcome::Rejected,
         }
     }
 
@@ -486,8 +485,10 @@ impl EditorDraft {
         match (self, other) {
             (EditorDraft::Unclassified(left), EditorDraft::Unclassified(right)) => left == right,
             (EditorDraft::Plain(left), EditorDraft::Plain(right)) => left == right,
-            (EditorDraft::Secret(_) | EditorDraft::RedactedSecret(_),
-             EditorDraft::Secret(_) | EditorDraft::RedactedSecret(_)) => true,
+            (
+                EditorDraft::Secret(_) | EditorDraft::RedactedSecret(_),
+                EditorDraft::Secret(_) | EditorDraft::RedactedSecret(_),
+            ) => true,
             _ => false,
         }
     }
@@ -656,6 +657,10 @@ impl TextInputState {
 
     pub(crate) const fn is_sensitive(&self) -> bool {
         self.draft.is_sensitive()
+    }
+
+    pub(crate) const fn is_classified(&self) -> bool {
+        self.draft.is_classified()
     }
 
     /// The last validation error.
