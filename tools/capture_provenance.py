@@ -10,6 +10,7 @@ import json
 import os
 import re
 import stat
+import subprocess
 import sys
 import tempfile
 from datetime import datetime, timezone
@@ -49,7 +50,17 @@ def file_info(raw_path: str) -> dict[str, Any]:
     bytes_read = 0
     descriptor: int | None = None
     try:
-        descriptor = os.open(raw_path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+        nofollow = getattr(os, "O_NOFOLLOW", None)
+        if nofollow is None:
+            info.update(
+                {
+                    "bytes": file_stat.st_size,
+                    "sha256": None,
+                    "status": "error: O_NOFOLLOW is unavailable",
+                }
+            )
+            return info
+        descriptor = os.open(raw_path, os.O_RDONLY | nofollow)
         opened_stat = os.fstat(descriptor)
         if not stat.S_ISREG(opened_stat.st_mode):
             os.close(descriptor)
@@ -171,6 +182,56 @@ def write_json(path: Path, value: Any) -> None:
                 pass
 
 
+def write_text_atomic(path: Path, value: str) -> None:
+    """Write a small state value without following a destination symlink."""
+    ensure_not_symlink(path, "capture state")
+    temporary_name: str | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as stream:
+            temporary_name = stream.name
+            os.chmod(stream.fileno(), 0o600)
+            stream.write(value)
+            stream.flush()
+            os.fsync(stream.fileno())
+        ensure_not_symlink(path, "capture state")
+        os.replace(temporary_name, path)
+        temporary_name = None
+    finally:
+        if temporary_name is not None:
+            try:
+                os.unlink(temporary_name)
+            except FileNotFoundError:
+                pass
+
+
+def open_stderr(path: Path) -> Any:
+    """Open owned stderr state without following a symlink or special file."""
+    ensure_not_symlink(path, "capture stderr")
+    nofollow = getattr(os, "O_NOFOLLOW", None)
+    if nofollow is None:
+        fail("cannot safely open capture stderr without O_NOFOLLOW")
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | nofollow
+    try:
+        descriptor = os.open(path, flags, 0o600)
+    except OSError as error:
+        fail(f"cannot open capture stderr {path}: {error}")
+    try:
+        metadata = os.fstat(descriptor)
+        if not stat.S_ISREG(metadata.st_mode):
+            fail(f"capture stderr is not a regular file: {path}")
+        return os.fdopen(descriptor, "wb")
+    except BaseException:
+        os.close(descriptor)
+        raise
+
+
 def update_manifest(manifest_path: Path, update: Any) -> None:
     """Run update(records) while holding a per-manifest advisory lock."""
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -242,6 +303,87 @@ def command_set_session(args: argparse.Namespace) -> None:
         fail("metadata run id does not match requested run id")
     metadata["session_id"] = args.session_id
     write_json(path, metadata)
+
+
+def command_exec(args: argparse.Namespace) -> int:
+    """Execute the exact argv serialized in a live capture run's metadata."""
+    metadata_path = Path(args.metadata)
+    metadata = load_json(metadata_path)
+    if not isinstance(metadata, dict) or metadata.get("run_id") != args.run_id:
+        fail("capture metadata does not match requested run")
+
+    argv = metadata.get("argv")
+    if (
+        not isinstance(argv, list)
+        or not argv
+        or any(not isinstance(argument, str) for argument in argv)
+    ):
+        fail("capture metadata does not contain a valid argv list")
+    binary = argv[0]
+    binary_info = metadata.get("binary")
+    if not isinstance(binary_info, dict) or binary_info.get("path") != binary:
+        fail("capture metadata binary does not match argv[0]")
+    expected_hash = binary_info.get("sha256")
+    if not isinstance(expected_hash, str) or not expected_hash:
+        fail("capture metadata lacks a binary content hash")
+    ensure_regular(binary, "capture binary")
+    if not os.access(binary, os.X_OK):
+        fail(f"capture binary is not executable: {binary}")
+    current_binary = file_info(binary)
+    if current_binary.get("status") != "ok" or current_binary.get("sha256") != expected_hash:
+        fail("capture binary changed after provenance was initialized")
+
+    color = metadata.get("color")
+    if color != args.color:
+        fail("capture color does not match the owning run metadata")
+    expected_stderr = metadata.get("stderr")
+    if expected_stderr != args.stderr:
+        fail("capture stderr path does not match the owning run metadata")
+    expected_exit = metadata_path.parent / "exit.status"
+    if Path(args.exit) != expected_exit:
+        fail("capture exit path does not belong to the owning run directory")
+
+    environment = os.environ.copy()
+    if color == "truecolor":
+        environment.pop("NO_COLOR", None)
+        environment["TERM"] = "xterm-256color"
+        environment["COLORTERM"] = "truecolor"
+    elif color == "256":
+        environment.pop("NO_COLOR", None)
+        environment.pop("COLORTERM", None)
+        environment["TERM"] = "xterm-256color"
+    elif color == "16":
+        environment.pop("NO_COLOR", None)
+        environment.pop("COLORTERM", None)
+        environment["TERM"] = "xterm"
+    elif color == "mono":
+        environment["NO_COLOR"] = "1"
+        environment["TERM"] = "xterm-256color"
+        environment["COLORTERM"] = "truecolor"
+    else:
+        fail(f"unsupported capture color: {color!r}")
+
+    stderr_path = Path(args.stderr)
+    stderr = open_stderr(stderr_path)
+    try:
+        try:
+            process = subprocess.Popen(
+                argv,
+                cwd=Path(__file__).resolve().parent.parent,
+                env=environment,
+                stderr=stderr,
+                shell=False,
+            )
+        except OSError as error:
+            stderr.write(f"capture exec: cannot start application: {error}\n".encode())
+            stderr.flush()
+            write_text_atomic(Path(args.exit), "127\n")
+            return 127
+        return_code = process.wait()
+        write_text_atomic(Path(args.exit), f"{return_code}\n")
+        return return_code if return_code >= 0 else 128 + (-return_code)
+    finally:
+        stderr.close()
 
 
 def metadata_record(metadata: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
@@ -368,6 +510,16 @@ def parser() -> argparse.ArgumentParser:
     session.add_argument("--session-id", required=True)
     session.set_defaults(handler=command_set_session)
 
+    execute = subparsers.add_parser("exec")
+    execute.add_argument("--metadata", required=True)
+    execute.add_argument("--run-id", required=True)
+    execute.add_argument("--stderr", required=True)
+    execute.add_argument("--exit", required=True)
+    execute.add_argument(
+        "--color", choices=("truecolor", "256", "16", "mono"), required=True
+    )
+    execute.set_defaults(handler=command_exec)
+
     record = subparsers.add_parser("record")
     record.add_argument("--metadata", required=True)
     record.add_argument("--manifest", required=True)
@@ -393,8 +545,8 @@ def parser() -> argparse.ArgumentParser:
 
 def main() -> int:
     args = parser().parse_args()
-    args.handler(args)
-    return 0
+    result = args.handler(args)
+    return result if isinstance(result, int) else 0
 
 
 if __name__ == "__main__":

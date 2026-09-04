@@ -504,6 +504,31 @@ fn capture_run_state_exists(shots: &Path, run_id: &str) -> Result<bool, String> 
 fn remove_capture_artifacts(shots: &Path, case: CaptureCase) -> Result<(), String> {
     ensure_capture_directory(shots)?;
     let base = shots.join(case.shot_name());
+    match fs::symlink_metadata(&base) {
+        Ok(metadata) if metadata.file_type().is_symlink() => {
+            return Err(format!(
+                "refusing to replace symlink capture generation: {}",
+                base.display()
+            ));
+        }
+        Ok(metadata) if !metadata.is_dir() => {
+            return Err(format!(
+                "capture generation is not a directory: {}",
+                base.display()
+            ));
+        }
+        Ok(_) => {}
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => {
+            return Err(format!(
+                "cannot inspect capture generation {}: {error}",
+                base.display()
+            ));
+        }
+    }
+    // Legacy flat artifacts are removed only after the transactional directory
+    // has been validated. An existing generation stays intact until capture.sh
+    // has validated and published its replacement.
     for extension in ["ansi", "cursor", "html", "png", "txt"] {
         remove_file_if_present(&base.with_extension(extension))?;
     }
@@ -528,7 +553,20 @@ fn remove_file_if_present(path: &Path) -> Result<(), String> {
 }
 
 fn capture_record(shots: &Path, case: CaptureCase) -> Result<CaptureRecord, String> {
-    let path = shots.join(format!("{}.png", case.shot_name()));
+    let generation = shots.join(case.shot_name());
+    let generation_metadata = fs::symlink_metadata(&generation).map_err(|error| {
+        format!(
+            "cannot inspect capture generation {}: {error}",
+            generation.display()
+        )
+    })?;
+    if generation_metadata.file_type().is_symlink() || !generation_metadata.is_dir() {
+        return Err(format!(
+            "capture generation is not a real directory: {}",
+            generation.display()
+        ));
+    }
+    let path = generation.join("png");
     let (bytes, sha256) = file_digest(&path)?;
     Ok(CaptureRecord {
         case,
@@ -798,6 +836,10 @@ fn capture_script_contract_hits(script: &str) -> Vec<String> {
         ("failed-start cleanup", "cleanup_failed_start"),
         ("failed-start trap", "trap 'cleanup_failed_start"),
         ("provenance helper", "capture_provenance.py"),
+        ("constant tmux launch", "/bin/bash tools/capture_exec.sh"),
+        ("serialized metadata handoff", "CAPTURE_METADATA_FILE"),
+        ("staged artifact set", "stage_dir"),
+        ("rollback publication", "backup_dir"),
         ("COLOR dispatch", "case \"$COLOR\" in"),
         ("truecolor branch", "truecolor)"),
         ("256-color branch", "256)"),
@@ -815,6 +857,16 @@ fn capture_script_contract_hits(script: &str) -> Vec<String> {
             "capture script interpolates legacy BIN/ARGS shell source; use explicit argv"
                 .to_owned()
         }))
+    .chain((script.lines().any(|line| {
+        line.contains("new-session")
+            && (line.contains("$BIN")
+                || line.contains("$ARGS")
+                || line.contains("APP_ARGV")
+                || line.contains("RUNNER"))
+    }))
+    .then(|| {
+        "tmux launch command must be constant; pass argv through serialized metadata".to_owned()
+    }))
     .chain((script.contains("BIN=${BIN:-target/debug/showcase}")).then(|| {
         "capture script still has the legacy showcase BIN default; the binary owner must be explicit"
             .to_owned()
@@ -890,6 +942,14 @@ fn capture_exec_contract_hits(script: &str) -> Vec<String> {
         (
             "atomic exit status publication",
             "mv -f \"$exit_tmp\" \"$exit_path\"",
+        ),
+        (
+            "serialized argv execution",
+            "exec python3 \"$ROOT_DIR/tools/capture_provenance.py\" exec",
+        ),
+        (
+            "serialized metadata argument",
+            "--metadata \"$CAPTURE_METADATA_FILE\"",
         ),
     ]
     .into_iter()
@@ -8682,6 +8742,8 @@ captures / classification: `(pending — filled when the change lands)`
 "$@" 2>"$stderr_path"
 printf '%s\n' "$rc" > "$exit_tmp"
 mv -f "$exit_tmp" "$exit_path"
+exec python3 "$ROOT_DIR/tools/capture_provenance.py" exec
+--metadata "$CAPTURE_METADATA_FILE"
 "$BIN $ARGS" 2>$stderr_path
 "#;
         let errors = capture_exec_contract_hits(unsafe_runner);
@@ -8706,7 +8768,7 @@ mv -f "$exit_tmp" "$exit_path"
             .copied()
             .map(|case| CaptureRecord {
                 case,
-                path: PathBuf::from(format!("shots/{}.png", case.shot_name())),
+                path: PathBuf::from(format!("shots/{}/png", case.shot_name())),
                 bytes: 1,
                 sha256: "0".repeat(64),
             })
@@ -8760,6 +8822,33 @@ mv -f "$exit_tmp" "$exit_path"
         ] {
             assert!(!capture_name_is_safe(invalid), "{invalid}");
         }
+    }
+
+    #[test]
+    fn capture_preclean_preserves_a_published_generation_for_transactional_replace() {
+        let directory = std::env::temp_dir().join(format!(
+            "terminal-components-capture-generation-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("clock after epoch")
+                .as_nanos()
+        ));
+        fs::create_dir(&directory).expect("create isolated generation fixture");
+        let shots = directory.join("shots");
+        fs::create_dir(&shots).expect("create generation output directory");
+        let case = capture_matrix_cases()[0];
+        let generation = shots.join(case.shot_name());
+        fs::create_dir(&generation).expect("create published generation");
+        fs::write(generation.join("png"), b"previous generation").expect("write generation");
+
+        remove_capture_artifacts(&shots, case).expect("pre-clean leaves published generation");
+
+        assert_eq!(
+            fs::read(generation.join("png")).expect("read preserved generation"),
+            b"previous generation"
+        );
+        fs::remove_dir_all(directory).expect("remove isolated generation fixture");
     }
 
     #[cfg(unix)]
@@ -9011,5 +9100,86 @@ set -eu
         assert_eq!(fs::read_to_string(&exit).expect("exit state"), "0\n");
         assert!(!marker.exists(), "injection-shaped argv was evaluated");
         fs::remove_dir_all(directory).expect("remove isolated runner fixture");
+    }
+
+    #[test]
+    fn capture_tmux_entrypoint_executes_serialized_argv_without_shell_interpretation() {
+        let suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock after epoch")
+            .as_nanos();
+        let directory = std::env::temp_dir().join(format!(
+            "terminal-components-capture-serialized-{}-{suffix}",
+            std::process::id()
+        ));
+        fs::create_dir(&directory).expect("create isolated serialized runner fixture");
+        let metadata = directory.join("metadata.json");
+        let stderr = directory.join("stderr");
+        let exit = directory.join("exit.status");
+        let marker = directory.join("must-not-exist");
+        let shaped = format!("$(touch {})", marker.display());
+        let init = Command::new("python3")
+            .arg(root().join("tools/capture_provenance.py"))
+            .arg("init")
+            .arg("--metadata")
+            .arg(&metadata)
+            .arg("--run-id")
+            .arg("serialized-run")
+            .arg("--session")
+            .arg("serialized-session")
+            .arg("--session-id")
+            .arg("$serialized")
+            .arg("--binary")
+            .arg("/usr/bin/printf")
+            .arg("--revision")
+            .arg("0".repeat(40))
+            .arg("--dirty")
+            .arg("false")
+            .arg("--columns")
+            .arg("80")
+            .arg("--rows")
+            .arg("24")
+            .arg("--capture-dir")
+            .arg(&directory)
+            .arg("--manifest")
+            .arg(directory.join("manifest.json"))
+            .arg("--stderr")
+            .arg(&stderr)
+            .arg("--theme")
+            .arg("junie")
+            .arg("--color")
+            .arg("truecolor")
+            .arg("--argv")
+            .arg("/usr/bin/printf")
+            .arg("%s\\n")
+            .arg("argument with spaces")
+            .arg(&shaped)
+            .output()
+            .expect("initialize serialized runner metadata");
+        assert!(init.status.success(), "{init:?}");
+
+        let output = Command::new("bash")
+            .arg(root().join("tools/capture_exec.sh"))
+            .env("CAPTURE_METADATA_FILE", &metadata)
+            .env("CAPTURE_RUN_ID", "serialized-run")
+            .env("CAPTURE_STDERR_FILE", &stderr)
+            .env("CAPTURE_EXIT_FILE", &exit)
+            .env("CAPTURE_COLOR_MODE", "truecolor")
+            .output()
+            .expect("run serialized capture entrypoint");
+        assert!(output.status.success(), "{output:?}");
+        assert_eq!(
+            String::from_utf8_lossy(&output.stdout),
+            format!("argument with spaces\n{shaped}\n")
+        );
+        assert_eq!(
+            fs::read_to_string(&exit).expect("serialized exit state"),
+            "0\n"
+        );
+        assert!(
+            !marker.exists(),
+            "serialized argv was evaluated as shell source"
+        );
+        fs::remove_dir_all(directory).expect("remove isolated serialized runner fixture");
     }
 }
