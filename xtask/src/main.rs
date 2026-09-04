@@ -33,23 +33,25 @@ fn root() -> PathBuf {
 const CAPTURE_SIZES: [(u16, u16); 4] = [(80, 24), (100, 30), (120, 40), (160, 50)];
 const CAPTURE_COLORS: [&str; 4] = ["truecolor", "256", "16", "mono"];
 const CAPTURE_THEMES: [&str; 2] = ["junie", "paper"];
+const NO_CAPTURE_ARGS: &[&str] = &[];
+const JACKIN_CAPTURE_ARGS: &[&str] = &["--motion", "paused", "--frame", "0"];
 const CAPTURE_APPS: [CaptureApp; 3] = [
     CaptureApp {
         name: "showcase",
         binary: "showcase",
-        extra_args: "",
+        extra_args: NO_CAPTURE_ARGS,
     },
     CaptureApp {
         name: "tablepro",
         binary: "tablepro",
-        extra_args: "",
+        extra_args: NO_CAPTURE_ARGS,
     },
     CaptureApp {
         name: "jackin-preview",
         binary: "jackin-preview",
         // A paused frame makes the capture deterministic and avoids waiting
         // for the intro animation on every matrix cell.
-        extra_args: "--motion paused --frame 0",
+        extra_args: JACKIN_CAPTURE_ARGS,
     },
 ];
 const CAPTURE_MANIFEST: &str = "shots/capture-matrix.tsv";
@@ -66,7 +68,7 @@ const EXPECTED_CAPTURE_APPS: [&str; 3] = ["showcase", "tablepro", "jackin-previe
 struct CaptureApp {
     name: &'static str,
     binary: &'static str,
-    extra_args: &'static str,
+    extra_args: &'static [&'static str],
 }
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -161,19 +163,27 @@ fn capture_matrix() -> Result<(), String> {
             .get(case.app.name)
             .ok_or_else(|| format!("capture app is not declared: {}", case.app.name))?;
 
-        let start_args = vec![
+        let run_id = capture_run_id(case, index);
+        let mut start_args = vec![
             "start".to_owned(),
             case.width.to_string(),
             case.height.to_string(),
+            "--".to_owned(),
+            binary
+                .strip_prefix(root())
+                .unwrap_or(binary)
+                .to_string_lossy()
+                .into_owned(),
         ];
-        if let Err(error) = run_capture_script(&script, &start_args, case, binary) {
-            let _ = stop_capture(&script, case, binary);
+        start_args.extend(capture_arguments(case));
+        if let Err(error) = run_capture_script(&script, &start_args, case, binary, &run_id) {
+            let _ = stop_capture(&script, case, binary, &run_id);
             return Err(error);
         }
 
         let shot_args = vec!["shot".to_owned(), case.shot_name()];
-        let shot_result = run_capture_script(&script, &shot_args, case, binary);
-        let stop_result = stop_capture(&script, case, binary);
+        let shot_result = run_capture_script(&script, &shot_args, case, binary, &run_id);
+        let stop_result = stop_capture(&script, case, binary, &run_id);
         shot_result?;
         stop_result?;
 
@@ -277,6 +287,7 @@ fn run_capture_script(
     args: &[String],
     case: CaptureCase,
     binary: &Path,
+    run_id: &str,
 ) -> Result<(), String> {
     let binary_arg = binary
         .strip_prefix(root())
@@ -289,7 +300,8 @@ fn run_capture_script(
         .current_dir(root())
         .env("BIN", binary_arg)
         .env("COLOR", case.color)
-        .env("ARGS", capture_arguments(case))
+        .env("CAPTURE_RUN_ID", run_id)
+        .env_remove("ARGS")
         .output()
         .map_err(|error| {
             format!(
@@ -327,17 +339,33 @@ fn capture_color_arg(color: &str) -> &str {
     if color == "mono" { "none" } else { color }
 }
 
-fn capture_arguments(case: CaptureCase) -> String {
-    format!(
-        "{} --theme {} --color {}",
-        case.app.extra_args,
-        case.theme,
-        capture_color_arg(case.color)
-    )
+fn capture_arguments(case: CaptureCase) -> Vec<String> {
+    let mut arguments = case
+        .app
+        .extra_args
+        .iter()
+        .map(|argument| (*argument).to_owned())
+        .collect::<Vec<_>>();
+    arguments.extend([
+        "--theme".to_owned(),
+        case.theme.to_owned(),
+        "--color".to_owned(),
+        capture_color_arg(case.color).to_owned(),
+    ]);
+    arguments
 }
 
-fn stop_capture(script: &Path, case: CaptureCase, binary: &Path) -> Result<(), String> {
-    run_capture_script(script, &["stop".to_owned()], case, binary)
+fn capture_run_id(case: CaptureCase, index: usize) -> String {
+    format!("{}-{}-{}", case.shot_name(), std::process::id(), index)
+}
+
+fn stop_capture(
+    script: &Path,
+    case: CaptureCase,
+    binary: &Path,
+    run_id: &str,
+) -> Result<(), String> {
+    run_capture_script(script, &["stop".to_owned()], case, binary, run_id)
 }
 
 fn remove_capture_artifacts(case: CaptureCase) -> Result<(), String> {
@@ -514,7 +542,13 @@ fn capture_script_contract_hits(script: &str) -> Vec<String> {
     [
         ("required BIN", ": \"${BIN:?"),
         ("COLOR default", "COLOR=${COLOR:-truecolor}"),
-        ("ARGS expansion", "${ARGS:-}"),
+        ("explicit argv", "APP_ARGV=("),
+        ("opaque argv expansion", "\"${APP_ARGV[@]}\""),
+        ("capture runner", "capture_exec.sh"),
+        ("run identity", "CAPTURE_RUN_ID"),
+        ("owned session id", "#{session_id}"),
+        ("safe capture name", "validate_capture_name"),
+        ("provenance helper", "capture_provenance.py"),
         ("COLOR dispatch", "case \"$COLOR\" in"),
         ("truecolor branch", "truecolor)"),
         ("256-color branch", "256)"),
@@ -527,6 +561,11 @@ fn capture_script_contract_hits(script: &str) -> Vec<String> {
     .into_iter()
     .filter(|(_, fragment)| !script.contains(fragment))
     .map(|(label, fragment)| format!("capture script lacks {label}: `{fragment}`"))
+    .chain((script.contains("${ARGS") || script.contains("${app_env} ${BIN}"))
+        .then(|| {
+            "capture script interpolates legacy BIN/ARGS shell source; use explicit argv"
+                .to_owned()
+        }))
     .chain((script.contains("BIN=${BIN:-target/debug/showcase}")).then(|| {
         "capture script still has the legacy showcase BIN default; the binary owner must be explicit"
             .to_owned()
@@ -582,6 +621,13 @@ fn capture_matrix_contract() -> Result<(), String> {
     }
 
     Ok(())
+}
+
+fn capture_name_is_safe(name: &str) -> bool {
+    let mut chars = name.chars();
+    matches!(chars.next(), Some(first) if first.is_ascii_alphanumeric())
+        && chars
+            .all(|character| character.is_ascii_alphanumeric() || matches!(character, '_' | '-'))
 }
 
 fn main() -> ExitCode {
@@ -8272,17 +8318,17 @@ captures / classification: `(pending — filled when the change lands)`
             CaptureApp {
                 name: "showcase",
                 binary: "showcase",
-                extra_args: "",
+                extra_args: NO_CAPTURE_ARGS,
             },
             CaptureApp {
                 name: "tablepro",
                 binary: "tablepro",
-                extra_args: "",
+                extra_args: NO_CAPTURE_ARGS,
             },
             CaptureApp {
                 name: "jackin-preview",
                 binary: "jackin-preview",
-                extra_args: "--motion paused --frame 0",
+                extra_args: JACKIN_CAPTURE_ARGS,
             },
         ];
         let expected: BTreeSet<CaptureCase> = expected_sizes
@@ -8309,7 +8355,8 @@ captures / classification: `(pending — filled when the change lands)`
     #[test]
     fn capture_contract_rejects_axis_and_script_shortcuts() {
         assert!(capture_axes_contract_hits().is_empty());
-        let missing_png = "BIN=ok\nCOLOR=${COLOR:-truecolor}\ncase \"$COLOR\" in\ntruecolor)\n256)\n16)\nmono)\n${ARGS:-}\n";
+        let missing_png =
+            "BIN=ok\nCOLOR=${COLOR:-truecolor}\ncase \"$COLOR\" in\ntruecolor)\n256)\n16)\nmono)\n";
         let errors = capture_script_contract_hits(missing_png);
         assert!(
             errors.iter().any(|error| error.contains("required BIN")),
@@ -8324,6 +8371,15 @@ captures / classification: `(pending — filled when the change lands)`
         assert!(
             errors.iter().any(|error| error.contains("PNG conversion")),
             "{errors:?}"
+        );
+
+        let unsafe_launch = r#"tmux new-session "${app_env} ${BIN} ${ARGS:-}""#;
+        let errors = capture_script_contract_hits(unsafe_launch);
+        assert!(
+            errors
+                .iter()
+                .any(|error| error.contains("interpolates legacy")),
+            "shell source assembled from BIN/ARGS must fail: {errors:?}"
         );
 
         let legacy_default = "BIN=${BIN:-target/debug/showcase}\n: \"${BIN:?x}\"";
@@ -8369,7 +8425,43 @@ captures / classification: `(pending — filled when the change lands)`
         };
         assert_eq!(
             capture_arguments(case),
-            "--motion paused --frame 0 --theme paper --color none"
+            vec![
+                "--motion".to_owned(),
+                "paused".to_owned(),
+                "--frame".to_owned(),
+                "0".to_owned(),
+                "--theme".to_owned(),
+                "paper".to_owned(),
+                "--color".to_owned(),
+                "none".to_owned(),
+            ]
         );
+    }
+
+    #[test]
+    fn capture_names_cannot_escape_the_artifact_directory() {
+        for valid in ["showcase_junie_truecolor_120x40", "a-1", "A_2"] {
+            assert!(capture_name_is_safe(valid), "{valid}");
+        }
+        for invalid in [
+            "",
+            ".",
+            "..",
+            "../escape",
+            "nested/name",
+            "has space",
+            "a.b",
+        ] {
+            assert!(!capture_name_is_safe(invalid), "{invalid}");
+        }
+    }
+
+    #[test]
+    fn capture_run_ids_are_matrix_names_with_safe_suffixes() {
+        for (index, case) in capture_matrix_cases().into_iter().enumerate() {
+            let run_id = capture_run_id(case, index);
+            assert!(capture_name_is_safe(&run_id), "{run_id}");
+            assert!(run_id.starts_with(&case.shot_name()), "{run_id}");
+        }
     }
 }
