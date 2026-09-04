@@ -367,6 +367,9 @@ impl EditorDraft {
     }
 
     pub(crate) fn set_sensitive(&mut self, sensitive: bool) {
+        if self.is_redacted() && sensitive {
+            return;
+        }
         if self.is_classified() && !self.is_redacted() && self.is_sensitive() == sensitive {
             return;
         }
@@ -698,7 +701,7 @@ impl TextInputState {
         let changed = self.is_sensitive() != sensitive;
         self.draft.set_sensitive(sensitive);
 
-        if !was_classified || was_redacted || changed {
+        if !was_classified || changed || (was_redacted && !sensitive) {
             self.phase = EditPhase::Idle;
         }
 
@@ -740,7 +743,7 @@ impl TextInputState {
 
     /// Begin an edit over `current` (a no-op while editing).
     pub fn begin(&mut self, current: &str) {
-        if self.is_editing() {
+        if self.is_editing() && !self.draft.is_redacted() {
             return;
         }
         if !self.draft.is_classified() || self.draft.is_redacted() {
@@ -1921,6 +1924,18 @@ mod tests {
         let copy = state.clone();
         assert_eq!(copy.draft.text(), "•••••••");
         assert!(!copy.draft.text().contains("hunter2"));
+    }
+
+    #[test]
+    fn sensitive_clone_stays_redacted_when_the_form_classifies_it() {
+        let mut state = TextInputState::default();
+        state.set_sensitive(true);
+        state.begin("hunter2");
+        let mut copy = state.clone();
+        copy.set_sensitive(true);
+        assert!(copy.is_editing());
+        assert_eq!(copy.draft.text(), "•••••••");
+        assert_eq!(copy.apply(EditAction::Insert('x')), EditOutcome::Rejected);
     }
 
     #[test]

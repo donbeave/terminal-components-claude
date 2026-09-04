@@ -351,7 +351,7 @@ impl TextAreaState {
         let was_redacted = self.draft.is_redacted();
         let changed = self.is_sensitive() != sensitive;
         self.draft.set_sensitive(sensitive);
-        if !was_classified || was_redacted || changed {
+        if !was_classified || changed || (was_redacted && !sensitive) {
             self.phase = EditPhase::Idle;
         }
 
@@ -386,7 +386,7 @@ impl TextAreaState {
 
     /// Begin an edit over `current` (a no-op while editing).
     pub fn begin(&mut self, current: &str) {
-        if self.is_editing() {
+        if self.is_editing() && !self.draft.is_redacted() {
             return;
         }
         if !self.draft.is_classified() || self.draft.is_redacted() {
@@ -1489,6 +1489,18 @@ mod tests {
         let copy = left.clone();
         assert_eq!(copy.draft.text(), "•••");
         assert!(!copy.draft.text().contains("one"));
+    }
+
+    #[test]
+    fn sensitive_clone_stays_redacted_when_the_form_classifies_it() {
+        let mut state = TextAreaState::default();
+        state.set_sensitive(true);
+        state.begin("one\ntwo");
+        let mut copy = state.clone();
+        copy.set_sensitive(true);
+        assert!(copy.is_editing());
+        assert_eq!(copy.draft.text(), "•••\n•••");
+        assert_eq!(copy.apply(EditAction::Insert('x')), EditOutcome::Rejected);
     }
 
     #[test]
