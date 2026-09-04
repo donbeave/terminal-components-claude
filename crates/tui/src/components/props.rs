@@ -939,7 +939,7 @@ mod tests {
         let text: String = AREA
             .positions()
             .filter_map(|position| buffer.cell(position))
-            .map(|cell| cell.symbol())
+            .map(ratatui_core::buffer::Cell::symbol)
             .collect();
         assert!(!text.contains("hunter2"));
 
