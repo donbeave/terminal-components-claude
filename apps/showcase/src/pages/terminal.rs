@@ -50,7 +50,7 @@ impl Page for TerminalPage {
     }
 
     fn update(&mut self, cx: &mut Cx<'_>) -> Response<()> {
-        let mut response = output()
+        let response = output()
             .update(cx, &mut self.state, &mut self.output)
             .erase();
         let _ = panel();
