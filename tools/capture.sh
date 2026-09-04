@@ -342,7 +342,9 @@ case "$cmd" in
     RUN_MANIFEST_FILE=$RUN_DIR/manifest
     RUN_STDERR_FILE=$RUN_DIR/stderr
     RUN_COLOR_FILE=$RUN_DIR/color
-    STDERR_FILE=$CAPTURE_DIR_PATH/stderr.$CAPTURE_RUN_ID.log
+    # Keep per-run stderr inside the ignored, mode-0700 state directory so
+    # concurrent captures never share or leave a global stderr artifact.
+    STDERR_FILE=$RUN_DIR/stderr.log
     theme=$(capture_theme)
     case "$COLOR" in
       truecolor)

@@ -18,6 +18,7 @@ use std::fs::{self, File};
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
+#[cfg(test)]
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use regex::Regex;

@@ -46,19 +46,31 @@ def file_info(raw_path: str) -> dict[str, Any]:
         return info
 
     digest = hashlib.sha256()
+    bytes_read = 0
+    descriptor: int | None = None
     try:
-        with path.open("rb") as stream:
+        descriptor = os.open(raw_path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+        opened_stat = os.fstat(descriptor)
+        if not stat.S_ISREG(opened_stat.st_mode):
+            os.close(descriptor)
+            info.update({"bytes": None, "sha256": None, "status": "not-regular"})
+            return info
+        with os.fdopen(descriptor, "rb") as stream:
+            descriptor = None
             for chunk in iter(lambda: stream.read(1024 * 1024), b""):
                 digest.update(chunk)
+                bytes_read += len(chunk)
     except OSError as error:
+        if descriptor is not None:
+            os.close(descriptor)
         info.update({"bytes": file_stat.st_size, "sha256": None, "status": f"error: {error}"})
         return info
 
     info.update(
         {
-            "bytes": file_stat.st_size,
+            "bytes": bytes_read,
             "sha256": digest.hexdigest(),
-            "status": "ok" if file_stat.st_size else "empty",
+            "status": "ok" if bytes_read else "empty",
         }
     )
     try:
