@@ -18,6 +18,7 @@ use std::fs::{self, File};
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use regex::Regex;
 use sha2::{Digest, Sha256};
@@ -616,6 +617,14 @@ fn capture_matrix_contract() -> Result<(), String> {
         .map_err(|error| format!("cannot read capture script {}: {error}", rel(&script)))?;
     let mut errors = capture_axes_contract_hits();
     errors.extend(capture_script_contract_hits(&script_text));
+    let runner = root().join("tools/capture_exec.sh");
+    if !runner.is_file() {
+        errors.push(format!("capture runner is missing: {}", rel(&runner)));
+    } else {
+        let runner_text = fs::read_to_string(&runner)
+            .map_err(|error| format!("cannot read capture runner {}: {error}", rel(&runner)))?;
+        errors.extend(capture_exec_contract_hits(&runner_text));
+    }
     if !errors.is_empty() {
         return Err(errors.join("\n"));
     }
@@ -623,6 +632,26 @@ fn capture_matrix_contract() -> Result<(), String> {
     Ok(())
 }
 
+fn capture_exec_contract_hits(script: &str) -> Vec<String> {
+    [
+        ("opaque command execution", "\"$@\" 2>\"$stderr_path\""),
+        (
+            "exit status recording",
+            "printf '%s\\n' \"$rc\" > \"$exit_path\"",
+        ),
+    ]
+    .into_iter()
+    .filter(|(_, fragment)| !script.contains(fragment))
+    .map(|(label, fragment)| format!("capture runner lacks {label}: `{fragment}`"))
+    .chain(
+        (script.contains("${BIN") || script.contains("${ARGS")).then(|| {
+            "capture runner interpolates BIN/ARGS into shell source; use its opaque argv".to_owned()
+        }),
+    )
+    .collect()
+}
+
+#[cfg(test)]
 fn capture_name_is_safe(name: &str) -> bool {
     let mut chars = name.chars();
     matches!(chars.next(), Some(first) if first.is_ascii_alphanumeric())
@@ -8390,6 +8419,15 @@ captures / classification: `(pending — filled when the change lands)`
                 .any(|error| error.contains("legacy showcase BIN default")),
             "the old implicit binary owner must fail: {errors:?}"
         );
+
+        let unsafe_runner = r#""$BIN $ARGS" 2>$stderr_path"#;
+        let errors = capture_exec_contract_hits(unsafe_runner);
+        assert!(
+            errors
+                .iter()
+                .any(|error| error.contains("interpolates BIN/ARGS")),
+            "runner shell interpolation must fail: {errors:?}"
+        );
     }
 
     #[test]
@@ -8463,5 +8501,40 @@ captures / classification: `(pending — filled when the change lands)`
             assert!(capture_name_is_safe(&run_id), "{run_id}");
             assert!(run_id.starts_with(&case.shot_name()), "{run_id}");
         }
+    }
+
+    #[test]
+    fn capture_runner_preserves_spaced_and_injection_shaped_arguments() {
+        let suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock after epoch")
+            .as_nanos();
+        let directory = std::env::temp_dir().join(format!(
+            "terminal-components-capture-runner-{}-{suffix}",
+            std::process::id()
+        ));
+        fs::create_dir(&directory).expect("create isolated runner fixture");
+        let stderr = directory.join("stderr");
+        let exit = directory.join("exit");
+        let marker = directory.join("must-not-exist");
+        let shaped = format!("$(touch {})", marker.display());
+        let output = Command::new("bash")
+            .arg(root().join("tools/capture_exec.sh"))
+            .arg(&stderr)
+            .arg(&exit)
+            .arg("/usr/bin/printf")
+            .arg("%s\\n")
+            .arg("argument with spaces")
+            .arg(&shaped)
+            .output()
+            .expect("run capture runner fixture");
+        assert!(output.status.success(), "{output:?}");
+        assert_eq!(
+            String::from_utf8_lossy(&output.stdout),
+            format!("argument with spaces\n{shaped}\n")
+        );
+        assert_eq!(fs::read_to_string(&exit).expect("exit state"), "0\n");
+        assert!(!marker.exists(), "injection-shaped argv was evaluated");
+        fs::remove_dir_all(directory).expect("remove isolated runner fixture");
     }
 }
