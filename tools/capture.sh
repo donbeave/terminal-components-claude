@@ -29,6 +29,71 @@ PYTHON_BIN=${PY:-python3}
 cmd=${1:-}
 shift || true
 
+# A failed start must not leave a live tmux session or a half-owned run
+# directory behind.  The session id is recorded as soon as tmux creates the
+# session, so cleanup never kills a same-named session that replaced ours.
+START_SESSION_ID=
+
+cleanup_failed_start() {
+  local status=$1 current path cleanup_failed=0
+  trap - EXIT
+
+  if (( status != 0 )); then
+    if [[ -n "$START_SESSION_ID" ]] && session_exists; then
+      current=$(session_id || true)
+      if [[ "$current" == "$START_SESSION_ID" ]]; then
+        if ! tmux kill-session -t "$SESSION_NAME" 2>/dev/null; then
+          cleanup_failed=1
+          echo "capture cleanup failed: cannot kill owned tmux session $SESSION_NAME" >&2
+        fi
+      elif [[ -z "$current" ]]; then
+        cleanup_failed=1
+        echo "capture cleanup failed: cannot verify tmux session ownership for $SESSION_NAME" >&2
+      fi
+    fi
+
+    # Keep state when cleanup itself fails.  The caller can then report or
+    # retry an explicit stop; deleting unverifiable state would hide a leak.
+    if (( cleanup_failed == 0 )); then
+      for path in \
+        "$RUN_METADATA_FILE" \
+        "$RUN_SESSION_ID_FILE" \
+        "$RUN_EXIT_FILE" \
+        "$RUN_BIN_FILE" \
+        "$RUN_CAPTURE_DIR_FILE" \
+        "$RUN_MANIFEST_FILE" \
+        "$RUN_STDERR_FILE" \
+        "$RUN_COLOR_FILE" \
+        "$STDERR_FILE"; do
+        if [[ -L "$path" ]]; then
+          cleanup_failed=1
+          echo "capture cleanup failed: refusing symlink state $path" >&2
+        elif [[ -e "$path" ]] && ! rm -f "$path"; then
+          cleanup_failed=1
+          echo "capture cleanup failed: cannot remove $path" >&2
+        fi
+      done
+      for path in "$RUN_DIR"/*.tmp.* "$RUN_DIR"/.*.tmp; do
+        if [[ -L "$path" ]]; then
+          cleanup_failed=1
+          echo "capture cleanup failed: refusing symlink temporary $path" >&2
+        elif [[ -e "$path" ]] && ! rm -f "$path"; then
+          cleanup_failed=1
+          echo "capture cleanup failed: cannot remove $path" >&2
+        fi
+      done
+      if (( cleanup_failed == 0 )) && ! rmdir "$RUN_DIR" 2>/dev/null; then
+        cleanup_failed=1
+        echo "capture cleanup failed: cannot remove run state $RUN_DIR" >&2
+      fi
+    fi
+    if (( cleanup_failed != 0 )); then
+      echo "capture cleanup incomplete; run state retained: $RUN_DIR" >&2
+    fi
+  fi
+  exit "$status"
+}
+
 absolute_path() {
   case "$1" in
     /*) printf '%s\n' "$1" ;;
@@ -206,7 +271,8 @@ tool_version() {
 
 snapshot_value() {
   local name=$1
-  if [[ -v "$name" ]]; then
+  # `${!name+x}` is supported by macOS Bash 3.2; `[[ -v ]]` is Bash 4+.
+  if [[ -n "${!name+x}" ]]; then
     printf '%s=%s\n' "$name" "${!name}"
   else
     printf '%s=<unset>\n' "$name"
@@ -332,8 +398,7 @@ case "$cmd" in
       echo "capture failed: run state already exists: $RUN_DIR" >&2
       exit 1
     fi
-    mkdir "$RUN_DIR"
-    chmod 700 "$RUN_DIR"
+    mkdir -m 700 "$RUN_DIR"
     RUN_METADATA_FILE=$RUN_DIR/metadata.json
     RUN_SESSION_ID_FILE=$RUN_DIR/session.id
     RUN_EXIT_FILE=$RUN_DIR/exit.status
@@ -345,6 +410,7 @@ case "$cmd" in
     # Keep per-run stderr inside the ignored, mode-0700 state directory so
     # concurrent captures never share or leave a global stderr artifact.
     STDERR_FILE=$RUN_DIR/stderr.log
+    trap 'cleanup_failed_start "$?"' EXIT
     theme=$(capture_theme)
     case "$COLOR" in
       truecolor)
@@ -445,18 +511,32 @@ case "$cmd" in
       "${tool_versions[@]}" \
       "${tool_files[@]}" \
       --argv "${APP_ARGV[@]}"
-    tmux -f /dev/null new-session -d -s "$SESSION_NAME" -c "$ROOT_DIR" -x "$cols" -y "$rows" \
-      "${app_env[@]}" "$RUNNER" "$STDERR_FILE" "$RUN_EXIT_FILE" "${APP_ARGV[@]}"
+    if ! actual_session_id=$(tmux -f /dev/null new-session -d -P -F '#{session_id}' \
+      -s "$SESSION_NAME" -c "$ROOT_DIR" -x "$cols" -y "$rows" \
+      "${app_env[@]}" "$RUNNER" "$STDERR_FILE" "$RUN_EXIT_FILE" "${APP_ARGV[@]}" \
+    ); then
+      # A server can create a session before reporting a command error.  The
+      # printed id is authoritative only when the named session still has it;
+      # otherwise leave an unverified session untouched for safety.
+      if [[ -n "$actual_session_id" ]] && session_exists; then
+        current_session_id=$(session_id || true)
+        if [[ "$current_session_id" == "$actual_session_id" ]]; then
+          START_SESSION_ID=$actual_session_id
+        fi
+      fi
+      echo "capture failed: tmux could not start the owning session" >&2
+      exit 1
+    fi
     if ! session_exists; then
       exit_status=$(read_exit_status)
       echo "capture failed: tmux session ended during setup (app exit status $exit_status); stderr: $STDERR_FILE" >&2
       exit 1
     fi
-    actual_session_id=$(session_id)
     if [[ -z "$actual_session_id" ]]; then
       echo "capture failed: tmux did not return a session id" >&2
       exit 1
     fi
+    START_SESSION_ID=$actual_session_id
     write_state "$RUN_SESSION_ID_FILE" "$actual_session_id"
     python3 "$PROVENANCE_TOOL" set-session \
       --metadata "$RUN_METADATA_FILE" \
@@ -477,6 +557,7 @@ case "$cmd" in
       echo "capture failed: owned tmux session ended before capture; stderr: $STDERR_FILE" >&2
       exit 1
     fi
+    trap - EXIT
     echo "$CAPTURE_RUN_ID"
     ;;
   keys)
