@@ -212,6 +212,12 @@ impl PublicApp for App {
         let response = {
             let mut jx = Jx::new(&mut requests);
             match self.route {
+                Route::Intro => {
+                    if let Some(intro) = self.intro.as_mut() {
+                        intro.skip();
+                    }
+                    public_tui::Response::changed()
+                }
                 Route::Manager => self.screens.manager.update(cx, &mut jx, &mut self.world),
                 Route::Accounts => self.screens.accounts.update(cx, &mut jx, &mut self.world),
                 Route::Usage => self.screens.usage.update(cx, &mut jx, &mut self.world),
@@ -245,7 +251,16 @@ impl PublicApp for App {
                     .as_mut()
                     .map(|screen| screen.update(cx, &mut jx, &mut self.world))
                     .unwrap_or_else(public_tui::Response::ignored),
-                _ => public_tui::Response::ignored(),
+                Route::Outro => {
+                    if let Some(outro) = self.outro.as_mut() {
+                        outro.skip();
+                    }
+                    public_tui::Response::changed()
+                }
+                Route::Handoff => {
+                    self.route = Route::Capsule;
+                    public_tui::Response::changed()
+                }
             }
         };
         for request in requests {
@@ -323,6 +338,17 @@ impl PublicApp for App {
             let response = {
                 let mut jx = Jx::new(&mut requests);
                 match self.route {
+                    Route::Manager => {
+                        self.quit = true;
+                        cx.quit();
+                        public_tui::Response::changed()
+                    }
+                    Route::Intro => {
+                        if let Some(intro) = self.intro.as_mut() {
+                            intro.skip();
+                        }
+                        public_tui::Response::changed()
+                    }
                     Route::Accounts => {
                         self.screens
                             .accounts
@@ -359,8 +385,14 @@ impl PublicApp for App {
                         .as_mut()
                         .map(|screen| screen.on_esc_top(cx, &mut jx, &mut self.world))
                         .unwrap_or_else(public_tui::Response::ignored),
-                    _ => {
-                        self.route = Route::Manager;
+                    Route::Outro => {
+                        if let Some(outro) = self.outro.as_mut() {
+                            outro.skip();
+                        }
+                        public_tui::Response::changed()
+                    }
+                    Route::Handoff => {
+                        self.route = Route::Capsule;
                         public_tui::Response::changed()
                     }
                 }
