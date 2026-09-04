@@ -57,14 +57,14 @@ impl PartialEq for PropsValue<'_> {
 
 impl Eq for PropsValue<'_> {}
 
-impl PropsValue<'_> {
+impl<'a> PropsValue<'a> {
     /// Whether this value is secret and therefore masked and non-copyable.
     pub const fn is_secret(self) -> bool {
         matches!(self, PropsValue::Secret(_))
     }
 
     /// The plain text, if this is not a secret value.
-    pub const fn text(self) -> Option<&'_ str> {
+    pub const fn text(self) -> Option<&'a str> {
         match self {
             PropsValue::Text(value) => Some(value),
             PropsValue::Secret(_) => None,
@@ -207,7 +207,13 @@ const fn binding(
 }
 
 const PROPS_BINDINGS: [Binding<PropsCmd>; 12] = [
-    binding("props.up", Chord::key(KeyCode::Up), PropsCmd::Up, "Up", true),
+    binding(
+        "props.up",
+        Chord::key(KeyCode::Up),
+        PropsCmd::Up,
+        "Up",
+        true,
+    ),
     binding(
         "props.down",
         Chord::key(KeyCode::Down),
@@ -291,7 +297,6 @@ const PROPS_BINDINGS: [Binding<PropsCmd>; 12] = [
 #[derive(Clone, PartialEq, Eq, Debug, Default)]
 pub struct PropsState {
     core: crate::collection::CollectionCore,
-    scroll: ScrollState,
 }
 
 impl PropsState {
@@ -307,13 +312,12 @@ impl PropsState {
 
     /// The vertical scroll state.
     pub const fn scroll(&self) -> &ScrollState {
-        &self.scroll
+        self.core.scroll()
     }
 
     /// Point the cursor at a keyed row.
     pub fn set_cursor(&mut self, index: usize, key: ItemKey) {
         self.core.set_cursor(index, key);
-        self.scroll.ensure_visible_on_next_layout(index);
     }
 
     /// Invalidate the keyed collection after in-place row changes.
@@ -460,11 +464,7 @@ impl<'a> PropsList<'a> {
             .sum()
     }
 
-    fn row_at_visual(
-        rows: &[PropsRow<'_>],
-        visual: usize,
-        width: u16,
-    ) -> Option<(usize, usize)> {
+    fn row_at_visual(rows: &[PropsRow<'_>], visual: usize, width: u16) -> Option<(usize, usize)> {
         let value_width = Self::value_width(rows, width);
         let mut start = 0usize;
         for (index, row) in rows.iter().enumerate() {
@@ -478,8 +478,11 @@ impl<'a> PropsList<'a> {
     }
 
     fn reveal(&self, cx: &Cx<'_>, st: &mut PropsState, rows: &[PropsRow<'_>], index: usize) {
-        let width = cx.area(self.id).map_or(1, |area| area.width.saturating_sub(1));
-        st.scroll
+        let width = cx
+            .area(self.id)
+            .map_or(1, |area| area.width.saturating_sub(1));
+        st.core
+            .scroll_mut()
             .ensure_visible_on_next_layout(Self::visual_start(rows, index, width));
     }
 
@@ -501,12 +504,7 @@ impl<'a> PropsList<'a> {
         acc.changed();
     }
 
-    fn copy_cursor(
-        &self,
-        st: &PropsState,
-        rows: &[PropsRow<'_>],
-        acc: &mut Acc<PropsAction>,
-    ) {
+    fn copy_cursor(st: &PropsState, rows: &[PropsRow<'_>], acc: &mut Acc<PropsAction>) {
         let Some(row) = rows.get(st.core.cursor_index()) else {
             acc.consumed();
             return;
@@ -530,11 +528,11 @@ impl<'a> PropsList<'a> {
         st: &mut PropsState,
         rows: &[PropsRow<'_>],
     ) -> Response<PropsAction> {
-        use crate::collection::Reconcile;
-
-        let _ = st
-            .core
-            .reconcile_with(rows.len(), |index| rows[index].key, |_| true);
+        let _ = st.core.reconcile_with(
+            rows.len(),
+            |index| rows.get(index).map_or(ItemKey::index(index), |row| row.key),
+            |_| true,
+        );
         if st.core.cursor().is_none()
             && let Some(row) = rows.first()
         {
@@ -546,9 +544,11 @@ impl<'a> PropsList<'a> {
             .map_or(1, |area| area.width.saturating_sub(1));
         let content_len = Self::content_len(rows, width);
         let mut acc = Acc::<PropsAction>::new();
-        let scroll = self.scrollbar().update(cx, &mut st.scroll, content_len);
+        let scroll = self
+            .scrollbar()
+            .update(cx, st.core.scroll_mut(), content_len);
         acc.fold(&scroll);
-        let viewport = st.scroll.viewport_len().max(1);
+        let viewport = st.core.scroll().viewport_len().max(1);
 
         for intent in cx.intents(self.id) {
             match intent {
@@ -585,15 +585,16 @@ impl<'a> PropsList<'a> {
                     Some(PropsCmd::End) => {
                         self.move_cursor(cx, st, rows, usize::MAX, &mut acc);
                     }
-                    Some(PropsCmd::Copy) => self.copy_cursor(st, rows, &mut acc),
+                    Some(PropsCmd::Copy) => Self::copy_cursor(st, rows, &mut acc),
                     None => {}
                 },
                 Intent::Pointer {
                     phase,
-                    part: PartRef {
-                        part: Part::ROW,
-                        item: Some(key),
-                    },
+                    part:
+                        PartRef {
+                            part: Part::ROW,
+                            item: Some(key),
+                        },
                     pos,
                     ..
                 } => {
@@ -603,10 +604,10 @@ impl<'a> PropsList<'a> {
                     };
                     let width = area.width.saturating_sub(1);
                     let content_len = Self::content_len(rows, width);
-                    let view = super::ScrollRegion::view(&st.scroll, area, content_len);
-                    let visual = view.offset().saturating_add(usize::from(
-                        pos.y.saturating_sub(area.y),
-                    ));
+                    let view = super::ScrollRegion::view(st.core.scroll(), area, content_len);
+                    let visual = view
+                        .offset()
+                        .saturating_add(usize::from(pos.y.saturating_sub(area.y)));
                     let Some((index, _)) = Self::row_at_visual(rows, visual, width) else {
                         acc.consumed();
                         continue;
@@ -625,7 +626,7 @@ impl<'a> PropsList<'a> {
                         }
                         Phase::Click | Phase::DoubleClick => {
                             self.move_cursor(cx, st, rows, index, &mut acc);
-                            self.copy_cursor(st, rows, &mut acc);
+                            Self::copy_cursor(st, rows, &mut acc);
                         }
                         _ => acc.consumed(),
                     }
@@ -638,10 +639,6 @@ impl<'a> PropsList<'a> {
     }
 
     /// The draw phase.
-    #[expect(
-        clippy::too_many_lines,
-        reason = "one pass over visible keyed rows and their two value modes"
-    )]
     pub fn draw(
         &self,
         ui: &mut Ui<'_>,
@@ -661,11 +658,11 @@ impl<'a> PropsList<'a> {
         }
 
         let total = Self::content_len(rows, area.width.saturating_sub(1));
-        let content = self.scrollbar().draw(ui, area, &st.scroll, total);
+        let content = self.scrollbar().draw(ui, area, st.core.scroll(), total);
         if content.is_empty() {
             return area;
         }
-        let view = super::ScrollRegion::view(&st.scroll, content, total);
+        let view = super::ScrollRegion::view(st.core.scroll(), content, total);
         let value_width = Self::value_width(rows, content.width);
         let label_width = Self::label_width(rows).min(content.width);
         let hover = ui.hovered_part(self.id);
@@ -686,9 +683,13 @@ impl<'a> PropsList<'a> {
             }
             let delta = start.abs_diff(view.offset());
             let y = if start >= view.offset() {
-                content.y.saturating_add(delta.min(usize::from(u16::MAX)) as u16)
+                content
+                    .y
+                    .saturating_add(delta.min(usize::from(u16::MAX)) as u16)
             } else {
-                content.y.saturating_sub(delta.min(usize::from(u16::MAX)) as u16)
+                content
+                    .y
+                    .saturating_sub(delta.min(usize::from(u16::MAX)) as u16)
             };
             let row_area = Rect {
                 x: content.x,
@@ -718,14 +719,9 @@ impl<'a> PropsList<'a> {
             );
             ui.fill(visible_area, container.style);
 
-            let label = self.ov.style(
-                ui,
-                self.id,
-                Family::PROPS,
-                self.variant,
-                Part::META,
-                flags,
-            );
+            let label = self
+                .ov
+                .style(ui, self.id, Family::PROPS, self.variant, Part::META, flags);
             let label_area = Rect {
                 x: content.x,
                 y,
@@ -740,14 +736,9 @@ impl<'a> PropsList<'a> {
                 width: value_width,
                 height,
             };
-            let value = self.ov.style(
-                ui,
-                self.id,
-                Family::PROPS,
-                self.variant,
-                Part::LABEL,
-                flags,
-            );
+            let value = self
+                .ov
+                .style(ui, self.id, Family::PROPS, self.variant, Part::LABEL, flags);
             paint_value(ui, value_area, row, value.style);
 
             if !ui.is_inert() && !visible_area.is_empty() {
@@ -801,9 +792,7 @@ fn walk_wrap<'a>(s: &'a str, width: u16, f: &mut dyn FnMut(WrapPiece<'a>)) {
             } else if line_width.saturating_add(1).saturating_add(word_width) <= width {
                 f(WrapPiece::Space);
                 f(WrapPiece::Text(word));
-                line_width = line_width
-                    .saturating_add(1)
-                    .saturating_add(word_width);
+                line_width = line_width.saturating_add(1).saturating_add(word_width);
             } else {
                 f(WrapPiece::Break);
                 line_width = 0;
@@ -864,26 +853,18 @@ fn paint_value(ui: &mut Ui<'_>, area: Rect, row: &PropsRow<'_>, style: Style) {
                 WrapPiece::Space => paint_piece(ui, area, &mut x, y, " ", style, row.tone),
             });
         }
-        PropsValue::Text(value) => paint_piece(ui, area, &mut x0(area), area.y, value, style, row.tone),
+        PropsValue::Text(value) => {
+            let mut x = area.x;
+            paint_piece(ui, area, &mut x, area.y, value, style, row.tone);
+        }
         PropsValue::Secret(secret) => {
-            let mut cell = CellUi::new(
-                ui.reborrow(),
-                Rect {
-                    height: 1,
-                    ..area
-                },
-                style,
-            );
+            let mut cell = CellUi::new(ui.reborrow(), Rect { height: 1, ..area }, style);
             if let Some(tone) = row.tone {
                 cell.tone(tone);
             }
             secret.write_mask(&mut cell, secret.len(), SecretPolicy::default());
         }
     }
-}
-
-fn x0(area: Rect) -> u16 {
-    area.x
 }
 
 fn paint_piece(
@@ -917,7 +898,7 @@ fn paint_piece(
         cell.tone(tone);
     }
     cell.text(text);
-    *x = x.saturating_add(used);
+    *x = (*x).saturating_add(used);
 }
 
 /// Label / value rows: muted labels in a column sized to the widest, values
@@ -1012,7 +993,7 @@ impl<'a> Props<'a> {
         }
         let lw = self.label_width().min(area.width);
         let ov = self.ov;
-        let owner = crate::id::Id::root("tui.props");
+        let owner = Id::root("tui.props");
         let key_style = ov
             .style(
                 ui,
@@ -1056,5 +1037,135 @@ impl<'a> Props<'a> {
         let w = self.label_width().saturating_add(2).saturating_add(vw);
         let h = self.rows.len().min(usize::from(u16::MAX)) as u16;
         Size::exact(w, h).fit(c)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use ratatui_core::buffer::Buffer;
+    use ratatui_core::layout::{Position, Rect};
+
+    use super::*;
+    use crate::event::{Input, MouseKind};
+    use crate::runtime::stub::{Stub, key, mouse};
+    use crate::runtime::{App, Runtime};
+    use crate::secret::Secret;
+    use crate::theme::{GlyphRole, Theme};
+
+    const ID: Id = Id::root("props.tests");
+    const AREA: Rect = Rect::new(0, 0, 40, 4);
+    const FIRST_KEY: ItemKey = ItemKey::num(11);
+    const SECOND_KEY: ItemKey = ItemKey::num(22);
+
+    #[test]
+    fn rows_preserve_keyed_borrowed_semantic_metadata() {
+        let value = String::from("ready");
+        let row = PropsRow::new(FIRST_KEY, "Status", value.as_str())
+            .role(Role::Success)
+            .wrap()
+            .copyable();
+
+        assert_eq!(row.key, FIRST_KEY);
+        assert_eq!(row.label, "Status");
+        assert_eq!(row.value.text(), Some("ready"));
+        assert!(
+            row.value
+                .text()
+                .is_some_and(|text| core::ptr::eq(text.as_ptr(), value.as_ptr()))
+        );
+        assert_eq!(row.tone, Some(Role::Success));
+        assert!(row.wrap);
+        assert!(row.copyable);
+        assert!(row.can_copy());
+    }
+
+    fn painted_text(buffer: &Buffer, area: Rect) -> String {
+        let mut text = String::new();
+        for y in area.y..area.bottom() {
+            for x in area.x..area.right() {
+                if let Some(cell) = buffer.cell(Position::new(x, y)) {
+                    text.push_str(cell.symbol());
+                }
+            }
+        }
+        text
+    }
+
+    #[test]
+    fn secret_rows_are_masked_redacted_and_non_copyable() {
+        let secret = Secret::new(String::from("hunter2"));
+        let row = PropsRow::secret(SECOND_KEY, "Token", &secret).copyable();
+        assert!(!row.copyable);
+        assert!(!row.can_copy());
+        assert!(!format!("{row:?}").contains("hunter2"));
+
+        let rows = [row];
+        let mut runtime = Runtime::new(Stub::default(), Theme::junie());
+        let mut buffer = Buffer::empty(AREA);
+        let state = PropsState::default();
+        runtime.draw_scene(AREA, &mut buffer, |ui, area| {
+            PropsList::new(ID).draw(ui, area, &state, &rows);
+        });
+
+        let text = painted_text(&buffer, AREA);
+        assert!(!text.contains("hunter2"));
+        assert!(text.contains(Theme::junie().design.glyphs.get(GlyphRole::SecretMask)));
+    }
+
+    #[derive(Default)]
+    struct ActionApp {
+        state: PropsState,
+        actions: Vec<PropsAction>,
+    }
+
+    const ACTION_ROWS: [PropsRow<'static>; 2] = [
+        PropsRow::new(FIRST_KEY, "Name", "alice").copyable(),
+        PropsRow::new(SECOND_KEY, "Mode", "safe"),
+    ];
+
+    impl App for ActionApp {
+        fn update(&mut self, cx: &mut Cx<'_>) -> Response<()> {
+            let response = PropsList::new(ID).update(cx, &mut self.state, &ACTION_ROWS);
+            if let Some(action) = response.action_ref() {
+                self.actions.push(*action);
+            }
+            response.erase()
+        }
+
+        fn draw(&self, ui: &mut Ui<'_>) {
+            PropsList::new(ID).draw(ui, AREA, &self.state, &ACTION_ROWS);
+        }
+    }
+
+    #[test]
+    fn copy_is_keyed_and_reached_by_keyboard_and_mouse_runtime_intents() {
+        let mut runtime = Runtime::new(ActionApp::default(), Theme::junie());
+        let mut buffer = Buffer::empty(AREA);
+        runtime.draw_buffer(AREA, &mut buffer);
+
+        let _ = runtime.handle(key(KeyCode::Char('y')));
+        assert_eq!(runtime.app().actions, [PropsAction::Copy(FIRST_KEY)]);
+
+        let _ = runtime.handle(key(KeyCode::Down));
+        let _ = runtime.handle(key(KeyCode::Char('y')));
+        assert_eq!(
+            runtime.app().actions,
+            [PropsAction::Copy(FIRST_KEY)],
+            "a non-copyable row must consume copy without emitting an action"
+        );
+
+        runtime.draw_buffer(AREA, &mut buffer);
+        let row = runtime
+            .area_of_part(ID, PartRef::item(Part::ROW, FIRST_KEY))
+            .expect("the keyed row must register a mouse hit region");
+        let x = row.x.saturating_add(row.width / 2);
+        let _ = runtime.handle(mouse(MouseKind::Down, x, row.y));
+        runtime.draw_buffer(AREA, &mut buffer);
+        let _ = runtime.handle(mouse(MouseKind::Up, x, row.y));
+
+        assert_eq!(
+            runtime.app().actions,
+            [PropsAction::Copy(FIRST_KEY), PropsAction::Copy(FIRST_KEY)]
+        );
     }
 }
