@@ -232,6 +232,80 @@ def open_stderr(path: Path) -> Any:
         raise
 
 
+def open_regular_read(path: str, label: str) -> tuple[int, os.stat_result]:
+    """Open a regular file without following a symlink at the leaf."""
+    nofollow = getattr(os, "O_NOFOLLOW", None)
+    if nofollow is None:
+        fail(f"cannot safely open {label} without O_NOFOLLOW")
+    try:
+        descriptor = os.open(path, os.O_RDONLY | nofollow)
+        metadata = os.fstat(descriptor)
+    except OSError as error:
+        fail(f"cannot open {label} {path}: {error}")
+    if not stat.S_ISREG(metadata.st_mode):
+        os.close(descriptor)
+        fail(f"{label} is not a regular file: {path}")
+    return descriptor, metadata
+
+
+def command_stage_binary(args: argparse.Namespace) -> None:
+    """Copy one verified executable into the private run directory."""
+    source = Path(args.source)
+    destination = Path(args.destination)
+    ensure_regular(str(source), "capture binary")
+    if not os.access(source, os.X_OK):
+        fail(f"capture binary is not executable: {source}")
+    ensure_not_symlink(destination, "capture executable")
+    if destination.exists():
+        fail(f"capture executable already exists: {destination}")
+    if destination.parent.is_symlink() or not destination.parent.is_dir():
+        fail(f"capture executable parent is not a private directory: {destination.parent}")
+
+    descriptor, source_metadata = open_regular_read(str(source), "capture binary")
+    temporary_name: str | None = None
+    bytes_copied = 0
+    try:
+        digest = hashlib.sha256()
+        with os.fdopen(descriptor, "rb") as stream:
+            descriptor = -1
+            with tempfile.NamedTemporaryFile(
+                mode="wb",
+                dir=destination.parent,
+                prefix=f".{destination.name}.",
+                suffix=".tmp",
+                delete=False,
+            ) as output:
+                temporary_name = output.name
+                os.chmod(output.fileno(), 0o500)
+                for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                    digest.update(chunk)
+                    output.write(chunk)
+                    bytes_copied += len(chunk)
+                output.flush()
+                os.fsync(output.fileno())
+        if source_metadata.st_size == 0 or bytes_copied == 0:
+            fail(f"capture binary is empty: {source}")
+        ensure_not_symlink(destination, "capture executable")
+        os.replace(temporary_name, destination)
+        temporary_name = None
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+        if temporary_name is not None:
+            try:
+                os.unlink(temporary_name)
+            except FileNotFoundError:
+                pass
+
+    copied = file_info(str(destination))
+    if copied.get("status") != "ok" or not copied.get("sha256"):
+        fail(f"staged capture binary is not a non-empty regular file: {destination}")
+    if copied["sha256"] != digest.hexdigest():
+        fail("staged capture binary changed while it was being published")
+    if not os.access(destination, os.X_OK):
+        fail(f"staged capture binary is not executable: {destination}")
+
+
 def update_manifest(manifest_path: Path, update: Any) -> None:
     """Run update(records) while holding a per-manifest advisory lock."""
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -254,7 +328,9 @@ def update_manifest(manifest_path: Path, update: Any) -> None:
 
 def metadata_from_args(args: argparse.Namespace) -> dict[str, Any]:
     ensure_regular(args.binary, "capture binary")
-    if not args.argv or args.argv[0] != args.binary:
+    source_binary = args.source_binary or args.binary
+    ensure_regular(source_binary, "capture source binary")
+    if not args.argv or args.argv[0] != source_binary:
         fail("exact argv must be non-empty and begin with BIN")
     if not re.fullmatch(r"[0-9a-fA-F]{40}", args.revision):
         fail(f"revision is not a full commit id: {args.revision!r}")
@@ -267,7 +343,9 @@ def metadata_from_args(args: argparse.Namespace) -> dict[str, Any]:
         "session_id": args.session_id,
         "started_at": now(),
         "binary": file_info(args.binary),
+        "binary_source": file_info(source_binary),
         "argv": args.argv,
+        "executed_argv": [args.binary, *args.argv[1:]],
         "git": {"revision": args.revision, "dirty": args.dirty == "true"},
         "environment": parse_env(args.env),
         "tools": {
@@ -305,6 +383,21 @@ def command_set_session(args: argparse.Namespace) -> None:
     write_json(path, metadata)
 
 
+def recorded_environment(metadata: dict[str, Any]) -> dict[str, str]:
+    snapshot = metadata.get("environment")
+    if not isinstance(snapshot, dict):
+        fail("capture metadata lacks a sanitized environment snapshot")
+    environment: dict[str, str] = {}
+    for key, value in snapshot.items():
+        if not isinstance(key, str) or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key):
+            fail(f"capture metadata has an invalid environment key: {key!r}")
+        if value is not None and not isinstance(value, str):
+            fail(f"capture metadata has an invalid environment value for {key}")
+        if value is not None:
+            environment[key] = value
+    return environment
+
+
 def command_exec(args: argparse.Namespace) -> int:
     """Execute the exact argv serialized in a live capture run's metadata."""
     metadata_path = Path(args.metadata)
@@ -312,7 +405,7 @@ def command_exec(args: argparse.Namespace) -> int:
     if not isinstance(metadata, dict) or metadata.get("run_id") != args.run_id:
         fail("capture metadata does not match requested run")
 
-    argv = metadata.get("argv")
+    argv = metadata.get("executed_argv")
     if (
         not isinstance(argv, list)
         or not argv
@@ -343,25 +436,11 @@ def command_exec(args: argparse.Namespace) -> int:
     if Path(args.exit) != expected_exit:
         fail("capture exit path does not belong to the owning run directory")
 
-    environment = os.environ.copy()
-    if color == "truecolor":
-        environment.pop("NO_COLOR", None)
-        environment["TERM"] = "xterm-256color"
-        environment["COLORTERM"] = "truecolor"
-    elif color == "256":
-        environment.pop("NO_COLOR", None)
-        environment.pop("COLORTERM", None)
-        environment["TERM"] = "xterm-256color"
-    elif color == "16":
-        environment.pop("NO_COLOR", None)
-        environment.pop("COLORTERM", None)
-        environment["TERM"] = "xterm"
-    elif color == "mono":
-        environment["NO_COLOR"] = "1"
-        environment["TERM"] = "xterm-256color"
-        environment["COLORTERM"] = "truecolor"
-    else:
+    if color not in {"truecolor", "256", "16", "mono"}:
         fail(f"unsupported capture color: {color!r}")
+    environment = recorded_environment(metadata)
+    if environment.get("COLOR") != color:
+        fail("capture environment COLOR does not match the owning run metadata")
 
     stderr_path = Path(args.stderr)
     stderr = open_stderr(stderr_path)
@@ -401,8 +480,11 @@ def metadata_record(metadata: dict[str, Any], args: argparse.Namespace) -> dict[
         fail("all five capture artifacts are required")
 
     run_binary = metadata.get("binary")
+    source_binary = metadata.get("binary_source", run_binary)
     if not isinstance(run_binary, dict) or run_binary.get("sha256") is None:
         fail("capture metadata lacks a binary content hash")
+    if not isinstance(source_binary, dict):
+        fail("capture metadata lacks a source binary record")
     record = {
         "schema_version": 2,
         "captured_at": now(),
@@ -410,9 +492,11 @@ def metadata_record(metadata: dict[str, Any], args: argparse.Namespace) -> dict[
         "run_id": args.run_id,
         "session": metadata.get("session"),
         "session_id": metadata.get("session_id"),
-        "app": Path(str(run_binary.get("path", ""))).name,
+        "app": Path(str(source_binary.get("path", ""))).name,
         "binary": run_binary,
+        "binary_source": source_binary,
         "argv": metadata.get("argv"),
+        "executed_argv": metadata.get("executed_argv"),
         "git": metadata.get("git"),
         "revision": metadata.get("git", {}).get("revision"),
         "dirty": metadata.get("git", {}).get("dirty"),
@@ -489,6 +573,7 @@ def parser() -> argparse.ArgumentParser:
     init.add_argument("--session", required=True)
     init.add_argument("--session-id", required=True)
     init.add_argument("--binary", required=True)
+    init.add_argument("--source-binary")
     init.add_argument("--revision", required=True)
     init.add_argument("--dirty", choices=("true", "false"), required=True)
     init.add_argument("--columns", type=int, required=True)
@@ -503,6 +588,11 @@ def parser() -> argparse.ArgumentParser:
     init.add_argument("--tool-file", action="append", default=[])
     init.add_argument("--argv", nargs=argparse.REMAINDER, required=True)
     init.set_defaults(handler=command_init)
+
+    stage = subparsers.add_parser("stage-binary")
+    stage.add_argument("--source", required=True)
+    stage.add_argument("--destination", required=True)
+    stage.set_defaults(handler=command_stage_binary)
 
     session = subparsers.add_parser("set-session")
     session.add_argument("--metadata", required=True)
