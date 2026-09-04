@@ -1,305 +1,305 @@
-# phase	case	exact_test_key	digest	classification	frame
-before	button::selected	render::components::button::selected 120 40 junie truecolor	c3a5557f65a5ff3f	checked-selection-marker	frames/button--selected__120x40__junie__truecolor.txt
-before	button::selected	render::components::button::selected 40 10 junie truecolor	2b38a4b81a3e733f	checked-selection-marker	frames/button--selected__40x10__junie__truecolor.txt
-before	button::selected	render::components::button::selected 120 40 junie mono	13d0bae25b64bacc	checked-selection-marker	frames/button--selected__120x40__junie__mono.txt
-before	button::selected	render::components::button::selected 40 10 junie mono	0f80b7f1cc3b9e4c	checked-selection-marker	frames/button--selected__40x10__junie__mono.txt
-before	button::selected	render::components::button::selected 120 40 paper truecolor	93ffce78c25faa79	checked-selection-marker	frames/button--selected__120x40__paper__truecolor.txt
-before	button::selected	render::components::button::selected 40 10 paper truecolor	6b3f15ee40b3e7f9	checked-selection-marker	frames/button--selected__40x10__paper__truecolor.txt
-before	button::selected	render::components::button::selected 120 40 paper mono	4330743d0d1af0f4	checked-selection-marker	frames/button--selected__120x40__paper__mono.txt
-before	button::selected	render::components::button::selected 40 10 paper mono	000a22404ee1f874	checked-selection-marker	frames/button--selected__40x10__paper__mono.txt
-before	chip_bar::focused	render::components::chip_bar::focused 120 40 junie truecolor	ec65ee8e34084547	owned-cursor-state	frames/chip_bar--focused__120x40__junie__truecolor.txt
-before	chip_bar::focused	render::components::chip_bar::focused 40 10 junie truecolor	668e2c4ce5d503d8	owned-cursor-state	frames/chip_bar--focused__40x10__junie__truecolor.txt
-before	chip_bar::focused	render::components::chip_bar::focused 120 40 junie mono	d410e30a8fa1287b	owned-cursor-state	frames/chip_bar--focused__120x40__junie__mono.txt
-before	chip_bar::focused	render::components::chip_bar::focused 40 10 junie mono	fff5116446505e3c	owned-cursor-state	frames/chip_bar--focused__40x10__junie__mono.txt
-before	chip_bar::focused	render::components::chip_bar::focused 120 40 paper truecolor	5262957dbd38ff11	owned-cursor-state	frames/chip_bar--focused__120x40__paper__truecolor.txt
-before	chip_bar::focused	render::components::chip_bar::focused 40 10 paper truecolor	0775d556d329cac0	owned-cursor-state	frames/chip_bar--focused__40x10__paper__truecolor.txt
-before	chip_bar::focused	render::components::chip_bar::focused 120 40 paper mono	af6ee1d9868d153b	owned-cursor-state	frames/chip_bar--focused__120x40__paper__mono.txt
-before	chip_bar::focused	render::components::chip_bar::focused 40 10 paper mono	1ccb93fcbda7a6d8	owned-cursor-state	frames/chip_bar--focused__40x10__paper__mono.txt
-before	code_editor::disabled	render::components::code_editor::disabled 120 40 junie truecolor	8a0ebfab287b61ce	disabled-editor-state	frames/code_editor--disabled__120x40__junie__truecolor.txt
-before	code_editor::disabled	render::components::code_editor::disabled 40 10 junie truecolor	a0a3a2ffbd50cbbe	disabled-editor-state	frames/code_editor--disabled__40x10__junie__truecolor.txt
-before	code_editor::disabled	render::components::code_editor::disabled 120 40 junie mono	2cc2ae4227dcdc9a	disabled-editor-state	frames/code_editor--disabled__120x40__junie__mono.txt
-before	code_editor::disabled	render::components::code_editor::disabled 40 10 junie mono	4effe6c0029f69da	disabled-editor-state	frames/code_editor--disabled__40x10__junie__mono.txt
-before	code_editor::disabled	render::components::code_editor::disabled 120 40 paper truecolor	6b645d24f89ac5e2	disabled-editor-state	frames/code_editor--disabled__120x40__paper__truecolor.txt
-before	code_editor::disabled	render::components::code_editor::disabled 40 10 paper truecolor	221e5e3eda930862	disabled-editor-state	frames/code_editor--disabled__40x10__paper__truecolor.txt
-before	code_editor::disabled	render::components::code_editor::disabled 120 40 paper mono	fac2db84f7ce6162	disabled-editor-state	frames/code_editor--disabled__120x40__paper__mono.txt
-before	code_editor::disabled	render::components::code_editor::disabled 40 10 paper mono	247d6fd161110122	disabled-editor-state	frames/code_editor--disabled__40x10__paper__mono.txt
-before	completion::pressed	render::components::completion::pressed 120 40 junie truecolor	9f4ca9af9726d314	owned-cursor-state	frames/completion--pressed__120x40__junie__truecolor.txt
-before	completion::pressed	render::components::completion::pressed 40 10 junie truecolor	648acf049ed32534	owned-cursor-state	frames/completion--pressed__40x10__junie__truecolor.txt
-before	completion::pressed	render::components::completion::pressed 120 40 junie mono	ebe498e8ebdbda13	owned-cursor-state	frames/completion--pressed__120x40__junie__mono.txt
-before	completion::pressed	render::components::completion::pressed 40 10 junie mono	46c0a4bc5841cec3	owned-cursor-state	frames/completion--pressed__40x10__junie__mono.txt
-before	completion::pressed	render::components::completion::pressed 120 40 paper truecolor	d882a9c7ac011ef9	owned-cursor-state	frames/completion--pressed__120x40__paper__truecolor.txt
-before	completion::pressed	render::components::completion::pressed 40 10 paper truecolor	bb95328861765ba9	owned-cursor-state	frames/completion--pressed__40x10__paper__truecolor.txt
-before	completion::pressed	render::components::completion::pressed 120 40 paper mono	d4dcd71c62410cdd	owned-cursor-state	frames/completion--pressed__120x40__paper__mono.txt
-before	completion::pressed	render::components::completion::pressed 40 10 paper mono	64d8819fe8a2a01d	owned-cursor-state	frames/completion--pressed__40x10__paper__mono.txt
-before	completion::selected	render::components::completion::selected 120 40 junie truecolor	529d0b2b17216132	selected-row-marker	frames/completion--selected__120x40__junie__truecolor.txt
-before	completion::selected	render::components::completion::selected 40 10 junie truecolor	1f1f796e74ebb572	selected-row-marker	frames/completion--selected__40x10__junie__truecolor.txt
-before	completion::selected	render::components::completion::selected 120 40 junie mono	2c52b2cb646f5dd5	selected-row-marker	frames/completion--selected__120x40__junie__mono.txt
-before	completion::selected	render::components::completion::selected 40 10 junie mono	41fdaff714ab0375	selected-row-marker	frames/completion--selected__40x10__junie__mono.txt
-before	completion::selected	render::components::completion::selected 120 40 paper truecolor	1bde724981c69778	selected-row-marker	frames/completion--selected__120x40__paper__truecolor.txt
-before	completion::selected	render::components::completion::selected 40 10 paper truecolor	d7a41a466fbe82e8	selected-row-marker	frames/completion--selected__40x10__paper__truecolor.txt
-before	completion::selected	render::components::completion::selected 120 40 paper mono	f9d6feb332ccd447	selected-row-marker	frames/completion--selected__120x40__paper__mono.txt
-before	completion::selected	render::components::completion::selected 40 10 paper mono	d24f0ece251a4c37	selected-row-marker	frames/completion--selected__40x10__paper__mono.txt
-before	completion::focused	render::components::completion::focused 120 40 junie truecolor	529d0b2b17216132	owned-cursor-state	frames/completion--focused__120x40__junie__truecolor.txt
-before	completion::focused	render::components::completion::focused 40 10 junie truecolor	1f1f796e74ebb572	owned-cursor-state	frames/completion--focused__40x10__junie__truecolor.txt
-before	completion::focused	render::components::completion::focused 120 40 junie mono	2c52b2cb646f5dd5	owned-cursor-state	frames/completion--focused__120x40__junie__mono.txt
-before	completion::focused	render::components::completion::focused 40 10 junie mono	41fdaff714ab0375	owned-cursor-state	frames/completion--focused__40x10__junie__mono.txt
-before	completion::focused	render::components::completion::focused 120 40 paper truecolor	1bde724981c69778	owned-cursor-state	frames/completion--focused__120x40__paper__truecolor.txt
-before	completion::focused	render::components::completion::focused 40 10 paper truecolor	d7a41a466fbe82e8	owned-cursor-state	frames/completion--focused__40x10__paper__truecolor.txt
-before	completion::focused	render::components::completion::focused 120 40 paper mono	f9d6feb332ccd447	owned-cursor-state	frames/completion--focused__120x40__paper__mono.txt
-before	completion::focused	render::components::completion::focused 40 10 paper mono	d24f0ece251a4c37	owned-cursor-state	frames/completion--focused__40x10__paper__mono.txt
-before	dialog::disabled	render::components::dialog::disabled 120 40 junie truecolor	3b3a35187a544472	disabled-actions	frames/dialog--disabled__120x40__junie__truecolor.txt
-before	dialog::disabled	render::components::dialog::disabled 40 10 junie truecolor	bca990b4d6367868	disabled-actions	frames/dialog--disabled__40x10__junie__truecolor.txt
-before	dialog::disabled	render::components::dialog::disabled 120 40 junie mono	b737d61b383ec6f5	disabled-actions	frames/dialog--disabled__120x40__junie__mono.txt
-before	dialog::disabled	render::components::dialog::disabled 40 10 junie mono	081728ded55d1575	disabled-actions	frames/dialog--disabled__40x10__junie__mono.txt
-before	dialog::disabled	render::components::dialog::disabled 120 40 paper truecolor	c32427125f196b4a	disabled-actions	frames/dialog--disabled__120x40__paper__truecolor.txt
-before	dialog::disabled	render::components::dialog::disabled 40 10 paper truecolor	37273c6e6232fa10	disabled-actions	frames/dialog--disabled__40x10__paper__truecolor.txt
-before	dialog::disabled	render::components::dialog::disabled 120 40 paper mono	98782672ba8211f1	disabled-actions	frames/dialog--disabled__120x40__paper__mono.txt
-before	dialog::disabled	render::components::dialog::disabled 40 10 paper mono	f9fb14d2886dbe31	disabled-actions	frames/dialog--disabled__40x10__paper__mono.txt
-before	context_menu::selected	render::components::context_menu::selected 120 40 junie truecolor	901d2f48c8a112ae	selected-row-marker	frames/context_menu--selected__120x40__junie__truecolor.txt
-before	context_menu::selected	render::components::context_menu::selected 40 10 junie truecolor	0713f57b0c11723e	selected-row-marker	frames/context_menu--selected__40x10__junie__truecolor.txt
-before	context_menu::selected	render::components::context_menu::selected 120 40 junie mono	e6c6987845be0a57	selected-row-marker	frames/context_menu--selected__120x40__junie__mono.txt
-before	context_menu::selected	render::components::context_menu::selected 40 10 junie mono	f37c624d906d3b07	selected-row-marker	frames/context_menu--selected__40x10__junie__mono.txt
-before	context_menu::selected	render::components::context_menu::selected 120 40 paper truecolor	a3369cee78664ae0	selected-row-marker	frames/context_menu--selected__120x40__paper__truecolor.txt
-before	context_menu::selected	render::components::context_menu::selected 40 10 paper truecolor	40ee1b43fd794f90	selected-row-marker	frames/context_menu--selected__40x10__paper__truecolor.txt
-before	context_menu::selected	render::components::context_menu::selected 120 40 paper mono	e5b0936552b2ce19	selected-row-marker	frames/context_menu--selected__120x40__paper__mono.txt
-before	context_menu::selected	render::components::context_menu::selected 40 10 paper mono	5b4a1ca147bd9b79	selected-row-marker	frames/context_menu--selected__40x10__paper__mono.txt
-before	filter_list::focused	render::components::filter_list::focused 120 40 junie truecolor	917af23a272149b8	owned-cursor-state	frames/filter_list--focused__120x40__junie__truecolor.txt
-before	filter_list::focused	render::components::filter_list::focused 40 10 junie truecolor	58377252918b9118	owned-cursor-state	frames/filter_list--focused__40x10__junie__truecolor.txt
-before	filter_list::focused	render::components::filter_list::focused 120 40 junie mono	6449c6c04aeb76e9	owned-cursor-state	frames/filter_list--focused__120x40__junie__mono.txt
-before	filter_list::focused	render::components::filter_list::focused 40 10 junie mono	d09db330fe7eb549	owned-cursor-state	frames/filter_list--focused__40x10__junie__mono.txt
-before	filter_list::focused	render::components::filter_list::focused 120 40 paper truecolor	e7daa7763ab26b60	owned-cursor-state	frames/filter_list--focused__120x40__paper__truecolor.txt
-before	filter_list::focused	render::components::filter_list::focused 40 10 paper truecolor	afa33f2b36594b00	owned-cursor-state	frames/filter_list--focused__40x10__paper__truecolor.txt
-before	filter_list::focused	render::components::filter_list::focused 120 40 paper mono	e37c24926f0b135b	owned-cursor-state	frames/filter_list--focused__120x40__paper__mono.txt
-before	filter_list::focused	render::components::filter_list::focused 40 10 paper mono	0c1a4adfb09fc63b	owned-cursor-state	frames/filter_list--focused__40x10__paper__mono.txt
-before	filter_list::pressed	render::components::filter_list::pressed 120 40 junie truecolor	917af23a272149b8	owned-cursor-state	frames/filter_list--pressed__120x40__junie__truecolor.txt
-before	filter_list::pressed	render::components::filter_list::pressed 40 10 junie truecolor	58377252918b9118	owned-cursor-state	frames/filter_list--pressed__40x10__junie__truecolor.txt
-before	filter_list::pressed	render::components::filter_list::pressed 120 40 junie mono	6449c6c04aeb76e9	owned-cursor-state	frames/filter_list--pressed__120x40__junie__mono.txt
-before	filter_list::pressed	render::components::filter_list::pressed 40 10 junie mono	d09db330fe7eb549	owned-cursor-state	frames/filter_list--pressed__40x10__junie__mono.txt
-before	filter_list::pressed	render::components::filter_list::pressed 120 40 paper truecolor	e7daa7763ab26b60	owned-cursor-state	frames/filter_list--pressed__120x40__paper__truecolor.txt
-before	filter_list::pressed	render::components::filter_list::pressed 40 10 paper truecolor	afa33f2b36594b00	owned-cursor-state	frames/filter_list--pressed__40x10__paper__truecolor.txt
-before	filter_list::pressed	render::components::filter_list::pressed 120 40 paper mono	e37c24926f0b135b	owned-cursor-state	frames/filter_list--pressed__120x40__paper__mono.txt
-before	filter_list::pressed	render::components::filter_list::pressed 40 10 paper mono	0c1a4adfb09fc63b	owned-cursor-state	frames/filter_list--pressed__40x10__paper__mono.txt
-before	filter_list::selected	render::components::filter_list::selected 120 40 junie truecolor	b7da71dfea121f8c	selected-row-marker	frames/filter_list--selected__120x40__junie__truecolor.txt
-before	filter_list::selected	render::components::filter_list::selected 40 10 junie truecolor	97507dd1ee80de0c	selected-row-marker	frames/filter_list--selected__40x10__junie__truecolor.txt
-before	filter_list::selected	render::components::filter_list::selected 120 40 junie mono	5173a3946a6f6d5d	selected-row-marker	frames/filter_list--selected__120x40__junie__mono.txt
-before	filter_list::selected	render::components::filter_list::selected 40 10 junie mono	d1164217669aa67d	selected-row-marker	frames/filter_list--selected__40x10__junie__mono.txt
-before	filter_list::selected	render::components::filter_list::selected 120 40 paper truecolor	ca34396211af4364	selected-row-marker	frames/filter_list--selected__120x40__paper__truecolor.txt
-before	filter_list::selected	render::components::filter_list::selected 40 10 paper truecolor	fcd4e0fb44859354	selected-row-marker	frames/filter_list--selected__40x10__paper__truecolor.txt
-before	filter_list::selected	render::components::filter_list::selected 120 40 paper mono	8a92f44a0e7b1e2f	selected-row-marker	frames/filter_list--selected__120x40__paper__mono.txt
-before	filter_list::selected	render::components::filter_list::selected 40 10 paper mono	c04b8c0f1387c74f	selected-row-marker	frames/filter_list--selected__40x10__paper__mono.txt
-before	menu_bar::disabled	render::components::menu_bar::disabled 120 40 junie truecolor	5cae5c8506ff7113	disabled-menu-title	frames/menu_bar--disabled__120x40__junie__truecolor.txt
-before	menu_bar::disabled	render::components::menu_bar::disabled 40 10 junie truecolor	f50445ec8b64db53	disabled-menu-title	frames/menu_bar--disabled__40x10__junie__truecolor.txt
-before	menu_bar::disabled	render::components::menu_bar::disabled 120 40 junie mono	ee5d27b03b18dbb3	disabled-menu-title	frames/menu_bar--disabled__120x40__junie__mono.txt
-before	menu_bar::disabled	render::components::menu_bar::disabled 40 10 junie mono	12b9a851f9af4d93	disabled-menu-title	frames/menu_bar--disabled__40x10__junie__mono.txt
-before	menu_bar::disabled	render::components::menu_bar::disabled 120 40 paper truecolor	7326495bdac3a26f	disabled-menu-title	frames/menu_bar--disabled__120x40__paper__truecolor.txt
-before	menu_bar::disabled	render::components::menu_bar::disabled 40 10 paper truecolor	0d6c0a069c56e61f	disabled-menu-title	frames/menu_bar--disabled__40x10__paper__truecolor.txt
-before	menu_bar::disabled	render::components::menu_bar::disabled 120 40 paper mono	fd2495cb9a5e26ab	disabled-menu-title	frames/menu_bar--disabled__120x40__paper__mono.txt
-before	menu_bar::disabled	render::components::menu_bar::disabled 40 10 paper mono	30ec7711c4af9f0b	disabled-menu-title	frames/menu_bar--disabled__40x10__paper__mono.txt
-before	list::pressed	render::components::list::pressed 120 40 junie truecolor	d0e89104e36aa2ea	owned-cursor-state	frames/list--pressed__120x40__junie__truecolor.txt
-before	list::pressed	render::components::list::pressed 40 10 junie truecolor	7a673016b0ed65aa	owned-cursor-state	frames/list--pressed__40x10__junie__truecolor.txt
-before	list::pressed	render::components::list::pressed 120 40 junie mono	cb5e7c9046398305	owned-cursor-state	frames/list--pressed__120x40__junie__mono.txt
-before	list::pressed	render::components::list::pressed 40 10 junie mono	7f93e89c2dddc765	owned-cursor-state	frames/list--pressed__40x10__junie__mono.txt
-before	list::pressed	render::components::list::pressed 120 40 paper truecolor	3e524d83e9dfe491	owned-cursor-state	frames/list--pressed__120x40__paper__truecolor.txt
-before	list::pressed	render::components::list::pressed 40 10 paper truecolor	d5f14e0f54f98a11	owned-cursor-state	frames/list--pressed__40x10__paper__truecolor.txt
-before	list::pressed	render::components::list::pressed 120 40 paper mono	f2ce0cf198981d97	owned-cursor-state	frames/list--pressed__120x40__paper__mono.txt
-before	list::pressed	render::components::list::pressed 40 10 paper mono	d3717338bef62977	owned-cursor-state	frames/list--pressed__40x10__paper__mono.txt
-before	list::focused	render::components::list::focused 120 40 junie truecolor	ce3be201fd5894f6	owned-cursor-state	frames/list--focused__120x40__junie__truecolor.txt
-before	list::focused	render::components::list::focused 40 10 junie truecolor	4e5dee5a5d3d3a76	owned-cursor-state	frames/list--focused__40x10__junie__truecolor.txt
-before	list::focused	render::components::list::focused 120 40 junie mono	164c36b18586726f	owned-cursor-state	frames/list--focused__120x40__junie__mono.txt
-before	list::focused	render::components::list::focused 40 10 junie mono	deac25911bc9718f	owned-cursor-state	frames/list--focused__40x10__junie__mono.txt
-before	list::focused	render::components::list::focused 120 40 paper truecolor	82e97d15fc758a0e	owned-cursor-state	frames/list--focused__120x40__paper__truecolor.txt
-before	list::focused	render::components::list::focused 40 10 paper truecolor	85d6dbd488cef51e	owned-cursor-state	frames/list--focused__40x10__paper__truecolor.txt
-before	list::focused	render::components::list::focused 120 40 paper mono	73efdde5cdb3a6c5	owned-cursor-state	frames/list--focused__120x40__paper__mono.txt
-before	list::focused	render::components::list::focused 40 10 paper mono	447bcd08741e2165	owned-cursor-state	frames/list--focused__40x10__paper__mono.txt
-before	list::disabled	render::components::list::disabled 120 40 junie truecolor	ce3be201fd5894f6	disabled-items	frames/list--disabled__120x40__junie__truecolor.txt
-before	list::disabled	render::components::list::disabled 40 10 junie truecolor	4e5dee5a5d3d3a76	disabled-items	frames/list--disabled__40x10__junie__truecolor.txt
-before	list::disabled	render::components::list::disabled 120 40 junie mono	164c36b18586726f	disabled-items	frames/list--disabled__120x40__junie__mono.txt
-before	list::disabled	render::components::list::disabled 40 10 junie mono	deac25911bc9718f	disabled-items	frames/list--disabled__40x10__junie__mono.txt
-before	list::disabled	render::components::list::disabled 120 40 paper truecolor	82e97d15fc758a0e	disabled-items	frames/list--disabled__120x40__paper__truecolor.txt
-before	list::disabled	render::components::list::disabled 40 10 paper truecolor	85d6dbd488cef51e	disabled-items	frames/list--disabled__40x10__paper__truecolor.txt
-before	list::disabled	render::components::list::disabled 120 40 paper mono	73efdde5cdb3a6c5	disabled-items	frames/list--disabled__120x40__paper__mono.txt
-before	list::disabled	render::components::list::disabled 40 10 paper mono	447bcd08741e2165	disabled-items	frames/list--disabled__40x10__paper__mono.txt
-before	menu_bar::selected	render::components::menu_bar::selected 120 40 junie truecolor	5cae5c8506ff7113	selected-menu-title-marker	frames/menu_bar--selected__120x40__junie__truecolor.txt
-before	menu_bar::selected	render::components::menu_bar::selected 40 10 junie truecolor	f50445ec8b64db53	selected-menu-title-marker	frames/menu_bar--selected__40x10__junie__truecolor.txt
-before	menu_bar::selected	render::components::menu_bar::selected 120 40 junie mono	ee5d27b03b18dbb3	selected-menu-title-marker	frames/menu_bar--selected__120x40__junie__mono.txt
-before	menu_bar::selected	render::components::menu_bar::selected 40 10 junie mono	12b9a851f9af4d93	selected-menu-title-marker	frames/menu_bar--selected__40x10__junie__mono.txt
-before	menu_bar::selected	render::components::menu_bar::selected 120 40 paper truecolor	7326495bdac3a26f	selected-menu-title-marker	frames/menu_bar--selected__120x40__paper__truecolor.txt
-before	menu_bar::selected	render::components::menu_bar::selected 40 10 paper truecolor	0d6c0a069c56e61f	selected-menu-title-marker	frames/menu_bar--selected__40x10__paper__truecolor.txt
-before	menu_bar::selected	render::components::menu_bar::selected 120 40 paper mono	fd2495cb9a5e26ab	selected-menu-title-marker	frames/menu_bar--selected__120x40__paper__mono.txt
-before	menu_bar::selected	render::components::menu_bar::selected 40 10 paper mono	30ec7711c4af9f0b	selected-menu-title-marker	frames/menu_bar--selected__40x10__paper__mono.txt
-before	nav_list::focused	render::components::nav_list::focused 120 40 junie truecolor	aa170fa48c7bff95	owned-cursor-state	frames/nav_list--focused__120x40__junie__truecolor.txt
-before	nav_list::focused	render::components::nav_list::focused 40 10 junie truecolor	c1dfdac7373c2195	owned-cursor-state	frames/nav_list--focused__40x10__junie__truecolor.txt
-before	nav_list::focused	render::components::nav_list::focused 120 40 junie mono	3edf5c964f3d7e70	owned-cursor-state	frames/nav_list--focused__120x40__junie__mono.txt
-before	nav_list::focused	render::components::nav_list::focused 40 10 junie mono	613c729105191690	owned-cursor-state	frames/nav_list--focused__40x10__junie__mono.txt
-before	nav_list::focused	render::components::nav_list::focused 120 40 paper truecolor	1e4bf4714984fc83	owned-cursor-state	frames/nav_list--focused__120x40__paper__truecolor.txt
-before	nav_list::focused	render::components::nav_list::focused 40 10 paper truecolor	2734b2396e1dd5d3	owned-cursor-state	frames/nav_list--focused__40x10__paper__truecolor.txt
-before	nav_list::focused	render::components::nav_list::focused 120 40 paper mono	8e51cb4ea971312e	owned-cursor-state	frames/nav_list--focused__120x40__paper__mono.txt
-before	nav_list::focused	render::components::nav_list::focused 40 10 paper mono	2f75b81b553a8ece	owned-cursor-state	frames/nav_list--focused__40x10__paper__mono.txt
-before	nav_list::pressed	render::components::nav_list::pressed 120 40 junie truecolor	49fcb62bf25e1aa1	owned-cursor-state	frames/nav_list--pressed__120x40__junie__truecolor.txt
-before	nav_list::pressed	render::components::nav_list::pressed 40 10 junie truecolor	51b1ce9c9f6961e1	owned-cursor-state	frames/nav_list--pressed__40x10__junie__truecolor.txt
-before	nav_list::pressed	render::components::nav_list::pressed 120 40 junie mono	d3726f43d9cf7856	owned-cursor-state	frames/nav_list--pressed__120x40__junie__mono.txt
-before	nav_list::pressed	render::components::nav_list::pressed 40 10 junie mono	aabd8a0f4ff229b6	owned-cursor-state	frames/nav_list--pressed__40x10__junie__mono.txt
-before	nav_list::pressed	render::components::nav_list::pressed 120 40 paper truecolor	3aa06624efd9ddcb	owned-cursor-state	frames/nav_list--pressed__120x40__paper__truecolor.txt
-before	nav_list::pressed	render::components::nav_list::pressed 40 10 paper truecolor	80b4214a0332a62b	owned-cursor-state	frames/nav_list--pressed__40x10__paper__truecolor.txt
-before	nav_list::pressed	render::components::nav_list::pressed 120 40 paper mono	42df346c389d6f62	owned-cursor-state	frames/nav_list--pressed__120x40__paper__mono.txt
-before	nav_list::pressed	render::components::nav_list::pressed 40 10 paper mono	30e8f7b5f8165f42	owned-cursor-state	frames/nav_list--pressed__40x10__paper__mono.txt
-before	picker::focused	render::components::picker::focused 120 40 junie truecolor	e86c596e8f67992e	owned-cursor-state	frames/picker--focused__120x40__junie__truecolor.txt
-before	picker::focused	render::components::picker::focused 40 10 junie truecolor	5e9e8059097fa47a	owned-cursor-state	frames/picker--focused__40x10__junie__truecolor.txt
-before	picker::focused	render::components::picker::focused 120 40 junie mono	3b3e3c128e5a6a0d	owned-cursor-state	frames/picker--focused__120x40__junie__mono.txt
-before	picker::focused	render::components::picker::focused 40 10 junie mono	e71f4fbb98c0629d	owned-cursor-state	frames/picker--focused__40x10__junie__mono.txt
-before	picker::focused	render::components::picker::focused 120 40 paper truecolor	d74a1161bf34e69e	owned-cursor-state	frames/picker--focused__120x40__paper__truecolor.txt
-before	picker::focused	render::components::picker::focused 40 10 paper truecolor	c65062169bcf1fc2	owned-cursor-state	frames/picker--focused__40x10__paper__truecolor.txt
-before	picker::focused	render::components::picker::focused 120 40 paper mono	a8252482ad8025bb	owned-cursor-state	frames/picker--focused__120x40__paper__mono.txt
-before	picker::focused	render::components::picker::focused 40 10 paper mono	d3e9fcf66ea92fbb	owned-cursor-state	frames/picker--focused__40x10__paper__mono.txt
-before	picker::pressed	render::components::picker::pressed 120 40 junie truecolor	e86c596e8f67992e	owned-cursor-state	frames/picker--pressed__120x40__junie__truecolor.txt
-before	picker::pressed	render::components::picker::pressed 40 10 junie truecolor	5e9e8059097fa47a	owned-cursor-state	frames/picker--pressed__40x10__junie__truecolor.txt
-before	picker::pressed	render::components::picker::pressed 120 40 junie mono	3b3e3c128e5a6a0d	owned-cursor-state	frames/picker--pressed__120x40__junie__mono.txt
-before	picker::pressed	render::components::picker::pressed 40 10 junie mono	e71f4fbb98c0629d	owned-cursor-state	frames/picker--pressed__40x10__junie__mono.txt
-before	picker::pressed	render::components::picker::pressed 120 40 paper truecolor	d74a1161bf34e69e	owned-cursor-state	frames/picker--pressed__120x40__paper__truecolor.txt
-before	picker::pressed	render::components::picker::pressed 40 10 paper truecolor	c65062169bcf1fc2	owned-cursor-state	frames/picker--pressed__40x10__paper__truecolor.txt
-before	picker::pressed	render::components::picker::pressed 120 40 paper mono	a8252482ad8025bb	owned-cursor-state	frames/picker--pressed__120x40__paper__mono.txt
-before	picker::pressed	render::components::picker::pressed 40 10 paper mono	d3e9fcf66ea92fbb	owned-cursor-state	frames/picker--pressed__40x10__paper__mono.txt
-before	picker::selected	render::components::picker::selected 120 40 junie truecolor	9b37264df946abc8	selected-row-marker	frames/picker--selected__120x40__junie__truecolor.txt
-before	picker::selected	render::components::picker::selected 40 10 junie truecolor	94688363474c2f78	selected-row-marker	frames/picker--selected__40x10__junie__truecolor.txt
-before	picker::selected	render::components::picker::selected 120 40 junie mono	b3ae92858be43071	selected-row-marker	frames/picker--selected__120x40__junie__mono.txt
-before	picker::selected	render::components::picker::selected 40 10 junie mono	f74d37210e531a91	selected-row-marker	frames/picker--selected__40x10__junie__mono.txt
-before	picker::selected	render::components::picker::selected 120 40 paper truecolor	96876118d6a26b7c	selected-row-marker	frames/picker--selected__120x40__paper__truecolor.txt
-before	picker::selected	render::components::picker::selected 40 10 paper truecolor	91b8158edc253e0c	selected-row-marker	frames/picker--selected__40x10__paper__truecolor.txt
-before	picker::selected	render::components::picker::selected 120 40 paper mono	84f14628077bc8c7	selected-row-marker	frames/picker--selected__120x40__paper__mono.txt
-before	picker::selected	render::components::picker::selected 40 10 paper mono	b659d32c315ba277	selected-row-marker	frames/picker--selected__40x10__paper__mono.txt
-before	picker_chain::selected	render::components::picker_chain::selected 120 40 junie truecolor	b7081733e2f45ede	selected-stage-state	frames/picker_chain--selected__120x40__junie__truecolor.txt
-before	picker_chain::selected	render::components::picker_chain::selected 40 10 junie truecolor	cb7c93a6d76088de	selected-stage-state	frames/picker_chain--selected__40x10__junie__truecolor.txt
-before	picker_chain::selected	render::components::picker_chain::selected 120 40 junie mono	79a4feb79184f0d2	selected-stage-state	frames/picker_chain--selected__120x40__junie__mono.txt
-before	picker_chain::selected	render::components::picker_chain::selected 40 10 junie mono	3b157164d06fad32	selected-stage-state	frames/picker_chain--selected__40x10__junie__mono.txt
-before	picker_chain::selected	render::components::picker_chain::selected 120 40 paper truecolor	fbba09714c4ed84c	selected-stage-state	frames/picker_chain--selected__120x40__paper__truecolor.txt
-before	picker_chain::selected	render::components::picker_chain::selected 40 10 paper truecolor	18834e6a4d8ffe3c	selected-stage-state	frames/picker_chain--selected__40x10__paper__truecolor.txt
-before	picker_chain::selected	render::components::picker_chain::selected 120 40 paper mono	ed1bddc828302a72	selected-stage-state	frames/picker_chain--selected__120x40__paper__mono.txt
-before	picker_chain::selected	render::components::picker_chain::selected 40 10 paper mono	ace67f346e0f67d2	selected-stage-state	frames/picker_chain--selected__40x10__paper__mono.txt
-before	radio_group::focused	render::components::radio_group::focused 120 40 junie truecolor	57c4e8ba8931346e	owned-cursor-state	frames/radio_group--focused__120x40__junie__truecolor.txt
-before	radio_group::focused	render::components::radio_group::focused 40 10 junie truecolor	3c36518edf6682ae	owned-cursor-state	frames/radio_group--focused__40x10__junie__truecolor.txt
-before	radio_group::focused	render::components::radio_group::focused 120 40 junie mono	23253cfc778734b7	owned-cursor-state	frames/radio_group--focused__120x40__junie__mono.txt
-before	radio_group::focused	render::components::radio_group::focused 40 10 junie mono	783665ea3658b177	owned-cursor-state	frames/radio_group--focused__40x10__junie__mono.txt
-before	radio_group::focused	render::components::radio_group::focused 120 40 paper truecolor	d080a80f269c3da2	owned-cursor-state	frames/radio_group--focused__120x40__paper__truecolor.txt
-before	radio_group::focused	render::components::radio_group::focused 40 10 paper truecolor	1ad944db4e336262	owned-cursor-state	frames/radio_group--focused__40x10__paper__truecolor.txt
-before	radio_group::focused	render::components::radio_group::focused 120 40 paper mono	ec7745f70f85f805	owned-cursor-state	frames/radio_group--focused__120x40__paper__mono.txt
-before	radio_group::focused	render::components::radio_group::focused 40 10 paper mono	dc874cf17df524c5	owned-cursor-state	frames/radio_group--focused__40x10__paper__mono.txt
-before	radio_group::pressed	render::components::radio_group::pressed 120 40 junie truecolor	7c45f61130c600e6	owned-cursor-state	frames/radio_group--pressed__120x40__junie__truecolor.txt
-before	radio_group::pressed	render::components::radio_group::pressed 40 10 junie truecolor	d9de17746e8da6a6	owned-cursor-state	frames/radio_group--pressed__40x10__junie__truecolor.txt
-before	radio_group::pressed	render::components::radio_group::pressed 120 40 junie mono	c1fcc82633a44665	owned-cursor-state	frames/radio_group--pressed__120x40__junie__mono.txt
-before	radio_group::pressed	render::components::radio_group::pressed 40 10 junie mono	96df91bc5acc71e5	owned-cursor-state	frames/radio_group--pressed__40x10__junie__mono.txt
-before	radio_group::pressed	render::components::radio_group::pressed 120 40 paper truecolor	b74072a1943741bb	owned-cursor-state	frames/radio_group--pressed__120x40__paper__truecolor.txt
-before	radio_group::pressed	render::components::radio_group::pressed 40 10 paper truecolor	9d9612086a084deb	owned-cursor-state	frames/radio_group--pressed__40x10__paper__truecolor.txt
-before	radio_group::pressed	render::components::radio_group::pressed 120 40 paper mono	af7f1cd31203adff	owned-cursor-state	frames/radio_group--pressed__120x40__paper__mono.txt
-before	radio_group::pressed	render::components::radio_group::pressed 40 10 paper mono	f604b3a6b831c57f	owned-cursor-state	frames/radio_group--pressed__40x10__paper__mono.txt
-before	steps::disabled	render::components::steps::disabled 120 40 junie truecolor	623bc6071dbf9908	disabled-step-state	frames/steps--disabled__120x40__junie__truecolor.txt
-before	steps::disabled	render::components::steps::disabled 40 10 junie truecolor	60ef4ac347301488	disabled-step-state	frames/steps--disabled__40x10__junie__truecolor.txt
-before	steps::disabled	render::components::steps::disabled 120 40 junie mono	b054f35ce7b8a314	disabled-step-state	frames/steps--disabled__120x40__junie__mono.txt
-before	steps::disabled	render::components::steps::disabled 40 10 junie mono	1c36ff0e2567fb14	disabled-step-state	frames/steps--disabled__40x10__junie__mono.txt
-before	steps::disabled	render::components::steps::disabled 120 40 paper truecolor	b04e10d82c7e82fe	disabled-step-state	frames/steps--disabled__120x40__paper__truecolor.txt
-before	steps::disabled	render::components::steps::disabled 40 10 paper truecolor	b25d51b8737ac6fe	disabled-step-state	frames/steps--disabled__40x10__paper__truecolor.txt
-before	steps::disabled	render::components::steps::disabled 120 40 paper mono	b3f73e3ebdc10f48	disabled-step-state	frames/steps--disabled__120x40__paper__mono.txt
-before	steps::disabled	render::components::steps::disabled 40 10 paper mono	0b0bd01297cf91e8	disabled-step-state	frames/steps--disabled__40x10__paper__mono.txt
-before	steps::default	render::components::steps::default 120 40 junie truecolor	1d00177b06f03b80	step-status-glyph	frames/steps--default__120x40__junie__truecolor.txt
-before	steps::default	render::components::steps::default 40 10 junie truecolor	e2b7fa7e0b700520	step-status-glyph	frames/steps--default__40x10__junie__truecolor.txt
-before	steps::default	render::components::steps::default 120 40 junie mono	16c60c0e71d05628	step-status-glyph	frames/steps--default__120x40__junie__mono.txt
-before	steps::default	render::components::steps::default 40 10 junie mono	fbf6cac31bf12a28	step-status-glyph	frames/steps--default__40x10__junie__mono.txt
-before	steps::default	render::components::steps::default 120 40 paper truecolor	46db4044c112e098	step-status-glyph	frames/steps--default__120x40__paper__truecolor.txt
-before	steps::default	render::components::steps::default 40 10 paper truecolor	7f5158e1e2c235c8	step-status-glyph	frames/steps--default__40x10__paper__truecolor.txt
-before	steps::default	render::components::steps::default 120 40 paper mono	b679a4f6c77a9820	step-status-glyph	frames/steps--default__120x40__paper__mono.txt
-before	steps::default	render::components::steps::default 40 10 paper mono	34f9ac6f86d83cc0	step-status-glyph	frames/steps--default__40x10__paper__mono.txt
-before	steps::selected	render::components::steps::selected 120 40 junie truecolor	1d00177b06f03b80	step-status-glyph	frames/steps--selected__120x40__junie__truecolor.txt
-before	steps::selected	render::components::steps::selected 40 10 junie truecolor	e2b7fa7e0b700520	step-status-glyph	frames/steps--selected__40x10__junie__truecolor.txt
-before	steps::selected	render::components::steps::selected 120 40 junie mono	16c60c0e71d05628	step-status-glyph	frames/steps--selected__120x40__junie__mono.txt
-before	steps::selected	render::components::steps::selected 40 10 junie mono	fbf6cac31bf12a28	step-status-glyph	frames/steps--selected__40x10__junie__mono.txt
-before	steps::selected	render::components::steps::selected 120 40 paper truecolor	46db4044c112e098	step-status-glyph	frames/steps--selected__120x40__paper__truecolor.txt
-before	steps::selected	render::components::steps::selected 40 10 paper truecolor	7f5158e1e2c235c8	step-status-glyph	frames/steps--selected__40x10__paper__truecolor.txt
-before	steps::selected	render::components::steps::selected 120 40 paper mono	b679a4f6c77a9820	step-status-glyph	frames/steps--selected__120x40__paper__mono.txt
-before	steps::selected	render::components::steps::selected 40 10 paper mono	34f9ac6f86d83cc0	step-status-glyph	frames/steps--selected__40x10__paper__mono.txt
-before	steps::hovered	render::components::steps::hovered 120 40 junie truecolor	67b55aca61770e1a	step-status-glyph	frames/steps--hovered__120x40__junie__truecolor.txt
-before	steps::hovered	render::components::steps::hovered 40 10 junie truecolor	beebaf04992a2ffa	step-status-glyph	frames/steps--hovered__40x10__junie__truecolor.txt
-before	steps::hovered	render::components::steps::hovered 120 40 junie mono	16c60c0e71d05628	step-status-glyph	frames/steps--hovered__120x40__junie__mono.txt
-before	steps::hovered	render::components::steps::hovered 40 10 junie mono	fbf6cac31bf12a28	step-status-glyph	frames/steps--hovered__40x10__junie__mono.txt
-before	steps::hovered	render::components::steps::hovered 120 40 paper truecolor	172b7ce4c789d248	step-status-glyph	frames/steps--hovered__120x40__paper__truecolor.txt
-before	steps::hovered	render::components::steps::hovered 40 10 paper truecolor	a384943eeb2095f8	step-status-glyph	frames/steps--hovered__40x10__paper__truecolor.txt
-before	steps::hovered	render::components::steps::hovered 120 40 paper mono	b679a4f6c77a9820	step-status-glyph	frames/steps--hovered__120x40__paper__mono.txt
-before	steps::hovered	render::components::steps::hovered 40 10 paper mono	34f9ac6f86d83cc0	step-status-glyph	frames/steps--hovered__40x10__paper__mono.txt
-before	steps::pressed	render::components::steps::pressed 120 40 junie truecolor	7835c2a984c9f970	step-status-glyph	frames/steps--pressed__120x40__junie__truecolor.txt
-before	steps::pressed	render::components::steps::pressed 40 10 junie truecolor	d7057c5b501f7e50	step-status-glyph	frames/steps--pressed__40x10__junie__truecolor.txt
-before	steps::pressed	render::components::steps::pressed 120 40 junie mono	831f261cb10a53aa	step-status-glyph	frames/steps--pressed__120x40__junie__mono.txt
-before	steps::pressed	render::components::steps::pressed 40 10 junie mono	c86e449c901601ea	step-status-glyph	frames/steps--pressed__40x10__junie__mono.txt
-before	steps::pressed	render::components::steps::pressed 120 40 paper truecolor	5bfb3e4b80c37452	step-status-glyph	frames/steps--pressed__120x40__paper__truecolor.txt
-before	steps::pressed	render::components::steps::pressed 40 10 paper truecolor	bfdebf63045e06f2	step-status-glyph	frames/steps--pressed__40x10__paper__truecolor.txt
-before	steps::pressed	render::components::steps::pressed 120 40 paper mono	6589157e2e315230	step-status-glyph	frames/steps--pressed__120x40__paper__mono.txt
-before	steps::pressed	render::components::steps::pressed 40 10 paper mono	d7c8326e45241790	step-status-glyph	frames/steps--pressed__40x10__paper__mono.txt
-before	steps::focused	render::components::steps::focused 120 40 junie truecolor	1d00177b06f03b80	step-status-glyph	frames/steps--focused__120x40__junie__truecolor.txt
-before	steps::focused	render::components::steps::focused 40 10 junie truecolor	e2b7fa7e0b700520	step-status-glyph	frames/steps--focused__40x10__junie__truecolor.txt
-before	steps::focused	render::components::steps::focused 120 40 junie mono	16c60c0e71d05628	step-status-glyph	frames/steps--focused__120x40__junie__mono.txt
-before	steps::focused	render::components::steps::focused 40 10 junie mono	fbf6cac31bf12a28	step-status-glyph	frames/steps--focused__40x10__junie__mono.txt
-before	steps::focused	render::components::steps::focused 120 40 paper truecolor	46db4044c112e098	step-status-glyph	frames/steps--focused__120x40__paper__truecolor.txt
-before	steps::focused	render::components::steps::focused 40 10 paper truecolor	7f5158e1e2c235c8	step-status-glyph	frames/steps--focused__40x10__paper__truecolor.txt
-before	steps::focused	render::components::steps::focused 120 40 paper mono	b679a4f6c77a9820	step-status-glyph	frames/steps--focused__120x40__paper__mono.txt
-before	steps::focused	render::components::steps::focused 40 10 paper mono	34f9ac6f86d83cc0	step-status-glyph	frames/steps--focused__40x10__paper__mono.txt
-before	tabs::focused	render::components::tabs::focused 120 40 junie truecolor	345a10235d65f11f	owned-tab-cursor-state	frames/tabs--focused__120x40__junie__truecolor.txt
-before	tabs::focused	render::components::tabs::focused 40 10 junie truecolor	870f0d29c4b57860	owned-tab-cursor-state	frames/tabs--focused__40x10__junie__truecolor.txt
-before	tabs::focused	render::components::tabs::focused 120 40 junie mono	03263f48effb1240	owned-tab-cursor-state	frames/tabs--focused__120x40__junie__mono.txt
-before	tabs::focused	render::components::tabs::focused 40 10 junie mono	8575598b028539ba	owned-tab-cursor-state	frames/tabs--focused__40x10__junie__mono.txt
-before	tabs::focused	render::components::tabs::focused 120 40 paper truecolor	9aa17c11b0135f9e	owned-tab-cursor-state	frames/tabs--focused__120x40__paper__truecolor.txt
-before	tabs::focused	render::components::tabs::focused 40 10 paper truecolor	2eb100378a3b3c43	owned-tab-cursor-state	frames/tabs--focused__40x10__paper__truecolor.txt
-before	tabs::focused	render::components::tabs::focused 120 40 paper mono	ad59d0d63e9883e4	owned-tab-cursor-state	frames/tabs--focused__120x40__paper__mono.txt
-before	tabs::focused	render::components::tabs::focused 40 10 paper mono	a26add1c3797f552	owned-tab-cursor-state	frames/tabs--focused__40x10__paper__mono.txt
-before	steps::editing	render::components::steps::editing 120 40 junie truecolor	1d00177b06f03b80	step-status-glyph	frames/steps--editing__120x40__junie__truecolor.txt
-before	steps::editing	render::components::steps::editing 40 10 junie truecolor	e2b7fa7e0b700520	step-status-glyph	frames/steps--editing__40x10__junie__truecolor.txt
-before	steps::editing	render::components::steps::editing 120 40 junie mono	16c60c0e71d05628	step-status-glyph	frames/steps--editing__120x40__junie__mono.txt
-before	steps::editing	render::components::steps::editing 40 10 junie mono	fbf6cac31bf12a28	step-status-glyph	frames/steps--editing__40x10__junie__mono.txt
-before	steps::editing	render::components::steps::editing 120 40 paper truecolor	46db4044c112e098	step-status-glyph	frames/steps--editing__120x40__paper__truecolor.txt
-before	steps::editing	render::components::steps::editing 40 10 paper truecolor	7f5158e1e2c235c8	step-status-glyph	frames/steps--editing__40x10__paper__truecolor.txt
-before	steps::editing	render::components::steps::editing 120 40 paper mono	b679a4f6c77a9820	step-status-glyph	frames/steps--editing__120x40__paper__mono.txt
-before	steps::editing	render::components::steps::editing 40 10 paper mono	34f9ac6f86d83cc0	step-status-glyph	frames/steps--editing__40x10__paper__mono.txt
-before	too_small::empty	render::components::too_small::empty 120 40 junie truecolor	9ea56067744f820f	required-product-copy	frames/too_small--empty__120x40__junie__truecolor.txt
-before	too_small::empty	render::components::too_small::empty 40 10 junie truecolor	fce3d5f93630e6e2	required-product-copy	frames/too_small--empty__40x10__junie__truecolor.txt
-before	too_small::empty	render::components::too_small::empty 120 40 junie mono	d177c60d725d64aa	required-product-copy	frames/too_small--empty__120x40__junie__mono.txt
-before	too_small::empty	render::components::too_small::empty 40 10 junie mono	256562eec5d491f8	required-product-copy	frames/too_small--empty__40x10__junie__mono.txt
-before	too_small::empty	render::components::too_small::empty 120 40 paper truecolor	8f4dff939e99610b	required-product-copy	frames/too_small--empty__120x40__paper__truecolor.txt
-before	too_small::empty	render::components::too_small::empty 40 10 paper truecolor	1c5bdeef8b58dbfe	required-product-copy	frames/too_small--empty__40x10__paper__truecolor.txt
-before	too_small::empty	render::components::too_small::empty 120 40 paper mono	90e5348a0528c210	required-product-copy	frames/too_small--empty__120x40__paper__mono.txt
-before	too_small::empty	render::components::too_small::empty 40 10 paper mono	e185626efd6e123c	required-product-copy	frames/too_small--empty__40x10__paper__mono.txt
-before	tree::focused	render::components::tree::focused 120 40 junie truecolor	166c4078d8671dfc	owned-cursor-state	frames/tree--focused__120x40__junie__truecolor.txt
-before	tree::focused	render::components::tree::focused 40 10 junie truecolor	f152f9641779aefc	owned-cursor-state	frames/tree--focused__40x10__junie__truecolor.txt
-before	tree::focused	render::components::tree::focused 120 40 junie mono	baf575f7ba6f2151	owned-cursor-state	frames/tree--focused__120x40__junie__mono.txt
-before	tree::focused	render::components::tree::focused 40 10 junie mono	9f3018afbf450231	owned-cursor-state	frames/tree--focused__40x10__junie__mono.txt
-before	tree::focused	render::components::tree::focused 120 40 paper truecolor	3a2c6b7f8f1e5356	owned-cursor-state	frames/tree--focused__120x40__paper__truecolor.txt
-before	tree::focused	render::components::tree::focused 40 10 paper truecolor	a577044e5105f946	owned-cursor-state	frames/tree--focused__40x10__paper__truecolor.txt
-before	tree::focused	render::components::tree::focused 120 40 paper mono	b309aa954616d2e7	owned-cursor-state	frames/tree--focused__120x40__paper__mono.txt
-before	tree::focused	render::components::tree::focused 40 10 paper mono	10dbf2bf094ddac7	owned-cursor-state	frames/tree--focused__40x10__paper__mono.txt
-before	wizard::focused	render::components::wizard::focused 120 40 junie truecolor	8862c8bb099345a8	current-step-state	frames/wizard--focused__120x40__junie__truecolor.txt
-before	wizard::focused	render::components::wizard::focused 40 10 junie truecolor	570b446a1182977c	current-step-state	frames/wizard--focused__40x10__junie__truecolor.txt
-before	wizard::focused	render::components::wizard::focused 120 40 junie mono	493c6b527c9bb2b8	current-step-state	frames/wizard--focused__120x40__junie__mono.txt
-before	wizard::focused	render::components::wizard::focused 40 10 junie mono	460f5c1ee441a9e0	current-step-state	frames/wizard--focused__40x10__junie__mono.txt
-before	wizard::focused	render::components::wizard::focused 120 40 paper truecolor	2a9991ed121f720a	current-step-state	frames/wizard--focused__120x40__paper__truecolor.txt
-before	wizard::focused	render::components::wizard::focused 40 10 paper truecolor	5e4c34fbf5f8830a	current-step-state	frames/wizard--focused__40x10__paper__truecolor.txt
-before	wizard::focused	render::components::wizard::focused 120 40 paper mono	1f9a6c68f96d1140	current-step-state	frames/wizard--focused__120x40__paper__mono.txt
-before	wizard::focused	render::components::wizard::focused 40 10 paper mono	526eebbd75b93920	current-step-state	frames/wizard--focused__40x10__paper__mono.txt
-before	wizard::disabled	render::components::wizard::disabled 120 40 junie truecolor	8862c8bb099345a8	disabled-step-state	frames/wizard--disabled__120x40__junie__truecolor.txt
-before	wizard::disabled	render::components::wizard::disabled 40 10 junie truecolor	570b446a1182977c	disabled-step-state	frames/wizard--disabled__40x10__junie__truecolor.txt
-before	wizard::disabled	render::components::wizard::disabled 120 40 junie mono	7d73dde4a86214d0	disabled-step-state	frames/wizard--disabled__120x40__junie__mono.txt
-before	wizard::disabled	render::components::wizard::disabled 40 10 junie mono	0fc62cbad509b9a8	disabled-step-state	frames/wizard--disabled__40x10__junie__mono.txt
-before	wizard::disabled	render::components::wizard::disabled 120 40 paper truecolor	2a9991ed121f720a	disabled-step-state	frames/wizard--disabled__120x40__paper__truecolor.txt
-before	wizard::disabled	render::components::wizard::disabled 40 10 paper truecolor	5e4c34fbf5f8830a	disabled-step-state	frames/wizard--disabled__40x10__paper__truecolor.txt
-before	wizard::disabled	render::components::wizard::disabled 120 40 paper mono	cea8729184babed8	disabled-step-state	frames/wizard--disabled__120x40__paper__mono.txt
-before	wizard::disabled	render::components::wizard::disabled 40 10 paper mono	aef7e3721926bf98	disabled-step-state	frames/wizard--disabled__40x10__paper__mono.txt
-before	tree::pressed	render::components::tree::pressed 120 40 junie truecolor	166c4078d8671dfc	owned-cursor-state	frames/tree--pressed__120x40__junie__truecolor.txt
-before	tree::pressed	render::components::tree::pressed 40 10 junie truecolor	f152f9641779aefc	owned-cursor-state	frames/tree--pressed__40x10__junie__truecolor.txt
-before	tree::pressed	render::components::tree::pressed 120 40 junie mono	baf575f7ba6f2151	owned-cursor-state	frames/tree--pressed__120x40__junie__mono.txt
-before	tree::pressed	render::components::tree::pressed 40 10 junie mono	9f3018afbf450231	owned-cursor-state	frames/tree--pressed__40x10__junie__mono.txt
-before	tree::pressed	render::components::tree::pressed 120 40 paper truecolor	3a2c6b7f8f1e5356	owned-cursor-state	frames/tree--pressed__120x40__paper__truecolor.txt
-before	tree::pressed	render::components::tree::pressed 40 10 paper truecolor	a577044e5105f946	owned-cursor-state	frames/tree--pressed__40x10__paper__truecolor.txt
-before	tree::pressed	render::components::tree::pressed 120 40 paper mono	b309aa954616d2e7	owned-cursor-state	frames/tree--pressed__120x40__paper__mono.txt
-before	tree::pressed	render::components::tree::pressed 40 10 paper mono	10dbf2bf094ddac7	owned-cursor-state	frames/tree--pressed__40x10__paper__mono.txt
-before	wizard::pressed	render::components::wizard::pressed 120 40 junie truecolor	8862c8bb099345a8	current-step-state	frames/wizard--pressed__120x40__junie__truecolor.txt
-before	wizard::pressed	render::components::wizard::pressed 40 10 junie truecolor	570b446a1182977c	current-step-state	frames/wizard--pressed__40x10__junie__truecolor.txt
-before	wizard::pressed	render::components::wizard::pressed 120 40 junie mono	cef09389d9540263	current-step-state	frames/wizard--pressed__120x40__junie__mono.txt
-before	wizard::pressed	render::components::wizard::pressed 40 10 junie mono	d82168f7118bd853	current-step-state	frames/wizard--pressed__40x10__junie__mono.txt
-before	wizard::pressed	render::components::wizard::pressed 120 40 paper truecolor	2a9991ed121f720a	current-step-state	frames/wizard--pressed__120x40__paper__truecolor.txt
-before	wizard::pressed	render::components::wizard::pressed 40 10 paper truecolor	5e4c34fbf5f8830a	current-step-state	frames/wizard--pressed__40x10__paper__truecolor.txt
-before	wizard::pressed	render::components::wizard::pressed 120 40 paper mono	d8149fca0267121b	current-step-state	frames/wizard--pressed__120x40__paper__mono.txt
-before	wizard::pressed	render::components::wizard::pressed 40 10 paper mono	a69de91c023b557b	current-step-state	frames/wizard--pressed__40x10__paper__mono.txt
+# phase	case	exact_test_key	digest	classification	frame	style_dump	ansi	html
+before	button::selected	render::components::button::selected 120 40 junie truecolor	c3a5557f65a5ff3f	checked-selection-marker	frames/button--selected__120x40__junie__truecolor.txt			
+before	button::selected	render::components::button::selected 40 10 junie truecolor	2b38a4b81a3e733f	checked-selection-marker	frames/button--selected__40x10__junie__truecolor.txt			
+before	button::selected	render::components::button::selected 120 40 junie mono	13d0bae25b64bacc	checked-selection-marker	frames/button--selected__120x40__junie__mono.txt			
+before	button::selected	render::components::button::selected 40 10 junie mono	0f80b7f1cc3b9e4c	checked-selection-marker	frames/button--selected__40x10__junie__mono.txt			
+before	button::selected	render::components::button::selected 120 40 paper truecolor	93ffce78c25faa79	checked-selection-marker	frames/button--selected__120x40__paper__truecolor.txt			
+before	button::selected	render::components::button::selected 40 10 paper truecolor	6b3f15ee40b3e7f9	checked-selection-marker	frames/button--selected__40x10__paper__truecolor.txt			
+before	button::selected	render::components::button::selected 120 40 paper mono	4330743d0d1af0f4	checked-selection-marker	frames/button--selected__120x40__paper__mono.txt			
+before	button::selected	render::components::button::selected 40 10 paper mono	000a22404ee1f874	checked-selection-marker	frames/button--selected__40x10__paper__mono.txt			
+before	chip_bar::focused	render::components::chip_bar::focused 120 40 junie truecolor	ec65ee8e34084547	owned-cursor-state	frames/chip_bar--focused__120x40__junie__truecolor.txt	styles/chip_bar--focused__120x40__junie__truecolor.tsv	ansi/chip_bar--focused__120x40__junie__truecolor.ansi	html/chip_bar--focused__120x40__junie__truecolor.html
+before	chip_bar::focused	render::components::chip_bar::focused 40 10 junie truecolor	668e2c4ce5d503d8	owned-cursor-state	frames/chip_bar--focused__40x10__junie__truecolor.txt	styles/chip_bar--focused__40x10__junie__truecolor.tsv	ansi/chip_bar--focused__40x10__junie__truecolor.ansi	html/chip_bar--focused__40x10__junie__truecolor.html
+before	chip_bar::focused	render::components::chip_bar::focused 120 40 junie mono	d410e30a8fa1287b	owned-cursor-state	frames/chip_bar--focused__120x40__junie__mono.txt	styles/chip_bar--focused__120x40__junie__mono.tsv	ansi/chip_bar--focused__120x40__junie__mono.ansi	html/chip_bar--focused__120x40__junie__mono.html
+before	chip_bar::focused	render::components::chip_bar::focused 40 10 junie mono	fff5116446505e3c	owned-cursor-state	frames/chip_bar--focused__40x10__junie__mono.txt	styles/chip_bar--focused__40x10__junie__mono.tsv	ansi/chip_bar--focused__40x10__junie__mono.ansi	html/chip_bar--focused__40x10__junie__mono.html
+before	chip_bar::focused	render::components::chip_bar::focused 120 40 paper truecolor	5262957dbd38ff11	owned-cursor-state	frames/chip_bar--focused__120x40__paper__truecolor.txt	styles/chip_bar--focused__120x40__paper__truecolor.tsv	ansi/chip_bar--focused__120x40__paper__truecolor.ansi	html/chip_bar--focused__120x40__paper__truecolor.html
+before	chip_bar::focused	render::components::chip_bar::focused 40 10 paper truecolor	0775d556d329cac0	owned-cursor-state	frames/chip_bar--focused__40x10__paper__truecolor.txt	styles/chip_bar--focused__40x10__paper__truecolor.tsv	ansi/chip_bar--focused__40x10__paper__truecolor.ansi	html/chip_bar--focused__40x10__paper__truecolor.html
+before	chip_bar::focused	render::components::chip_bar::focused 120 40 paper mono	af6ee1d9868d153b	owned-cursor-state	frames/chip_bar--focused__120x40__paper__mono.txt	styles/chip_bar--focused__120x40__paper__mono.tsv	ansi/chip_bar--focused__120x40__paper__mono.ansi	html/chip_bar--focused__120x40__paper__mono.html
+before	chip_bar::focused	render::components::chip_bar::focused 40 10 paper mono	1ccb93fcbda7a6d8	owned-cursor-state	frames/chip_bar--focused__40x10__paper__mono.txt	styles/chip_bar--focused__40x10__paper__mono.tsv	ansi/chip_bar--focused__40x10__paper__mono.ansi	html/chip_bar--focused__40x10__paper__mono.html
+before	code_editor::disabled	render::components::code_editor::disabled 120 40 junie truecolor	8a0ebfab287b61ce	disabled-editor-state	frames/code_editor--disabled__120x40__junie__truecolor.txt	styles/code_editor--disabled__120x40__junie__truecolor.tsv	ansi/code_editor--disabled__120x40__junie__truecolor.ansi	html/code_editor--disabled__120x40__junie__truecolor.html
+before	code_editor::disabled	render::components::code_editor::disabled 40 10 junie truecolor	a0a3a2ffbd50cbbe	disabled-editor-state	frames/code_editor--disabled__40x10__junie__truecolor.txt	styles/code_editor--disabled__40x10__junie__truecolor.tsv	ansi/code_editor--disabled__40x10__junie__truecolor.ansi	html/code_editor--disabled__40x10__junie__truecolor.html
+before	code_editor::disabled	render::components::code_editor::disabled 120 40 junie mono	2cc2ae4227dcdc9a	disabled-editor-state	frames/code_editor--disabled__120x40__junie__mono.txt	styles/code_editor--disabled__120x40__junie__mono.tsv	ansi/code_editor--disabled__120x40__junie__mono.ansi	html/code_editor--disabled__120x40__junie__mono.html
+before	code_editor::disabled	render::components::code_editor::disabled 40 10 junie mono	4effe6c0029f69da	disabled-editor-state	frames/code_editor--disabled__40x10__junie__mono.txt	styles/code_editor--disabled__40x10__junie__mono.tsv	ansi/code_editor--disabled__40x10__junie__mono.ansi	html/code_editor--disabled__40x10__junie__mono.html
+before	code_editor::disabled	render::components::code_editor::disabled 120 40 paper truecolor	6b645d24f89ac5e2	disabled-editor-state	frames/code_editor--disabled__120x40__paper__truecolor.txt	styles/code_editor--disabled__120x40__paper__truecolor.tsv	ansi/code_editor--disabled__120x40__paper__truecolor.ansi	html/code_editor--disabled__120x40__paper__truecolor.html
+before	code_editor::disabled	render::components::code_editor::disabled 40 10 paper truecolor	221e5e3eda930862	disabled-editor-state	frames/code_editor--disabled__40x10__paper__truecolor.txt	styles/code_editor--disabled__40x10__paper__truecolor.tsv	ansi/code_editor--disabled__40x10__paper__truecolor.ansi	html/code_editor--disabled__40x10__paper__truecolor.html
+before	code_editor::disabled	render::components::code_editor::disabled 120 40 paper mono	fac2db84f7ce6162	disabled-editor-state	frames/code_editor--disabled__120x40__paper__mono.txt	styles/code_editor--disabled__120x40__paper__mono.tsv	ansi/code_editor--disabled__120x40__paper__mono.ansi	html/code_editor--disabled__120x40__paper__mono.html
+before	code_editor::disabled	render::components::code_editor::disabled 40 10 paper mono	247d6fd161110122	disabled-editor-state	frames/code_editor--disabled__40x10__paper__mono.txt	styles/code_editor--disabled__40x10__paper__mono.tsv	ansi/code_editor--disabled__40x10__paper__mono.ansi	html/code_editor--disabled__40x10__paper__mono.html
+before	completion::pressed	render::components::completion::pressed 120 40 junie truecolor	9f4ca9af9726d314	owned-cursor-state	frames/completion--pressed__120x40__junie__truecolor.txt			
+before	completion::pressed	render::components::completion::pressed 40 10 junie truecolor	648acf049ed32534	owned-cursor-state	frames/completion--pressed__40x10__junie__truecolor.txt			
+before	completion::pressed	render::components::completion::pressed 120 40 junie mono	ebe498e8ebdbda13	owned-cursor-state	frames/completion--pressed__120x40__junie__mono.txt			
+before	completion::pressed	render::components::completion::pressed 40 10 junie mono	46c0a4bc5841cec3	owned-cursor-state	frames/completion--pressed__40x10__junie__mono.txt			
+before	completion::pressed	render::components::completion::pressed 120 40 paper truecolor	d882a9c7ac011ef9	owned-cursor-state	frames/completion--pressed__120x40__paper__truecolor.txt			
+before	completion::pressed	render::components::completion::pressed 40 10 paper truecolor	bb95328861765ba9	owned-cursor-state	frames/completion--pressed__40x10__paper__truecolor.txt			
+before	completion::pressed	render::components::completion::pressed 120 40 paper mono	d4dcd71c62410cdd	owned-cursor-state	frames/completion--pressed__120x40__paper__mono.txt			
+before	completion::pressed	render::components::completion::pressed 40 10 paper mono	64d8819fe8a2a01d	owned-cursor-state	frames/completion--pressed__40x10__paper__mono.txt			
+before	completion::selected	render::components::completion::selected 120 40 junie truecolor	529d0b2b17216132	selected-row-marker	frames/completion--selected__120x40__junie__truecolor.txt			
+before	completion::selected	render::components::completion::selected 40 10 junie truecolor	1f1f796e74ebb572	selected-row-marker	frames/completion--selected__40x10__junie__truecolor.txt			
+before	completion::selected	render::components::completion::selected 120 40 junie mono	2c52b2cb646f5dd5	selected-row-marker	frames/completion--selected__120x40__junie__mono.txt			
+before	completion::selected	render::components::completion::selected 40 10 junie mono	41fdaff714ab0375	selected-row-marker	frames/completion--selected__40x10__junie__mono.txt			
+before	completion::selected	render::components::completion::selected 120 40 paper truecolor	1bde724981c69778	selected-row-marker	frames/completion--selected__120x40__paper__truecolor.txt			
+before	completion::selected	render::components::completion::selected 40 10 paper truecolor	d7a41a466fbe82e8	selected-row-marker	frames/completion--selected__40x10__paper__truecolor.txt			
+before	completion::selected	render::components::completion::selected 120 40 paper mono	f9d6feb332ccd447	selected-row-marker	frames/completion--selected__120x40__paper__mono.txt			
+before	completion::selected	render::components::completion::selected 40 10 paper mono	d24f0ece251a4c37	selected-row-marker	frames/completion--selected__40x10__paper__mono.txt			
+before	completion::focused	render::components::completion::focused 120 40 junie truecolor	529d0b2b17216132	owned-cursor-state	frames/completion--focused__120x40__junie__truecolor.txt			
+before	completion::focused	render::components::completion::focused 40 10 junie truecolor	1f1f796e74ebb572	owned-cursor-state	frames/completion--focused__40x10__junie__truecolor.txt			
+before	completion::focused	render::components::completion::focused 120 40 junie mono	2c52b2cb646f5dd5	owned-cursor-state	frames/completion--focused__120x40__junie__mono.txt			
+before	completion::focused	render::components::completion::focused 40 10 junie mono	41fdaff714ab0375	owned-cursor-state	frames/completion--focused__40x10__junie__mono.txt			
+before	completion::focused	render::components::completion::focused 120 40 paper truecolor	1bde724981c69778	owned-cursor-state	frames/completion--focused__120x40__paper__truecolor.txt			
+before	completion::focused	render::components::completion::focused 40 10 paper truecolor	d7a41a466fbe82e8	owned-cursor-state	frames/completion--focused__40x10__paper__truecolor.txt			
+before	completion::focused	render::components::completion::focused 120 40 paper mono	f9d6feb332ccd447	owned-cursor-state	frames/completion--focused__120x40__paper__mono.txt			
+before	completion::focused	render::components::completion::focused 40 10 paper mono	d24f0ece251a4c37	owned-cursor-state	frames/completion--focused__40x10__paper__mono.txt			
+before	dialog::disabled	render::components::dialog::disabled 120 40 junie truecolor	3b3a35187a544472	disabled-actions	frames/dialog--disabled__120x40__junie__truecolor.txt	styles/dialog--disabled__120x40__junie__truecolor.tsv	ansi/dialog--disabled__120x40__junie__truecolor.ansi	html/dialog--disabled__120x40__junie__truecolor.html
+before	dialog::disabled	render::components::dialog::disabled 40 10 junie truecolor	bca990b4d6367868	disabled-actions	frames/dialog--disabled__40x10__junie__truecolor.txt	styles/dialog--disabled__40x10__junie__truecolor.tsv	ansi/dialog--disabled__40x10__junie__truecolor.ansi	html/dialog--disabled__40x10__junie__truecolor.html
+before	dialog::disabled	render::components::dialog::disabled 120 40 junie mono	b737d61b383ec6f5	disabled-actions	frames/dialog--disabled__120x40__junie__mono.txt	styles/dialog--disabled__120x40__junie__mono.tsv	ansi/dialog--disabled__120x40__junie__mono.ansi	html/dialog--disabled__120x40__junie__mono.html
+before	dialog::disabled	render::components::dialog::disabled 40 10 junie mono	081728ded55d1575	disabled-actions	frames/dialog--disabled__40x10__junie__mono.txt	styles/dialog--disabled__40x10__junie__mono.tsv	ansi/dialog--disabled__40x10__junie__mono.ansi	html/dialog--disabled__40x10__junie__mono.html
+before	dialog::disabled	render::components::dialog::disabled 120 40 paper truecolor	c32427125f196b4a	disabled-actions	frames/dialog--disabled__120x40__paper__truecolor.txt	styles/dialog--disabled__120x40__paper__truecolor.tsv	ansi/dialog--disabled__120x40__paper__truecolor.ansi	html/dialog--disabled__120x40__paper__truecolor.html
+before	dialog::disabled	render::components::dialog::disabled 40 10 paper truecolor	37273c6e6232fa10	disabled-actions	frames/dialog--disabled__40x10__paper__truecolor.txt	styles/dialog--disabled__40x10__paper__truecolor.tsv	ansi/dialog--disabled__40x10__paper__truecolor.ansi	html/dialog--disabled__40x10__paper__truecolor.html
+before	dialog::disabled	render::components::dialog::disabled 120 40 paper mono	98782672ba8211f1	disabled-actions	frames/dialog--disabled__120x40__paper__mono.txt	styles/dialog--disabled__120x40__paper__mono.tsv	ansi/dialog--disabled__120x40__paper__mono.ansi	html/dialog--disabled__120x40__paper__mono.html
+before	dialog::disabled	render::components::dialog::disabled 40 10 paper mono	f9fb14d2886dbe31	disabled-actions	frames/dialog--disabled__40x10__paper__mono.txt	styles/dialog--disabled__40x10__paper__mono.tsv	ansi/dialog--disabled__40x10__paper__mono.ansi	html/dialog--disabled__40x10__paper__mono.html
+before	context_menu::selected	render::components::context_menu::selected 120 40 junie truecolor	901d2f48c8a112ae	selected-row-marker	frames/context_menu--selected__120x40__junie__truecolor.txt			
+before	context_menu::selected	render::components::context_menu::selected 40 10 junie truecolor	0713f57b0c11723e	selected-row-marker	frames/context_menu--selected__40x10__junie__truecolor.txt			
+before	context_menu::selected	render::components::context_menu::selected 120 40 junie mono	e6c6987845be0a57	selected-row-marker	frames/context_menu--selected__120x40__junie__mono.txt			
+before	context_menu::selected	render::components::context_menu::selected 40 10 junie mono	f37c624d906d3b07	selected-row-marker	frames/context_menu--selected__40x10__junie__mono.txt			
+before	context_menu::selected	render::components::context_menu::selected 120 40 paper truecolor	a3369cee78664ae0	selected-row-marker	frames/context_menu--selected__120x40__paper__truecolor.txt			
+before	context_menu::selected	render::components::context_menu::selected 40 10 paper truecolor	40ee1b43fd794f90	selected-row-marker	frames/context_menu--selected__40x10__paper__truecolor.txt			
+before	context_menu::selected	render::components::context_menu::selected 120 40 paper mono	e5b0936552b2ce19	selected-row-marker	frames/context_menu--selected__120x40__paper__mono.txt			
+before	context_menu::selected	render::components::context_menu::selected 40 10 paper mono	5b4a1ca147bd9b79	selected-row-marker	frames/context_menu--selected__40x10__paper__mono.txt			
+before	filter_list::focused	render::components::filter_list::focused 120 40 junie truecolor	917af23a272149b8	owned-cursor-state	frames/filter_list--focused__120x40__junie__truecolor.txt			
+before	filter_list::focused	render::components::filter_list::focused 40 10 junie truecolor	58377252918b9118	owned-cursor-state	frames/filter_list--focused__40x10__junie__truecolor.txt			
+before	filter_list::focused	render::components::filter_list::focused 120 40 junie mono	6449c6c04aeb76e9	owned-cursor-state	frames/filter_list--focused__120x40__junie__mono.txt			
+before	filter_list::focused	render::components::filter_list::focused 40 10 junie mono	d09db330fe7eb549	owned-cursor-state	frames/filter_list--focused__40x10__junie__mono.txt			
+before	filter_list::focused	render::components::filter_list::focused 120 40 paper truecolor	e7daa7763ab26b60	owned-cursor-state	frames/filter_list--focused__120x40__paper__truecolor.txt			
+before	filter_list::focused	render::components::filter_list::focused 40 10 paper truecolor	afa33f2b36594b00	owned-cursor-state	frames/filter_list--focused__40x10__paper__truecolor.txt			
+before	filter_list::focused	render::components::filter_list::focused 120 40 paper mono	e37c24926f0b135b	owned-cursor-state	frames/filter_list--focused__120x40__paper__mono.txt			
+before	filter_list::focused	render::components::filter_list::focused 40 10 paper mono	0c1a4adfb09fc63b	owned-cursor-state	frames/filter_list--focused__40x10__paper__mono.txt			
+before	filter_list::pressed	render::components::filter_list::pressed 120 40 junie truecolor	917af23a272149b8	owned-cursor-state	frames/filter_list--pressed__120x40__junie__truecolor.txt			
+before	filter_list::pressed	render::components::filter_list::pressed 40 10 junie truecolor	58377252918b9118	owned-cursor-state	frames/filter_list--pressed__40x10__junie__truecolor.txt			
+before	filter_list::pressed	render::components::filter_list::pressed 120 40 junie mono	6449c6c04aeb76e9	owned-cursor-state	frames/filter_list--pressed__120x40__junie__mono.txt			
+before	filter_list::pressed	render::components::filter_list::pressed 40 10 junie mono	d09db330fe7eb549	owned-cursor-state	frames/filter_list--pressed__40x10__junie__mono.txt			
+before	filter_list::pressed	render::components::filter_list::pressed 120 40 paper truecolor	e7daa7763ab26b60	owned-cursor-state	frames/filter_list--pressed__120x40__paper__truecolor.txt			
+before	filter_list::pressed	render::components::filter_list::pressed 40 10 paper truecolor	afa33f2b36594b00	owned-cursor-state	frames/filter_list--pressed__40x10__paper__truecolor.txt			
+before	filter_list::pressed	render::components::filter_list::pressed 120 40 paper mono	e37c24926f0b135b	owned-cursor-state	frames/filter_list--pressed__120x40__paper__mono.txt			
+before	filter_list::pressed	render::components::filter_list::pressed 40 10 paper mono	0c1a4adfb09fc63b	owned-cursor-state	frames/filter_list--pressed__40x10__paper__mono.txt			
+before	filter_list::selected	render::components::filter_list::selected 120 40 junie truecolor	b7da71dfea121f8c	selected-row-marker	frames/filter_list--selected__120x40__junie__truecolor.txt			
+before	filter_list::selected	render::components::filter_list::selected 40 10 junie truecolor	97507dd1ee80de0c	selected-row-marker	frames/filter_list--selected__40x10__junie__truecolor.txt			
+before	filter_list::selected	render::components::filter_list::selected 120 40 junie mono	5173a3946a6f6d5d	selected-row-marker	frames/filter_list--selected__120x40__junie__mono.txt			
+before	filter_list::selected	render::components::filter_list::selected 40 10 junie mono	d1164217669aa67d	selected-row-marker	frames/filter_list--selected__40x10__junie__mono.txt			
+before	filter_list::selected	render::components::filter_list::selected 120 40 paper truecolor	ca34396211af4364	selected-row-marker	frames/filter_list--selected__120x40__paper__truecolor.txt			
+before	filter_list::selected	render::components::filter_list::selected 40 10 paper truecolor	fcd4e0fb44859354	selected-row-marker	frames/filter_list--selected__40x10__paper__truecolor.txt			
+before	filter_list::selected	render::components::filter_list::selected 120 40 paper mono	8a92f44a0e7b1e2f	selected-row-marker	frames/filter_list--selected__120x40__paper__mono.txt			
+before	filter_list::selected	render::components::filter_list::selected 40 10 paper mono	c04b8c0f1387c74f	selected-row-marker	frames/filter_list--selected__40x10__paper__mono.txt			
+before	menu_bar::disabled	render::components::menu_bar::disabled 120 40 junie truecolor	5cae5c8506ff7113	disabled-menu-title	frames/menu_bar--disabled__120x40__junie__truecolor.txt	styles/menu_bar--disabled__120x40__junie__truecolor.tsv	ansi/menu_bar--disabled__120x40__junie__truecolor.ansi	html/menu_bar--disabled__120x40__junie__truecolor.html
+before	menu_bar::disabled	render::components::menu_bar::disabled 40 10 junie truecolor	f50445ec8b64db53	disabled-menu-title	frames/menu_bar--disabled__40x10__junie__truecolor.txt	styles/menu_bar--disabled__40x10__junie__truecolor.tsv	ansi/menu_bar--disabled__40x10__junie__truecolor.ansi	html/menu_bar--disabled__40x10__junie__truecolor.html
+before	menu_bar::disabled	render::components::menu_bar::disabled 120 40 junie mono	ee5d27b03b18dbb3	disabled-menu-title	frames/menu_bar--disabled__120x40__junie__mono.txt	styles/menu_bar--disabled__120x40__junie__mono.tsv	ansi/menu_bar--disabled__120x40__junie__mono.ansi	html/menu_bar--disabled__120x40__junie__mono.html
+before	menu_bar::disabled	render::components::menu_bar::disabled 40 10 junie mono	12b9a851f9af4d93	disabled-menu-title	frames/menu_bar--disabled__40x10__junie__mono.txt	styles/menu_bar--disabled__40x10__junie__mono.tsv	ansi/menu_bar--disabled__40x10__junie__mono.ansi	html/menu_bar--disabled__40x10__junie__mono.html
+before	menu_bar::disabled	render::components::menu_bar::disabled 120 40 paper truecolor	7326495bdac3a26f	disabled-menu-title	frames/menu_bar--disabled__120x40__paper__truecolor.txt	styles/menu_bar--disabled__120x40__paper__truecolor.tsv	ansi/menu_bar--disabled__120x40__paper__truecolor.ansi	html/menu_bar--disabled__120x40__paper__truecolor.html
+before	menu_bar::disabled	render::components::menu_bar::disabled 40 10 paper truecolor	0d6c0a069c56e61f	disabled-menu-title	frames/menu_bar--disabled__40x10__paper__truecolor.txt	styles/menu_bar--disabled__40x10__paper__truecolor.tsv	ansi/menu_bar--disabled__40x10__paper__truecolor.ansi	html/menu_bar--disabled__40x10__paper__truecolor.html
+before	menu_bar::disabled	render::components::menu_bar::disabled 120 40 paper mono	fd2495cb9a5e26ab	disabled-menu-title	frames/menu_bar--disabled__120x40__paper__mono.txt	styles/menu_bar--disabled__120x40__paper__mono.tsv	ansi/menu_bar--disabled__120x40__paper__mono.ansi	html/menu_bar--disabled__120x40__paper__mono.html
+before	menu_bar::disabled	render::components::menu_bar::disabled 40 10 paper mono	30ec7711c4af9f0b	disabled-menu-title	frames/menu_bar--disabled__40x10__paper__mono.txt	styles/menu_bar--disabled__40x10__paper__mono.tsv	ansi/menu_bar--disabled__40x10__paper__mono.ansi	html/menu_bar--disabled__40x10__paper__mono.html
+before	list::pressed	render::components::list::pressed 120 40 junie truecolor	d0e89104e36aa2ea	owned-cursor-state	frames/list--pressed__120x40__junie__truecolor.txt			
+before	list::pressed	render::components::list::pressed 40 10 junie truecolor	7a673016b0ed65aa	owned-cursor-state	frames/list--pressed__40x10__junie__truecolor.txt			
+before	list::pressed	render::components::list::pressed 120 40 junie mono	cb5e7c9046398305	owned-cursor-state	frames/list--pressed__120x40__junie__mono.txt			
+before	list::pressed	render::components::list::pressed 40 10 junie mono	7f93e89c2dddc765	owned-cursor-state	frames/list--pressed__40x10__junie__mono.txt			
+before	list::pressed	render::components::list::pressed 120 40 paper truecolor	3e524d83e9dfe491	owned-cursor-state	frames/list--pressed__120x40__paper__truecolor.txt			
+before	list::pressed	render::components::list::pressed 40 10 paper truecolor	d5f14e0f54f98a11	owned-cursor-state	frames/list--pressed__40x10__paper__truecolor.txt			
+before	list::pressed	render::components::list::pressed 120 40 paper mono	f2ce0cf198981d97	owned-cursor-state	frames/list--pressed__120x40__paper__mono.txt			
+before	list::pressed	render::components::list::pressed 40 10 paper mono	d3717338bef62977	owned-cursor-state	frames/list--pressed__40x10__paper__mono.txt			
+before	list::focused	render::components::list::focused 120 40 junie truecolor	ce3be201fd5894f6	owned-cursor-state	frames/list--focused__120x40__junie__truecolor.txt			
+before	list::focused	render::components::list::focused 40 10 junie truecolor	4e5dee5a5d3d3a76	owned-cursor-state	frames/list--focused__40x10__junie__truecolor.txt			
+before	list::focused	render::components::list::focused 120 40 junie mono	164c36b18586726f	owned-cursor-state	frames/list--focused__120x40__junie__mono.txt			
+before	list::focused	render::components::list::focused 40 10 junie mono	deac25911bc9718f	owned-cursor-state	frames/list--focused__40x10__junie__mono.txt			
+before	list::focused	render::components::list::focused 120 40 paper truecolor	82e97d15fc758a0e	owned-cursor-state	frames/list--focused__120x40__paper__truecolor.txt			
+before	list::focused	render::components::list::focused 40 10 paper truecolor	85d6dbd488cef51e	owned-cursor-state	frames/list--focused__40x10__paper__truecolor.txt			
+before	list::focused	render::components::list::focused 120 40 paper mono	73efdde5cdb3a6c5	owned-cursor-state	frames/list--focused__120x40__paper__mono.txt			
+before	list::focused	render::components::list::focused 40 10 paper mono	447bcd08741e2165	owned-cursor-state	frames/list--focused__40x10__paper__mono.txt			
+before	list::disabled	render::components::list::disabled 120 40 junie truecolor	ce3be201fd5894f6	disabled-items	frames/list--disabled__120x40__junie__truecolor.txt	styles/list--disabled__120x40__junie__truecolor.tsv	ansi/list--disabled__120x40__junie__truecolor.ansi	html/list--disabled__120x40__junie__truecolor.html
+before	list::disabled	render::components::list::disabled 40 10 junie truecolor	4e5dee5a5d3d3a76	disabled-items	frames/list--disabled__40x10__junie__truecolor.txt	styles/list--disabled__40x10__junie__truecolor.tsv	ansi/list--disabled__40x10__junie__truecolor.ansi	html/list--disabled__40x10__junie__truecolor.html
+before	list::disabled	render::components::list::disabled 120 40 junie mono	164c36b18586726f	disabled-items	frames/list--disabled__120x40__junie__mono.txt	styles/list--disabled__120x40__junie__mono.tsv	ansi/list--disabled__120x40__junie__mono.ansi	html/list--disabled__120x40__junie__mono.html
+before	list::disabled	render::components::list::disabled 40 10 junie mono	deac25911bc9718f	disabled-items	frames/list--disabled__40x10__junie__mono.txt	styles/list--disabled__40x10__junie__mono.tsv	ansi/list--disabled__40x10__junie__mono.ansi	html/list--disabled__40x10__junie__mono.html
+before	list::disabled	render::components::list::disabled 120 40 paper truecolor	82e97d15fc758a0e	disabled-items	frames/list--disabled__120x40__paper__truecolor.txt	styles/list--disabled__120x40__paper__truecolor.tsv	ansi/list--disabled__120x40__paper__truecolor.ansi	html/list--disabled__120x40__paper__truecolor.html
+before	list::disabled	render::components::list::disabled 40 10 paper truecolor	85d6dbd488cef51e	disabled-items	frames/list--disabled__40x10__paper__truecolor.txt	styles/list--disabled__40x10__paper__truecolor.tsv	ansi/list--disabled__40x10__paper__truecolor.ansi	html/list--disabled__40x10__paper__truecolor.html
+before	list::disabled	render::components::list::disabled 120 40 paper mono	73efdde5cdb3a6c5	disabled-items	frames/list--disabled__120x40__paper__mono.txt	styles/list--disabled__120x40__paper__mono.tsv	ansi/list--disabled__120x40__paper__mono.ansi	html/list--disabled__120x40__paper__mono.html
+before	list::disabled	render::components::list::disabled 40 10 paper mono	447bcd08741e2165	disabled-items	frames/list--disabled__40x10__paper__mono.txt	styles/list--disabled__40x10__paper__mono.tsv	ansi/list--disabled__40x10__paper__mono.ansi	html/list--disabled__40x10__paper__mono.html
+before	menu_bar::selected	render::components::menu_bar::selected 120 40 junie truecolor	5cae5c8506ff7113	selected-menu-title-marker	frames/menu_bar--selected__120x40__junie__truecolor.txt			
+before	menu_bar::selected	render::components::menu_bar::selected 40 10 junie truecolor	f50445ec8b64db53	selected-menu-title-marker	frames/menu_bar--selected__40x10__junie__truecolor.txt			
+before	menu_bar::selected	render::components::menu_bar::selected 120 40 junie mono	ee5d27b03b18dbb3	selected-menu-title-marker	frames/menu_bar--selected__120x40__junie__mono.txt			
+before	menu_bar::selected	render::components::menu_bar::selected 40 10 junie mono	12b9a851f9af4d93	selected-menu-title-marker	frames/menu_bar--selected__40x10__junie__mono.txt			
+before	menu_bar::selected	render::components::menu_bar::selected 120 40 paper truecolor	7326495bdac3a26f	selected-menu-title-marker	frames/menu_bar--selected__120x40__paper__truecolor.txt			
+before	menu_bar::selected	render::components::menu_bar::selected 40 10 paper truecolor	0d6c0a069c56e61f	selected-menu-title-marker	frames/menu_bar--selected__40x10__paper__truecolor.txt			
+before	menu_bar::selected	render::components::menu_bar::selected 120 40 paper mono	fd2495cb9a5e26ab	selected-menu-title-marker	frames/menu_bar--selected__120x40__paper__mono.txt			
+before	menu_bar::selected	render::components::menu_bar::selected 40 10 paper mono	30ec7711c4af9f0b	selected-menu-title-marker	frames/menu_bar--selected__40x10__paper__mono.txt			
+before	nav_list::focused	render::components::nav_list::focused 120 40 junie truecolor	aa170fa48c7bff95	owned-cursor-state	frames/nav_list--focused__120x40__junie__truecolor.txt			
+before	nav_list::focused	render::components::nav_list::focused 40 10 junie truecolor	c1dfdac7373c2195	owned-cursor-state	frames/nav_list--focused__40x10__junie__truecolor.txt			
+before	nav_list::focused	render::components::nav_list::focused 120 40 junie mono	3edf5c964f3d7e70	owned-cursor-state	frames/nav_list--focused__120x40__junie__mono.txt			
+before	nav_list::focused	render::components::nav_list::focused 40 10 junie mono	613c729105191690	owned-cursor-state	frames/nav_list--focused__40x10__junie__mono.txt			
+before	nav_list::focused	render::components::nav_list::focused 120 40 paper truecolor	1e4bf4714984fc83	owned-cursor-state	frames/nav_list--focused__120x40__paper__truecolor.txt			
+before	nav_list::focused	render::components::nav_list::focused 40 10 paper truecolor	2734b2396e1dd5d3	owned-cursor-state	frames/nav_list--focused__40x10__paper__truecolor.txt			
+before	nav_list::focused	render::components::nav_list::focused 120 40 paper mono	8e51cb4ea971312e	owned-cursor-state	frames/nav_list--focused__120x40__paper__mono.txt			
+before	nav_list::focused	render::components::nav_list::focused 40 10 paper mono	2f75b81b553a8ece	owned-cursor-state	frames/nav_list--focused__40x10__paper__mono.txt			
+before	nav_list::pressed	render::components::nav_list::pressed 120 40 junie truecolor	49fcb62bf25e1aa1	owned-cursor-state	frames/nav_list--pressed__120x40__junie__truecolor.txt			
+before	nav_list::pressed	render::components::nav_list::pressed 40 10 junie truecolor	51b1ce9c9f6961e1	owned-cursor-state	frames/nav_list--pressed__40x10__junie__truecolor.txt			
+before	nav_list::pressed	render::components::nav_list::pressed 120 40 junie mono	d3726f43d9cf7856	owned-cursor-state	frames/nav_list--pressed__120x40__junie__mono.txt			
+before	nav_list::pressed	render::components::nav_list::pressed 40 10 junie mono	aabd8a0f4ff229b6	owned-cursor-state	frames/nav_list--pressed__40x10__junie__mono.txt			
+before	nav_list::pressed	render::components::nav_list::pressed 120 40 paper truecolor	3aa06624efd9ddcb	owned-cursor-state	frames/nav_list--pressed__120x40__paper__truecolor.txt			
+before	nav_list::pressed	render::components::nav_list::pressed 40 10 paper truecolor	80b4214a0332a62b	owned-cursor-state	frames/nav_list--pressed__40x10__paper__truecolor.txt			
+before	nav_list::pressed	render::components::nav_list::pressed 120 40 paper mono	42df346c389d6f62	owned-cursor-state	frames/nav_list--pressed__120x40__paper__mono.txt			
+before	nav_list::pressed	render::components::nav_list::pressed 40 10 paper mono	30e8f7b5f8165f42	owned-cursor-state	frames/nav_list--pressed__40x10__paper__mono.txt			
+before	picker::focused	render::components::picker::focused 120 40 junie truecolor	e86c596e8f67992e	owned-cursor-state	frames/picker--focused__120x40__junie__truecolor.txt			
+before	picker::focused	render::components::picker::focused 40 10 junie truecolor	5e9e8059097fa47a	owned-cursor-state	frames/picker--focused__40x10__junie__truecolor.txt			
+before	picker::focused	render::components::picker::focused 120 40 junie mono	3b3e3c128e5a6a0d	owned-cursor-state	frames/picker--focused__120x40__junie__mono.txt			
+before	picker::focused	render::components::picker::focused 40 10 junie mono	e71f4fbb98c0629d	owned-cursor-state	frames/picker--focused__40x10__junie__mono.txt			
+before	picker::focused	render::components::picker::focused 120 40 paper truecolor	d74a1161bf34e69e	owned-cursor-state	frames/picker--focused__120x40__paper__truecolor.txt			
+before	picker::focused	render::components::picker::focused 40 10 paper truecolor	c65062169bcf1fc2	owned-cursor-state	frames/picker--focused__40x10__paper__truecolor.txt			
+before	picker::focused	render::components::picker::focused 120 40 paper mono	a8252482ad8025bb	owned-cursor-state	frames/picker--focused__120x40__paper__mono.txt			
+before	picker::focused	render::components::picker::focused 40 10 paper mono	d3e9fcf66ea92fbb	owned-cursor-state	frames/picker--focused__40x10__paper__mono.txt			
+before	picker::pressed	render::components::picker::pressed 120 40 junie truecolor	e86c596e8f67992e	owned-cursor-state	frames/picker--pressed__120x40__junie__truecolor.txt			
+before	picker::pressed	render::components::picker::pressed 40 10 junie truecolor	5e9e8059097fa47a	owned-cursor-state	frames/picker--pressed__40x10__junie__truecolor.txt			
+before	picker::pressed	render::components::picker::pressed 120 40 junie mono	3b3e3c128e5a6a0d	owned-cursor-state	frames/picker--pressed__120x40__junie__mono.txt			
+before	picker::pressed	render::components::picker::pressed 40 10 junie mono	e71f4fbb98c0629d	owned-cursor-state	frames/picker--pressed__40x10__junie__mono.txt			
+before	picker::pressed	render::components::picker::pressed 120 40 paper truecolor	d74a1161bf34e69e	owned-cursor-state	frames/picker--pressed__120x40__paper__truecolor.txt			
+before	picker::pressed	render::components::picker::pressed 40 10 paper truecolor	c65062169bcf1fc2	owned-cursor-state	frames/picker--pressed__40x10__paper__truecolor.txt			
+before	picker::pressed	render::components::picker::pressed 120 40 paper mono	a8252482ad8025bb	owned-cursor-state	frames/picker--pressed__120x40__paper__mono.txt			
+before	picker::pressed	render::components::picker::pressed 40 10 paper mono	d3e9fcf66ea92fbb	owned-cursor-state	frames/picker--pressed__40x10__paper__mono.txt			
+before	picker::selected	render::components::picker::selected 120 40 junie truecolor	9b37264df946abc8	selected-row-marker	frames/picker--selected__120x40__junie__truecolor.txt			
+before	picker::selected	render::components::picker::selected 40 10 junie truecolor	94688363474c2f78	selected-row-marker	frames/picker--selected__40x10__junie__truecolor.txt			
+before	picker::selected	render::components::picker::selected 120 40 junie mono	b3ae92858be43071	selected-row-marker	frames/picker--selected__120x40__junie__mono.txt			
+before	picker::selected	render::components::picker::selected 40 10 junie mono	f74d37210e531a91	selected-row-marker	frames/picker--selected__40x10__junie__mono.txt			
+before	picker::selected	render::components::picker::selected 120 40 paper truecolor	96876118d6a26b7c	selected-row-marker	frames/picker--selected__120x40__paper__truecolor.txt			
+before	picker::selected	render::components::picker::selected 40 10 paper truecolor	91b8158edc253e0c	selected-row-marker	frames/picker--selected__40x10__paper__truecolor.txt			
+before	picker::selected	render::components::picker::selected 120 40 paper mono	84f14628077bc8c7	selected-row-marker	frames/picker--selected__120x40__paper__mono.txt			
+before	picker::selected	render::components::picker::selected 40 10 paper mono	b659d32c315ba277	selected-row-marker	frames/picker--selected__40x10__paper__mono.txt			
+before	picker_chain::selected	render::components::picker_chain::selected 120 40 junie truecolor	b7081733e2f45ede	selected-stage-state	frames/picker_chain--selected__120x40__junie__truecolor.txt	styles/picker_chain--selected__120x40__junie__truecolor.tsv	ansi/picker_chain--selected__120x40__junie__truecolor.ansi	html/picker_chain--selected__120x40__junie__truecolor.html
+before	picker_chain::selected	render::components::picker_chain::selected 40 10 junie truecolor	cb7c93a6d76088de	selected-stage-state	frames/picker_chain--selected__40x10__junie__truecolor.txt	styles/picker_chain--selected__40x10__junie__truecolor.tsv	ansi/picker_chain--selected__40x10__junie__truecolor.ansi	html/picker_chain--selected__40x10__junie__truecolor.html
+before	picker_chain::selected	render::components::picker_chain::selected 120 40 junie mono	79a4feb79184f0d2	selected-stage-state	frames/picker_chain--selected__120x40__junie__mono.txt	styles/picker_chain--selected__120x40__junie__mono.tsv	ansi/picker_chain--selected__120x40__junie__mono.ansi	html/picker_chain--selected__120x40__junie__mono.html
+before	picker_chain::selected	render::components::picker_chain::selected 40 10 junie mono	3b157164d06fad32	selected-stage-state	frames/picker_chain--selected__40x10__junie__mono.txt	styles/picker_chain--selected__40x10__junie__mono.tsv	ansi/picker_chain--selected__40x10__junie__mono.ansi	html/picker_chain--selected__40x10__junie__mono.html
+before	picker_chain::selected	render::components::picker_chain::selected 120 40 paper truecolor	fbba09714c4ed84c	selected-stage-state	frames/picker_chain--selected__120x40__paper__truecolor.txt	styles/picker_chain--selected__120x40__paper__truecolor.tsv	ansi/picker_chain--selected__120x40__paper__truecolor.ansi	html/picker_chain--selected__120x40__paper__truecolor.html
+before	picker_chain::selected	render::components::picker_chain::selected 40 10 paper truecolor	18834e6a4d8ffe3c	selected-stage-state	frames/picker_chain--selected__40x10__paper__truecolor.txt	styles/picker_chain--selected__40x10__paper__truecolor.tsv	ansi/picker_chain--selected__40x10__paper__truecolor.ansi	html/picker_chain--selected__40x10__paper__truecolor.html
+before	picker_chain::selected	render::components::picker_chain::selected 120 40 paper mono	ed1bddc828302a72	selected-stage-state	frames/picker_chain--selected__120x40__paper__mono.txt	styles/picker_chain--selected__120x40__paper__mono.tsv	ansi/picker_chain--selected__120x40__paper__mono.ansi	html/picker_chain--selected__120x40__paper__mono.html
+before	picker_chain::selected	render::components::picker_chain::selected 40 10 paper mono	ace67f346e0f67d2	selected-stage-state	frames/picker_chain--selected__40x10__paper__mono.txt	styles/picker_chain--selected__40x10__paper__mono.tsv	ansi/picker_chain--selected__40x10__paper__mono.ansi	html/picker_chain--selected__40x10__paper__mono.html
+before	radio_group::focused	render::components::radio_group::focused 120 40 junie truecolor	57c4e8ba8931346e	owned-cursor-state	frames/radio_group--focused__120x40__junie__truecolor.txt			
+before	radio_group::focused	render::components::radio_group::focused 40 10 junie truecolor	3c36518edf6682ae	owned-cursor-state	frames/radio_group--focused__40x10__junie__truecolor.txt			
+before	radio_group::focused	render::components::radio_group::focused 120 40 junie mono	23253cfc778734b7	owned-cursor-state	frames/radio_group--focused__120x40__junie__mono.txt			
+before	radio_group::focused	render::components::radio_group::focused 40 10 junie mono	783665ea3658b177	owned-cursor-state	frames/radio_group--focused__40x10__junie__mono.txt			
+before	radio_group::focused	render::components::radio_group::focused 120 40 paper truecolor	d080a80f269c3da2	owned-cursor-state	frames/radio_group--focused__120x40__paper__truecolor.txt			
+before	radio_group::focused	render::components::radio_group::focused 40 10 paper truecolor	1ad944db4e336262	owned-cursor-state	frames/radio_group--focused__40x10__paper__truecolor.txt			
+before	radio_group::focused	render::components::radio_group::focused 120 40 paper mono	ec7745f70f85f805	owned-cursor-state	frames/radio_group--focused__120x40__paper__mono.txt			
+before	radio_group::focused	render::components::radio_group::focused 40 10 paper mono	dc874cf17df524c5	owned-cursor-state	frames/radio_group--focused__40x10__paper__mono.txt			
+before	radio_group::pressed	render::components::radio_group::pressed 120 40 junie truecolor	7c45f61130c600e6	owned-cursor-state	frames/radio_group--pressed__120x40__junie__truecolor.txt			
+before	radio_group::pressed	render::components::radio_group::pressed 40 10 junie truecolor	d9de17746e8da6a6	owned-cursor-state	frames/radio_group--pressed__40x10__junie__truecolor.txt			
+before	radio_group::pressed	render::components::radio_group::pressed 120 40 junie mono	c1fcc82633a44665	owned-cursor-state	frames/radio_group--pressed__120x40__junie__mono.txt			
+before	radio_group::pressed	render::components::radio_group::pressed 40 10 junie mono	96df91bc5acc71e5	owned-cursor-state	frames/radio_group--pressed__40x10__junie__mono.txt			
+before	radio_group::pressed	render::components::radio_group::pressed 120 40 paper truecolor	b74072a1943741bb	owned-cursor-state	frames/radio_group--pressed__120x40__paper__truecolor.txt			
+before	radio_group::pressed	render::components::radio_group::pressed 40 10 paper truecolor	9d9612086a084deb	owned-cursor-state	frames/radio_group--pressed__40x10__paper__truecolor.txt			
+before	radio_group::pressed	render::components::radio_group::pressed 120 40 paper mono	af7f1cd31203adff	owned-cursor-state	frames/radio_group--pressed__120x40__paper__mono.txt			
+before	radio_group::pressed	render::components::radio_group::pressed 40 10 paper mono	f604b3a6b831c57f	owned-cursor-state	frames/radio_group--pressed__40x10__paper__mono.txt			
+before	steps::disabled	render::components::steps::disabled 120 40 junie truecolor	623bc6071dbf9908	disabled-step-state	frames/steps--disabled__120x40__junie__truecolor.txt			
+before	steps::disabled	render::components::steps::disabled 40 10 junie truecolor	60ef4ac347301488	disabled-step-state	frames/steps--disabled__40x10__junie__truecolor.txt			
+before	steps::disabled	render::components::steps::disabled 120 40 junie mono	b054f35ce7b8a314	disabled-step-state	frames/steps--disabled__120x40__junie__mono.txt			
+before	steps::disabled	render::components::steps::disabled 40 10 junie mono	1c36ff0e2567fb14	disabled-step-state	frames/steps--disabled__40x10__junie__mono.txt			
+before	steps::disabled	render::components::steps::disabled 120 40 paper truecolor	b04e10d82c7e82fe	disabled-step-state	frames/steps--disabled__120x40__paper__truecolor.txt			
+before	steps::disabled	render::components::steps::disabled 40 10 paper truecolor	b25d51b8737ac6fe	disabled-step-state	frames/steps--disabled__40x10__paper__truecolor.txt			
+before	steps::disabled	render::components::steps::disabled 120 40 paper mono	b3f73e3ebdc10f48	disabled-step-state	frames/steps--disabled__120x40__paper__mono.txt			
+before	steps::disabled	render::components::steps::disabled 40 10 paper mono	0b0bd01297cf91e8	disabled-step-state	frames/steps--disabled__40x10__paper__mono.txt			
+before	steps::default	render::components::steps::default 120 40 junie truecolor	1d00177b06f03b80	step-status-glyph	frames/steps--default__120x40__junie__truecolor.txt			
+before	steps::default	render::components::steps::default 40 10 junie truecolor	e2b7fa7e0b700520	step-status-glyph	frames/steps--default__40x10__junie__truecolor.txt			
+before	steps::default	render::components::steps::default 120 40 junie mono	16c60c0e71d05628	step-status-glyph	frames/steps--default__120x40__junie__mono.txt			
+before	steps::default	render::components::steps::default 40 10 junie mono	fbf6cac31bf12a28	step-status-glyph	frames/steps--default__40x10__junie__mono.txt			
+before	steps::default	render::components::steps::default 120 40 paper truecolor	46db4044c112e098	step-status-glyph	frames/steps--default__120x40__paper__truecolor.txt			
+before	steps::default	render::components::steps::default 40 10 paper truecolor	7f5158e1e2c235c8	step-status-glyph	frames/steps--default__40x10__paper__truecolor.txt			
+before	steps::default	render::components::steps::default 120 40 paper mono	b679a4f6c77a9820	step-status-glyph	frames/steps--default__120x40__paper__mono.txt			
+before	steps::default	render::components::steps::default 40 10 paper mono	34f9ac6f86d83cc0	step-status-glyph	frames/steps--default__40x10__paper__mono.txt			
+before	steps::selected	render::components::steps::selected 120 40 junie truecolor	1d00177b06f03b80	step-status-glyph	frames/steps--selected__120x40__junie__truecolor.txt			
+before	steps::selected	render::components::steps::selected 40 10 junie truecolor	e2b7fa7e0b700520	step-status-glyph	frames/steps--selected__40x10__junie__truecolor.txt			
+before	steps::selected	render::components::steps::selected 120 40 junie mono	16c60c0e71d05628	step-status-glyph	frames/steps--selected__120x40__junie__mono.txt			
+before	steps::selected	render::components::steps::selected 40 10 junie mono	fbf6cac31bf12a28	step-status-glyph	frames/steps--selected__40x10__junie__mono.txt			
+before	steps::selected	render::components::steps::selected 120 40 paper truecolor	46db4044c112e098	step-status-glyph	frames/steps--selected__120x40__paper__truecolor.txt			
+before	steps::selected	render::components::steps::selected 40 10 paper truecolor	7f5158e1e2c235c8	step-status-glyph	frames/steps--selected__40x10__paper__truecolor.txt			
+before	steps::selected	render::components::steps::selected 120 40 paper mono	b679a4f6c77a9820	step-status-glyph	frames/steps--selected__120x40__paper__mono.txt			
+before	steps::selected	render::components::steps::selected 40 10 paper mono	34f9ac6f86d83cc0	step-status-glyph	frames/steps--selected__40x10__paper__mono.txt			
+before	steps::hovered	render::components::steps::hovered 120 40 junie truecolor	67b55aca61770e1a	step-status-glyph	frames/steps--hovered__120x40__junie__truecolor.txt			
+before	steps::hovered	render::components::steps::hovered 40 10 junie truecolor	beebaf04992a2ffa	step-status-glyph	frames/steps--hovered__40x10__junie__truecolor.txt			
+before	steps::hovered	render::components::steps::hovered 120 40 junie mono	16c60c0e71d05628	step-status-glyph	frames/steps--hovered__120x40__junie__mono.txt			
+before	steps::hovered	render::components::steps::hovered 40 10 junie mono	fbf6cac31bf12a28	step-status-glyph	frames/steps--hovered__40x10__junie__mono.txt			
+before	steps::hovered	render::components::steps::hovered 120 40 paper truecolor	172b7ce4c789d248	step-status-glyph	frames/steps--hovered__120x40__paper__truecolor.txt			
+before	steps::hovered	render::components::steps::hovered 40 10 paper truecolor	a384943eeb2095f8	step-status-glyph	frames/steps--hovered__40x10__paper__truecolor.txt			
+before	steps::hovered	render::components::steps::hovered 120 40 paper mono	b679a4f6c77a9820	step-status-glyph	frames/steps--hovered__120x40__paper__mono.txt			
+before	steps::hovered	render::components::steps::hovered 40 10 paper mono	34f9ac6f86d83cc0	step-status-glyph	frames/steps--hovered__40x10__paper__mono.txt			
+before	steps::pressed	render::components::steps::pressed 120 40 junie truecolor	7835c2a984c9f970	step-status-glyph	frames/steps--pressed__120x40__junie__truecolor.txt			
+before	steps::pressed	render::components::steps::pressed 40 10 junie truecolor	d7057c5b501f7e50	step-status-glyph	frames/steps--pressed__40x10__junie__truecolor.txt			
+before	steps::pressed	render::components::steps::pressed 120 40 junie mono	831f261cb10a53aa	step-status-glyph	frames/steps--pressed__120x40__junie__mono.txt			
+before	steps::pressed	render::components::steps::pressed 40 10 junie mono	c86e449c901601ea	step-status-glyph	frames/steps--pressed__40x10__junie__mono.txt			
+before	steps::pressed	render::components::steps::pressed 120 40 paper truecolor	5bfb3e4b80c37452	step-status-glyph	frames/steps--pressed__120x40__paper__truecolor.txt			
+before	steps::pressed	render::components::steps::pressed 40 10 paper truecolor	bfdebf63045e06f2	step-status-glyph	frames/steps--pressed__40x10__paper__truecolor.txt			
+before	steps::pressed	render::components::steps::pressed 120 40 paper mono	6589157e2e315230	step-status-glyph	frames/steps--pressed__120x40__paper__mono.txt			
+before	steps::pressed	render::components::steps::pressed 40 10 paper mono	d7c8326e45241790	step-status-glyph	frames/steps--pressed__40x10__paper__mono.txt			
+before	steps::focused	render::components::steps::focused 120 40 junie truecolor	1d00177b06f03b80	step-status-glyph	frames/steps--focused__120x40__junie__truecolor.txt			
+before	steps::focused	render::components::steps::focused 40 10 junie truecolor	e2b7fa7e0b700520	step-status-glyph	frames/steps--focused__40x10__junie__truecolor.txt			
+before	steps::focused	render::components::steps::focused 120 40 junie mono	16c60c0e71d05628	step-status-glyph	frames/steps--focused__120x40__junie__mono.txt			
+before	steps::focused	render::components::steps::focused 40 10 junie mono	fbf6cac31bf12a28	step-status-glyph	frames/steps--focused__40x10__junie__mono.txt			
+before	steps::focused	render::components::steps::focused 120 40 paper truecolor	46db4044c112e098	step-status-glyph	frames/steps--focused__120x40__paper__truecolor.txt			
+before	steps::focused	render::components::steps::focused 40 10 paper truecolor	7f5158e1e2c235c8	step-status-glyph	frames/steps--focused__40x10__paper__truecolor.txt			
+before	steps::focused	render::components::steps::focused 120 40 paper mono	b679a4f6c77a9820	step-status-glyph	frames/steps--focused__120x40__paper__mono.txt			
+before	steps::focused	render::components::steps::focused 40 10 paper mono	34f9ac6f86d83cc0	step-status-glyph	frames/steps--focused__40x10__paper__mono.txt			
+before	tabs::focused	render::components::tabs::focused 120 40 junie truecolor	345a10235d65f11f	owned-tab-cursor-state	frames/tabs--focused__120x40__junie__truecolor.txt	styles/tabs--focused__120x40__junie__truecolor.tsv	ansi/tabs--focused__120x40__junie__truecolor.ansi	html/tabs--focused__120x40__junie__truecolor.html
+before	tabs::focused	render::components::tabs::focused 40 10 junie truecolor	870f0d29c4b57860	owned-tab-cursor-state	frames/tabs--focused__40x10__junie__truecolor.txt	styles/tabs--focused__40x10__junie__truecolor.tsv	ansi/tabs--focused__40x10__junie__truecolor.ansi	html/tabs--focused__40x10__junie__truecolor.html
+before	tabs::focused	render::components::tabs::focused 120 40 junie mono	03263f48effb1240	owned-tab-cursor-state	frames/tabs--focused__120x40__junie__mono.txt	styles/tabs--focused__120x40__junie__mono.tsv	ansi/tabs--focused__120x40__junie__mono.ansi	html/tabs--focused__120x40__junie__mono.html
+before	tabs::focused	render::components::tabs::focused 40 10 junie mono	8575598b028539ba	owned-tab-cursor-state	frames/tabs--focused__40x10__junie__mono.txt	styles/tabs--focused__40x10__junie__mono.tsv	ansi/tabs--focused__40x10__junie__mono.ansi	html/tabs--focused__40x10__junie__mono.html
+before	tabs::focused	render::components::tabs::focused 120 40 paper truecolor	9aa17c11b0135f9e	owned-tab-cursor-state	frames/tabs--focused__120x40__paper__truecolor.txt	styles/tabs--focused__120x40__paper__truecolor.tsv	ansi/tabs--focused__120x40__paper__truecolor.ansi	html/tabs--focused__120x40__paper__truecolor.html
+before	tabs::focused	render::components::tabs::focused 40 10 paper truecolor	2eb100378a3b3c43	owned-tab-cursor-state	frames/tabs--focused__40x10__paper__truecolor.txt	styles/tabs--focused__40x10__paper__truecolor.tsv	ansi/tabs--focused__40x10__paper__truecolor.ansi	html/tabs--focused__40x10__paper__truecolor.html
+before	tabs::focused	render::components::tabs::focused 120 40 paper mono	ad59d0d63e9883e4	owned-tab-cursor-state	frames/tabs--focused__120x40__paper__mono.txt	styles/tabs--focused__120x40__paper__mono.tsv	ansi/tabs--focused__120x40__paper__mono.ansi	html/tabs--focused__120x40__paper__mono.html
+before	tabs::focused	render::components::tabs::focused 40 10 paper mono	a26add1c3797f552	owned-tab-cursor-state	frames/tabs--focused__40x10__paper__mono.txt	styles/tabs--focused__40x10__paper__mono.tsv	ansi/tabs--focused__40x10__paper__mono.ansi	html/tabs--focused__40x10__paper__mono.html
+before	steps::editing	render::components::steps::editing 120 40 junie truecolor	1d00177b06f03b80	step-status-glyph	frames/steps--editing__120x40__junie__truecolor.txt			
+before	steps::editing	render::components::steps::editing 40 10 junie truecolor	e2b7fa7e0b700520	step-status-glyph	frames/steps--editing__40x10__junie__truecolor.txt			
+before	steps::editing	render::components::steps::editing 120 40 junie mono	16c60c0e71d05628	step-status-glyph	frames/steps--editing__120x40__junie__mono.txt			
+before	steps::editing	render::components::steps::editing 40 10 junie mono	fbf6cac31bf12a28	step-status-glyph	frames/steps--editing__40x10__junie__mono.txt			
+before	steps::editing	render::components::steps::editing 120 40 paper truecolor	46db4044c112e098	step-status-glyph	frames/steps--editing__120x40__paper__truecolor.txt			
+before	steps::editing	render::components::steps::editing 40 10 paper truecolor	7f5158e1e2c235c8	step-status-glyph	frames/steps--editing__40x10__paper__truecolor.txt			
+before	steps::editing	render::components::steps::editing 120 40 paper mono	b679a4f6c77a9820	step-status-glyph	frames/steps--editing__120x40__paper__mono.txt			
+before	steps::editing	render::components::steps::editing 40 10 paper mono	34f9ac6f86d83cc0	step-status-glyph	frames/steps--editing__40x10__paper__mono.txt			
+before	too_small::empty	render::components::too_small::empty 120 40 junie truecolor	9ea56067744f820f	required-product-copy	frames/too_small--empty__120x40__junie__truecolor.txt			
+before	too_small::empty	render::components::too_small::empty 40 10 junie truecolor	fce3d5f93630e6e2	required-product-copy	frames/too_small--empty__40x10__junie__truecolor.txt			
+before	too_small::empty	render::components::too_small::empty 120 40 junie mono	d177c60d725d64aa	required-product-copy	frames/too_small--empty__120x40__junie__mono.txt			
+before	too_small::empty	render::components::too_small::empty 40 10 junie mono	256562eec5d491f8	required-product-copy	frames/too_small--empty__40x10__junie__mono.txt			
+before	too_small::empty	render::components::too_small::empty 120 40 paper truecolor	8f4dff939e99610b	required-product-copy	frames/too_small--empty__120x40__paper__truecolor.txt			
+before	too_small::empty	render::components::too_small::empty 40 10 paper truecolor	1c5bdeef8b58dbfe	required-product-copy	frames/too_small--empty__40x10__paper__truecolor.txt			
+before	too_small::empty	render::components::too_small::empty 120 40 paper mono	90e5348a0528c210	required-product-copy	frames/too_small--empty__120x40__paper__mono.txt			
+before	too_small::empty	render::components::too_small::empty 40 10 paper mono	e185626efd6e123c	required-product-copy	frames/too_small--empty__40x10__paper__mono.txt			
+before	tree::focused	render::components::tree::focused 120 40 junie truecolor	166c4078d8671dfc	owned-cursor-state	frames/tree--focused__120x40__junie__truecolor.txt			
+before	tree::focused	render::components::tree::focused 40 10 junie truecolor	f152f9641779aefc	owned-cursor-state	frames/tree--focused__40x10__junie__truecolor.txt			
+before	tree::focused	render::components::tree::focused 120 40 junie mono	baf575f7ba6f2151	owned-cursor-state	frames/tree--focused__120x40__junie__mono.txt			
+before	tree::focused	render::components::tree::focused 40 10 junie mono	9f3018afbf450231	owned-cursor-state	frames/tree--focused__40x10__junie__mono.txt			
+before	tree::focused	render::components::tree::focused 120 40 paper truecolor	3a2c6b7f8f1e5356	owned-cursor-state	frames/tree--focused__120x40__paper__truecolor.txt			
+before	tree::focused	render::components::tree::focused 40 10 paper truecolor	a577044e5105f946	owned-cursor-state	frames/tree--focused__40x10__paper__truecolor.txt			
+before	tree::focused	render::components::tree::focused 120 40 paper mono	b309aa954616d2e7	owned-cursor-state	frames/tree--focused__120x40__paper__mono.txt			
+before	tree::focused	render::components::tree::focused 40 10 paper mono	10dbf2bf094ddac7	owned-cursor-state	frames/tree--focused__40x10__paper__mono.txt			
+before	wizard::focused	render::components::wizard::focused 120 40 junie truecolor	8862c8bb099345a8	current-step-state	frames/wizard--focused__120x40__junie__truecolor.txt			
+before	wizard::focused	render::components::wizard::focused 40 10 junie truecolor	570b446a1182977c	current-step-state	frames/wizard--focused__40x10__junie__truecolor.txt			
+before	wizard::focused	render::components::wizard::focused 120 40 junie mono	493c6b527c9bb2b8	current-step-state	frames/wizard--focused__120x40__junie__mono.txt			
+before	wizard::focused	render::components::wizard::focused 40 10 junie mono	460f5c1ee441a9e0	current-step-state	frames/wizard--focused__40x10__junie__mono.txt			
+before	wizard::focused	render::components::wizard::focused 120 40 paper truecolor	2a9991ed121f720a	current-step-state	frames/wizard--focused__120x40__paper__truecolor.txt			
+before	wizard::focused	render::components::wizard::focused 40 10 paper truecolor	5e4c34fbf5f8830a	current-step-state	frames/wizard--focused__40x10__paper__truecolor.txt			
+before	wizard::focused	render::components::wizard::focused 120 40 paper mono	1f9a6c68f96d1140	current-step-state	frames/wizard--focused__120x40__paper__mono.txt			
+before	wizard::focused	render::components::wizard::focused 40 10 paper mono	526eebbd75b93920	current-step-state	frames/wizard--focused__40x10__paper__mono.txt			
+before	wizard::disabled	render::components::wizard::disabled 120 40 junie truecolor	8862c8bb099345a8	disabled-step-state	frames/wizard--disabled__120x40__junie__truecolor.txt	styles/wizard--disabled__120x40__junie__truecolor.tsv	ansi/wizard--disabled__120x40__junie__truecolor.ansi	html/wizard--disabled__120x40__junie__truecolor.html
+before	wizard::disabled	render::components::wizard::disabled 40 10 junie truecolor	570b446a1182977c	disabled-step-state	frames/wizard--disabled__40x10__junie__truecolor.txt	styles/wizard--disabled__40x10__junie__truecolor.tsv	ansi/wizard--disabled__40x10__junie__truecolor.ansi	html/wizard--disabled__40x10__junie__truecolor.html
+before	wizard::disabled	render::components::wizard::disabled 120 40 junie mono	7d73dde4a86214d0	disabled-step-state	frames/wizard--disabled__120x40__junie__mono.txt			
+before	wizard::disabled	render::components::wizard::disabled 40 10 junie mono	0fc62cbad509b9a8	disabled-step-state	frames/wizard--disabled__40x10__junie__mono.txt			
+before	wizard::disabled	render::components::wizard::disabled 120 40 paper truecolor	2a9991ed121f720a	disabled-step-state	frames/wizard--disabled__120x40__paper__truecolor.txt	styles/wizard--disabled__120x40__paper__truecolor.tsv	ansi/wizard--disabled__120x40__paper__truecolor.ansi	html/wizard--disabled__120x40__paper__truecolor.html
+before	wizard::disabled	render::components::wizard::disabled 40 10 paper truecolor	5e4c34fbf5f8830a	disabled-step-state	frames/wizard--disabled__40x10__paper__truecolor.txt	styles/wizard--disabled__40x10__paper__truecolor.tsv	ansi/wizard--disabled__40x10__paper__truecolor.ansi	html/wizard--disabled__40x10__paper__truecolor.html
+before	wizard::disabled	render::components::wizard::disabled 120 40 paper mono	cea8729184babed8	disabled-step-state	frames/wizard--disabled__120x40__paper__mono.txt			
+before	wizard::disabled	render::components::wizard::disabled 40 10 paper mono	aef7e3721926bf98	disabled-step-state	frames/wizard--disabled__40x10__paper__mono.txt			
+before	tree::pressed	render::components::tree::pressed 120 40 junie truecolor	166c4078d8671dfc	owned-cursor-state	frames/tree--pressed__120x40__junie__truecolor.txt			
+before	tree::pressed	render::components::tree::pressed 40 10 junie truecolor	f152f9641779aefc	owned-cursor-state	frames/tree--pressed__40x10__junie__truecolor.txt			
+before	tree::pressed	render::components::tree::pressed 120 40 junie mono	baf575f7ba6f2151	owned-cursor-state	frames/tree--pressed__120x40__junie__mono.txt			
+before	tree::pressed	render::components::tree::pressed 40 10 junie mono	9f3018afbf450231	owned-cursor-state	frames/tree--pressed__40x10__junie__mono.txt			
+before	tree::pressed	render::components::tree::pressed 120 40 paper truecolor	3a2c6b7f8f1e5356	owned-cursor-state	frames/tree--pressed__120x40__paper__truecolor.txt			
+before	tree::pressed	render::components::tree::pressed 40 10 paper truecolor	a577044e5105f946	owned-cursor-state	frames/tree--pressed__40x10__paper__truecolor.txt			
+before	tree::pressed	render::components::tree::pressed 120 40 paper mono	b309aa954616d2e7	owned-cursor-state	frames/tree--pressed__120x40__paper__mono.txt			
+before	tree::pressed	render::components::tree::pressed 40 10 paper mono	10dbf2bf094ddac7	owned-cursor-state	frames/tree--pressed__40x10__paper__mono.txt			
+before	wizard::pressed	render::components::wizard::pressed 120 40 junie truecolor	8862c8bb099345a8	current-step-state	frames/wizard--pressed__120x40__junie__truecolor.txt			
+before	wizard::pressed	render::components::wizard::pressed 40 10 junie truecolor	570b446a1182977c	current-step-state	frames/wizard--pressed__40x10__junie__truecolor.txt			
+before	wizard::pressed	render::components::wizard::pressed 120 40 junie mono	cef09389d9540263	current-step-state	frames/wizard--pressed__120x40__junie__mono.txt			
+before	wizard::pressed	render::components::wizard::pressed 40 10 junie mono	d82168f7118bd853	current-step-state	frames/wizard--pressed__40x10__junie__mono.txt			
+before	wizard::pressed	render::components::wizard::pressed 120 40 paper truecolor	2a9991ed121f720a	current-step-state	frames/wizard--pressed__120x40__paper__truecolor.txt			
+before	wizard::pressed	render::components::wizard::pressed 40 10 paper truecolor	5e4c34fbf5f8830a	current-step-state	frames/wizard--pressed__40x10__paper__truecolor.txt			
+before	wizard::pressed	render::components::wizard::pressed 120 40 paper mono	d8149fca0267121b	current-step-state	frames/wizard--pressed__120x40__paper__mono.txt			
+before	wizard::pressed	render::components::wizard::pressed 40 10 paper mono	a69de91c023b557b	current-step-state	frames/wizard--pressed__40x10__paper__mono.txt			
