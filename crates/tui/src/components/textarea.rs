@@ -343,32 +343,42 @@ impl TextAreaState {
     }
 
     pub(crate) fn set_sensitive(&mut self, sensitive: bool) {
+        let was_classified = self.draft.is_classified();
+        let was_redacted = self.draft.is_redacted();
         let changed = self.is_sensitive() != sensitive;
         self.draft.set_sensitive(sensitive);
-        if changed {
+        if !was_classified || was_redacted || changed {
             self.phase = EditPhase::Idle;
-            self.clear_error();
-        } else if sensitive
-            && self
-                .error
-                .as_ref()
-                .is_some_and(|error| !error.is_sensitive())
-        {
-            self.clear_error();
-            self.error = Some(ErrorState::sensitive());
         }
+
+        let error = self.error.take();
+        self.error = match (sensitive, error) {
+            (true, Some(ErrorState::Sensitive)) => Some(ErrorState::Sensitive),
+            (true, Some(ErrorState::Pending(error) | ErrorState::Plain(error))) => {
+                discard_error(error);
+                Some(ErrorState::sensitive())
+            }
+            (true, None) => None,
+            (false, Some(ErrorState::Sensitive)) => None,
+            (false, Some(ErrorState::Pending(error) | ErrorState::Plain(error))) => {
+                Some(ErrorState::Plain(error))
+            }
+            (false, None) => None,
+        };
     }
 
     /// Set (or clear) the error from an external / async validation.
     pub fn set_error(&mut self, e: Option<FieldError>) {
         self.clear_error();
-        if self.is_sensitive() {
-            if let Some(error) = e {
+        if let Some(error) = e {
+            self.error = Some(if self.is_sensitive() {
                 discard_error(error);
-                self.error = Some(ErrorState::sensitive());
-            }
-        } else {
-            self.error = e.map(ErrorState::Plain);
+                ErrorState::sensitive()
+            } else if self.draft.is_classified() {
+                ErrorState::Plain(error)
+            } else {
+                ErrorState::Pending(error)
+            });
         }
     }
 
@@ -376,6 +386,9 @@ impl TextAreaState {
     pub fn begin(&mut self, current: &str) {
         if self.is_editing() {
             return;
+        }
+        if !self.draft.is_classified() || self.draft.is_redacted() {
+            self.set_sensitive(self.is_sensitive());
         }
         self.draft.begin_multi(current);
         self.phase = EditPhase::Editing;
@@ -399,8 +412,8 @@ impl TextAreaState {
     }
 
     fn write_target<T: TextTarget + ?Sized>(&mut self, value: &mut T) {
-        if self.is_editing() {
-            value.set(self.draft.text());
+        if self.is_editing() && self.draft.is_committable() {
+            value.set(self.draft.text(), self.is_sensitive());
         }
         self.phase = EditPhase::Idle;
         self.draft.zeroize();

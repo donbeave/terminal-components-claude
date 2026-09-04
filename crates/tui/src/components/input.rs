@@ -331,23 +331,40 @@ const BINDINGS: &[Binding<TextCmd>] = &[
 /// every operation that can copy, compare or format the draft sees the secret
 /// variant explicitly.
 pub(crate) enum EditorDraft {
+    /// The sensitivity of this draft has not been classified yet.
+    Unclassified(TextEditorCore),
     Plain(TextEditorCore),
     Secret(TextEditorCore),
+    /// A secret snapshot whose bullets are for observation only. It cannot
+    /// be edited into or committed as a controlled value.
+    RedactedSecret(TextEditorCore),
 }
 
 impl Default for EditorDraft {
     fn default() -> Self {
-        EditorDraft::Plain(TextEditorCore::default())
+        EditorDraft::Unclassified(TextEditorCore::default())
     }
 }
 
 impl EditorDraft {
     pub(crate) const fn is_sensitive(&self) -> bool {
-        matches!(self, EditorDraft::Secret(_))
+        matches!(self, EditorDraft::Secret(_) | EditorDraft::RedactedSecret(_))
+    }
+
+    pub(crate) const fn is_classified(&self) -> bool {
+        !matches!(self, EditorDraft::Unclassified(_))
+    }
+
+    pub(crate) const fn is_redacted(&self) -> bool {
+        matches!(self, EditorDraft::RedactedSecret(_))
+    }
+
+    pub(crate) const fn is_committable(&self) -> bool {
+        matches!(self, EditorDraft::Plain(_) | EditorDraft::Secret(_))
     }
 
     pub(crate) fn set_sensitive(&mut self, sensitive: bool) {
-        if self.is_sensitive() == sensitive {
+        if self.is_classified() && !self.is_redacted() && self.is_sensitive() == sensitive {
             return;
         }
         self.zeroize();
@@ -382,37 +399,55 @@ impl EditorDraft {
 
     pub(crate) fn text(&self) -> &str {
         match self {
-            EditorDraft::Plain(editor) | EditorDraft::Secret(editor) => editor.text(),
+            EditorDraft::Unclassified(editor)
+            | EditorDraft::Plain(editor)
+            | EditorDraft::Secret(editor)
+            | EditorDraft::RedactedSecret(editor) => editor.text(),
         }
     }
 
     pub(crate) fn cursor_pos(&self) -> crate::text::CursorPos {
         match self {
-            EditorDraft::Plain(editor) | EditorDraft::Secret(editor) => editor.cursor_pos(),
+            EditorDraft::Unclassified(editor)
+            | EditorDraft::Plain(editor)
+            | EditorDraft::Secret(editor)
+            | EditorDraft::RedactedSecret(editor) => editor.cursor_pos(),
         }
     }
 
     pub(crate) fn hscroll(&self) -> u16 {
         match self {
-            EditorDraft::Plain(editor) | EditorDraft::Secret(editor) => editor.hscroll(),
+            EditorDraft::Unclassified(editor)
+            | EditorDraft::Plain(editor)
+            | EditorDraft::Secret(editor)
+            | EditorDraft::RedactedSecret(editor) => editor.hscroll(),
         }
     }
 
     pub(crate) fn line_count(&self) -> usize {
         match self {
-            EditorDraft::Plain(editor) | EditorDraft::Secret(editor) => editor.line_count(),
+            EditorDraft::Unclassified(editor)
+            | EditorDraft::Plain(editor)
+            | EditorDraft::Secret(editor)
+            | EditorDraft::RedactedSecret(editor) => editor.line_count(),
         }
     }
 
     pub(crate) fn selection(&self) -> Option<core::ops::Range<usize>> {
         match self {
-            EditorDraft::Plain(editor) | EditorDraft::Secret(editor) => editor.selection(),
+            EditorDraft::Unclassified(editor)
+            | EditorDraft::Plain(editor)
+            | EditorDraft::Secret(editor)
+            | EditorDraft::RedactedSecret(editor) => editor.selection(),
         }
     }
 
     pub(crate) fn set_cursor_line_col(&mut self, line: usize, col: usize) {
         match self {
-            EditorDraft::Plain(editor) | EditorDraft::Secret(editor) => {
+            EditorDraft::Unclassified(editor)
+            | EditorDraft::Plain(editor)
+            | EditorDraft::Secret(editor)
+            | EditorDraft::RedactedSecret(editor) => {
                 editor.set_cursor_line_col(line, col);
             }
         }
@@ -420,7 +455,10 @@ impl EditorDraft {
 
     pub(crate) fn scroll_into_view(&mut self, width: u16) -> u16 {
         match self {
-            EditorDraft::Plain(editor) | EditorDraft::Secret(editor) => {
+            EditorDraft::Unclassified(editor)
+            | EditorDraft::Plain(editor)
+            | EditorDraft::Secret(editor)
+            | EditorDraft::RedactedSecret(editor) => {
                 editor.scroll_into_view(width)
             }
         }
@@ -429,19 +467,27 @@ impl EditorDraft {
     pub(crate) fn apply(&mut self, action: EditAction<'_>) -> EditOutcome {
         match self {
             EditorDraft::Plain(editor) | EditorDraft::Secret(editor) => editor.apply(action),
+            EditorDraft::Unclassified(_) | EditorDraft::RedactedSecret(_) => {
+                EditOutcome::Rejected
+            }
         }
     }
 
     pub(crate) fn zeroize(&mut self) {
         match self {
-            EditorDraft::Plain(editor) | EditorDraft::Secret(editor) => editor.zeroize(),
+            EditorDraft::Unclassified(editor)
+            | EditorDraft::Plain(editor)
+            | EditorDraft::Secret(editor)
+            | EditorDraft::RedactedSecret(editor) => editor.zeroize(),
         }
     }
 
     pub(crate) fn same(&self, other: &Self) -> bool {
         match (self, other) {
+            (EditorDraft::Unclassified(left), EditorDraft::Unclassified(right)) => left == right,
             (EditorDraft::Plain(left), EditorDraft::Plain(right)) => left == right,
-            (EditorDraft::Secret(_), EditorDraft::Secret(_)) => true,
+            (EditorDraft::Secret(_) | EditorDraft::RedactedSecret(_),
+             EditorDraft::Secret(_) | EditorDraft::RedactedSecret(_)) => true,
             _ => false,
         }
     }
@@ -451,7 +497,8 @@ impl EditorDraft {
     /// from the original draft.
     pub(crate) fn clone_snapshot(&self) -> Self {
         match self {
-            EditorDraft::Plain(editor) => EditorDraft::Plain(editor.clone()),
+            EditorDraft::Unclassified(_) => EditorDraft::Unclassified(TextEditorCore::default()),
+            EditorDraft::Plain(editor) => EditorDraft::Plain(editor.clone_plain()),
             EditorDraft::Secret(editor) => {
                 let mut snapshot = if editor.is_multiline() {
                     TextEditorCore::multi(&redacted_text(editor.text()))
@@ -460,7 +507,10 @@ impl EditorDraft {
                 };
                 let cursor = editor.cursor_pos();
                 snapshot.set_cursor_line_col(cursor.line, cursor.col);
-                EditorDraft::Secret(snapshot)
+                EditorDraft::RedactedSecret(snapshot)
+            }
+            EditorDraft::RedactedSecret(editor) => {
+                EditorDraft::RedactedSecret(editor.clone_plain())
             }
         }
     }
@@ -469,6 +519,9 @@ impl EditorDraft {
 /// A retained validation error tagged with the sensitivity of its source.
 /// Sensitive errors carry no caller message or code.
 pub(crate) enum ErrorState {
+    /// Error received before the controlled target's sensitivity is known.
+    /// Its message is never exposed until classification completes.
+    Pending(FieldError),
     Plain(FieldError),
     Sensitive,
 }
@@ -484,13 +537,19 @@ impl ErrorState {
 
     pub(crate) const fn as_ref(&self) -> &FieldError {
         match self {
+            ErrorState::Pending(_) => &INVALID_VALUE,
             ErrorState::Plain(error) => error,
             ErrorState::Sensitive => &INVALID_VALUE,
         }
     }
 
+    pub(crate) const fn is_pending(&self) -> bool {
+        matches!(self, ErrorState::Pending(_))
+    }
+
     pub(crate) fn clone_snapshot(&self) -> Self {
         match self {
+            ErrorState::Pending(_) => ErrorState::Pending(FieldError::new("Invalid value")),
             ErrorState::Plain(error) => ErrorState::Plain(error.clone()),
             ErrorState::Sensitive => ErrorState::Sensitive,
         }
@@ -498,6 +557,7 @@ impl ErrorState {
 
     pub(crate) fn same(&self, other: &Self) -> bool {
         match (self, other) {
+            (ErrorState::Pending(_), ErrorState::Pending(_)) => true,
             (ErrorState::Plain(left), ErrorState::Plain(right)) => left == right,
             (ErrorState::Sensitive, ErrorState::Sensitive) => true,
             _ => false,
@@ -505,8 +565,16 @@ impl ErrorState {
     }
 
     pub(crate) fn discard(self) {
-        if let ErrorState::Plain(error) = self {
-            discard_error(error);
+        drop(self);
+    }
+}
+
+impl Drop for ErrorState {
+    fn drop(&mut self) {
+        let old = core::mem::replace(self, ErrorState::Sensitive);
+        match old {
+            ErrorState::Pending(error) | ErrorState::Plain(error) => discard_error(error),
+            ErrorState::Sensitive => {}
         }
     }
 }
@@ -599,32 +667,43 @@ impl TextInputState {
     }
 
     pub(crate) fn set_sensitive(&mut self, sensitive: bool) {
+        let was_classified = self.draft.is_classified();
+        let was_redacted = self.draft.is_redacted();
         let changed = self.is_sensitive() != sensitive;
         self.draft.set_sensitive(sensitive);
-        if changed {
+
+        if !was_classified || was_redacted || changed {
             self.phase = EditPhase::Idle;
-            self.clear_error();
-        } else if sensitive
-            && self
-                .error
-                .as_ref()
-                .is_some_and(|error| !error.is_sensitive())
-        {
-            self.clear_error();
-            self.error = Some(ErrorState::sensitive());
         }
+
+        let error = self.error.take();
+        self.error = match (sensitive, error) {
+            (true, Some(ErrorState::Sensitive)) => Some(ErrorState::Sensitive),
+            (true, Some(ErrorState::Pending(error) | ErrorState::Plain(error))) => {
+                discard_error(error);
+                Some(ErrorState::sensitive())
+            }
+            (true, None) => None,
+            (false, Some(ErrorState::Sensitive)) => None,
+            (false, Some(ErrorState::Pending(error) | ErrorState::Plain(error))) => {
+                Some(ErrorState::Plain(error))
+            }
+            (false, None) => None,
+        };
     }
 
     /// Set (or clear) the error from an external / async validation.
     pub fn set_error(&mut self, e: Option<FieldError>) {
         self.clear_error();
-        if self.is_sensitive() {
-            if let Some(error) = e {
+        if let Some(error) = e {
+            self.error = Some(if self.is_sensitive() {
                 discard_error(error);
-                self.error = Some(ErrorState::sensitive());
-            }
-        } else {
-            self.error = e.map(ErrorState::Plain);
+                ErrorState::sensitive()
+            } else if self.draft.is_classified() {
+                ErrorState::Plain(error)
+            } else {
+                ErrorState::Pending(error)
+            });
         }
     }
 
@@ -632,6 +711,9 @@ impl TextInputState {
     pub fn begin(&mut self, current: &str) {
         if self.is_editing() {
             return;
+        }
+        if !self.draft.is_classified() || self.draft.is_redacted() {
+            self.set_sensitive(self.is_sensitive());
         }
         self.draft.begin_single(current);
         self.phase = EditPhase::Editing;
@@ -655,8 +737,8 @@ impl TextInputState {
     }
 
     fn write_target<T: TextTarget + ?Sized>(&mut self, value: &mut T) {
-        if self.is_editing() {
-            value.set(self.draft.text());
+        if self.is_editing() && self.draft.is_committable() {
+            value.set(self.draft.text(), self.is_sensitive());
         }
         self.phase = EditPhase::Idle;
         self.draft.zeroize();
@@ -741,14 +823,6 @@ pub(crate) fn discard_error(error: FieldError) {
     if let std::borrow::Cow::Owned(mut message) = error.message {
         zeroize_string(&mut message);
     }
-}
-
-fn zeroize_string(value: &mut String) {
-    let mut bytes = core::mem::take(value).into_bytes();
-    bytes.fill(0);
-    core::hint::black_box(&bytes);
-    core::sync::atomic::compiler_fence(core::sync::atomic::Ordering::SeqCst);
-    bytes.clear();
 }
 
 pub(crate) fn redacted_text(text: &str) -> String {
