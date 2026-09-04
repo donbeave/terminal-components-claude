@@ -769,10 +769,22 @@ const CHECKS: &[Check] = &[
         applications_depend_only_on_the_library_facade,
     ),
     (
+        "no_generic_component_copies_in_applications",
+        no_generic_component_copies_in_applications,
+    ),
+    (
+        "no_owns_or_locate_in_applications",
+        no_owns_or_locate_in_applications,
+    ),
+    (
         "baseline_moves_are_classified",
         baseline_moves_are_classified,
     ),
     ("props_are_built_once", props_are_built_once),
+    (
+        "showcase_covers_every_public_component",
+        showcase_covers_every_public_component,
+    ),
 ];
 
 fn boundary(only: Option<&str>) -> Result<(), String> {
@@ -2632,6 +2644,664 @@ fn due_apps(md: &cargo_metadata::Metadata) -> Vec<&'static AppPackage> {
     APPS.iter().filter(|a| !root_bins.contains(a.bin)).collect()
 }
 
+fn root_package(md: &cargo_metadata::Metadata) -> Option<&cargo_metadata::Package> {
+    md.packages
+        .iter()
+        .find(|package| package.manifest_path.parent() == Some(md.workspace_root.as_path()))
+}
+
+fn legacy_binary_source(app: &AppPackage) -> PathBuf {
+    root()
+        .join("src/bin")
+        .join(app.bin.replace('-', "_"))
+        .join("main.rs")
+}
+
+fn migrated_binary_source(app: &AppPackage) -> PathBuf {
+    root().join(app.dir).join("src/main.rs")
+}
+
+#[derive(Debug)]
+struct BinaryTarget {
+    package: String,
+    source: PathBuf,
+}
+
+fn binary_target_layout_hits(
+    app: &AppPackage,
+    root_owned: bool,
+    root_package: Option<&str>,
+    actual_package: &str,
+    actual_source: &Path,
+) -> Vec<String> {
+    let expected_package = if root_owned {
+        root_package
+    } else {
+        Some(app.bin)
+    };
+    let mut hits = Vec::new();
+    if expected_package != Some(actual_package) {
+        hits.push(format!(
+            "`[[bin]] {}` belongs to package `{actual_package}` at the wrong migration boundary; expected {expected_package:?}",
+            app.bin
+        ));
+    }
+    let expected_source = if root_owned {
+        legacy_binary_source(app)
+    } else {
+        migrated_binary_source(app)
+    };
+    if actual_source != expected_source {
+        hits.push(format!(
+            "`[[bin]] {}` source is `{}`, expected `{}`",
+            app.bin,
+            rel(actual_source),
+            rel(&expected_source)
+        ));
+    }
+    hits
+}
+
+/// Return the migration error for a missing `apps/` root. `None` is the one
+/// accepted pre-Slice-5 state: the root package still owns every app binary.
+fn missing_apps_for_due(due: &[&'static AppPackage]) -> Option<String> {
+    if due.is_empty() {
+        return None;
+    }
+    let expected = due
+        .iter()
+        .map(|app| format!("{}/src", app.dir))
+        .collect::<Vec<_>>()
+        .join(", ");
+    Some(format!(
+        "apps/ is missing while migrated application source is due: expected {expected} — the \
+         no-app state is accepted only while the root package still declares every \
+         application binary (§47.5)"
+    ))
+}
+
+/// Rust source files in the migrated application packages.
+///
+/// Before Slice 5 the accepted tree has no `apps/` directory and the root
+/// package still owns all three binaries. That is an explicit, temporary
+/// state — not an empty scan. Once any root binary is dropped, its application
+/// source root is due and every due root must exist and contain Rust input.
+/// Application directories that appear before their root binary is dropped are
+/// rejected as staging, even when their contents happen to be clean.
+fn application_source_files(md: &cargo_metadata::Metadata) -> Result<Vec<PathBuf>, String> {
+    let r = root();
+    let apps = r.join("apps");
+    let due = due_apps(md);
+    if !apps.exists() {
+        if due.is_empty() {
+            return Ok(Vec::new());
+        }
+        return match missing_apps_for_due(&due) {
+            Some(error) => Err(error),
+            None => Err("application migration due-set became empty during the scan".to_owned()),
+        };
+    }
+    if !apps.is_dir() {
+        return Err(format!(
+            "application scan root {} is not a directory",
+            rel(&apps)
+        ));
+    }
+
+    let due_names: BTreeSet<&str> = due.iter().map(|a| a.dir).collect();
+    let mut errors = Vec::new();
+    let mut dirs = Vec::new();
+    let entries =
+        std::fs::read_dir(&apps).map_err(|e| format!("cannot enumerate {}: {e}", rel(&apps)))?;
+    for entry in entries {
+        let entry = entry.map_err(|e| format!("cannot read {} entry: {e}", rel(&apps)))?;
+        let path = entry.path();
+        if !path.is_dir() {
+            continue;
+        }
+        let Some(app) = APPS.iter().find(|a| r.join(a.dir) == path) else {
+            errors.push(format!(
+                "{} is not one of the declared application roots {:?}",
+                rel(&path),
+                APPS.iter().map(|a| a.dir).collect::<Vec<_>>()
+            ));
+            continue;
+        };
+        if !due_names.contains(app.dir) {
+            errors.push(format!(
+                "{} exists while the root package still declares `[[bin]] {}` — \
+                 applications must be added atomically with removal of the root binary (§47.1)",
+                app.dir, app.bin
+            ));
+        }
+        let src = path.join("src");
+        if !src.is_dir() {
+            errors.push(format!(
+                "{}/src is missing or not a directory for due application `{}`",
+                app.dir, app.bin
+            ));
+            continue;
+        }
+        let mut files = rust_files(&src);
+        files.sort();
+        if files.is_empty() {
+            errors.push(format!(
+                "{}/src contains no Rust files; an application root cannot be a green-empty \
+                 scan (§47.5)",
+                app.dir
+            ));
+        }
+        dirs.push((app.dir, files));
+    }
+
+    for app in &due {
+        if !dirs.iter().any(|(dir, _)| *dir == app.dir) {
+            errors.push(format!(
+                "{}/src is missing for due application `{}` — the root package no longer \
+                 declares `[[bin]] {}` (§47.5)",
+                app.dir, app.bin, app.bin
+            ));
+        }
+    }
+    if !errors.is_empty() {
+        return Err(errors.join("\n"));
+    }
+
+    let mut files = dirs
+        .into_iter()
+        .flat_map(|(_, files)| files)
+        .collect::<Vec<_>>();
+    files.sort();
+    if files.is_empty() {
+        return Err(
+            "apps/ exists but no due application source files were discovered; refusing a \
+             green-empty boundary scan (§47.5)"
+                .to_owned(),
+        );
+    }
+    Ok(files)
+}
+
+/// One source line that matches an application-boundary pattern.
+fn application_pattern_hits(path: &str, source: &str, patterns: &[(&str, &str)]) -> Vec<String> {
+    let regexes = patterns
+        .iter()
+        .filter_map(|(name, pattern)| Regex::new(pattern).ok().map(|re| (*name, re)))
+        .collect::<Vec<_>>();
+    if regexes.len() != patterns.len() {
+        return vec![format!(
+            "{path}: application-boundary scanner has an invalid pattern"
+        )];
+    }
+    non_test_lines(source)
+        .into_iter()
+        .filter_map(|(line_number, line)| {
+            let code = code_line(line);
+            let matched = regexes
+                .iter()
+                .filter(|(_, re)| re.is_match(code))
+                .map(|(name, _)| *name)
+                .collect::<Vec<_>>();
+            if matched.is_empty() {
+                None
+            } else {
+                Some(format!(
+                    "{path}:{line_number}: {} — application code must use the public \
+                     component/runtime API",
+                    matched.join(", ")
+                ))
+            }
+        })
+        .collect()
+}
+
+const GENERIC_COMPONENT_COPY_PATTERNS: [(&str, &str); 4] = [
+    ("fn render", r"\bfn\s+render\s*\("),
+    ("Style::new()", r"\bStyle\s*::\s*new\s*\(\s*\)"),
+    ("Block::default()", r"\bBlock\s*::\s*default\s*\(\s*\)"),
+    ("buf.set_string", r"\b(?:buf|buffer)\s*\.\s*set_string\s*\("),
+];
+
+const DISPATCH_COPY_PATTERNS: [(&str, &str); 4] = [
+    (".owns()", r"\.\s*owns\s*\("),
+    (".locate", r"\.\s*locate\b"),
+    ("scrollbar::id_for", r"\bscrollbar\s*::\s*id_for\b"),
+    (".child()", r"\.\s*child\s*\("),
+];
+
+fn generic_component_copy_hits(path: &str, source: &str) -> Vec<String> {
+    // Jackin's animated rain is the one documented app-owned renderer. Its
+    // exception is path-specific and cannot widen to a module or directory.
+    if path.trim_start_matches("./") == "apps/jackin-preview/src/rain.rs" {
+        return Vec::new();
+    }
+    application_pattern_hits(path, source, &GENERIC_COMPONENT_COPY_PATTERNS)
+}
+
+fn owns_or_locate_hits(path: &str, source: &str) -> Vec<String> {
+    application_pattern_hits(path, source, &DISPATCH_COPY_PATTERNS)
+}
+
+/// §16.5 / §47.5. Applications compose the library; they do not copy generic
+/// renderers, style construction, block framing or raw cell painting.
+fn no_generic_component_copies_in_applications() -> Result<(), String> {
+    let md = metadata()?;
+    let files = application_source_files(&md)?;
+    let mut hits = Vec::new();
+    for file in &files {
+        let path = rel(file);
+        hits.extend(generic_component_copy_hits(&path, &read(file)));
+    }
+    if hits.is_empty() {
+        if files.is_empty() {
+            println!(
+                "no_generic_component_copies_in_applications: accepted temporary no-app state \
+                 (root package still owns every application binary)"
+            );
+        } else {
+            println!(
+                "no_generic_component_copies_in_applications: {} application source file(s) \
+                 scanned",
+                files.len()
+            );
+        }
+        Ok(())
+    } else {
+        Err(format!(
+            "generic component-copy patterns are forbidden in applications (rain.rs is the \
+             only named exception):\n{}",
+            hits.join("\n")
+        ))
+    }
+}
+
+/// §16.5 / §47.5. Runtime dispatch owns focus, hit-testing and child routing;
+/// application screens may not carry the retired `owns`/`locate` machinery.
+fn no_owns_or_locate_in_applications() -> Result<(), String> {
+    let md = metadata()?;
+    let files = application_source_files(&md)?;
+    let mut hits = Vec::new();
+    for file in &files {
+        let path = rel(file);
+        hits.extend(owns_or_locate_hits(&path, &read(file)));
+    }
+    if hits.is_empty() {
+        if files.is_empty() {
+            println!(
+                "no_owns_or_locate_in_applications: accepted temporary no-app state (root \
+                 package still owns every application binary)"
+            );
+        } else {
+            println!(
+                "no_owns_or_locate_in_applications: {} application source file(s) scanned",
+                files.len()
+            );
+        }
+        Ok(())
+    } else {
+        Err(format!(
+            "application dispatch copies are forbidden (`owns`, `locate`, `id_for`, `child`):\n{}",
+            hits.join("\n")
+        ))
+    }
+}
+
+/// `PageId::Variant` values present in the showcase's `NAV_ENTRIES` constant.
+/// The registry is parsed as Rust rather than searched as text so a commented
+/// out entry cannot keep a page green.
+struct PageIdUses {
+    variants: BTreeSet<String>,
+}
+
+impl<'ast> syn::visit::Visit<'ast> for PageIdUses {
+    fn visit_expr_path(&mut self, node: &'ast syn::ExprPath) {
+        let mut segments = node.path.segments.iter();
+        if segments.next().is_some_and(|s| s.ident == "PageId")
+            && let Some(variant) = segments.next()
+        {
+            self.variants.insert(variant.ident.to_string());
+        }
+        syn::visit::visit_expr_path(self, node);
+    }
+}
+
+fn nav_entries_expr(expr: &syn::Expr) -> BTreeSet<String> {
+    let mut uses = PageIdUses {
+        variants: BTreeSet::new(),
+    };
+    syn::visit::Visit::visit_expr(&mut uses, expr);
+    uses.variants
+}
+
+fn cfg_test_only(attrs: &[syn::Attribute]) -> bool {
+    attrs.iter().any(|attribute| {
+        if !attribute.path().is_ident("cfg") {
+            return false;
+        }
+        let syn::Meta::List(meta) = &attribute.meta else {
+            return false;
+        };
+        meta.tokens
+            .to_string()
+            .split(|c: char| !c.is_ascii_alphanumeric() && c != '_')
+            .any(|token| token == "test")
+    })
+}
+
+fn nav_entries_in_items(
+    items: &[syn::Item],
+    found: &mut Vec<(PathBuf, String, BTreeSet<String>)>,
+    module: &mut Vec<String>,
+    path: &Path,
+) {
+    for item in items {
+        match item {
+            syn::Item::Const(item)
+                if item.ident == "NAV_ENTRIES" && !cfg_test_only(&item.attrs) =>
+            {
+                found.push((
+                    path.to_path_buf(),
+                    if module.is_empty() {
+                        "NAV_ENTRIES".to_owned()
+                    } else {
+                        format!("{}::NAV_ENTRIES", module.join("::"))
+                    },
+                    nav_entries_expr(&item.expr),
+                ));
+            }
+            syn::Item::Static(item)
+                if item.ident == "NAV_ENTRIES" && !cfg_test_only(&item.attrs) =>
+            {
+                found.push((
+                    path.to_path_buf(),
+                    if module.is_empty() {
+                        "NAV_ENTRIES".to_owned()
+                    } else {
+                        format!("{}::NAV_ENTRIES", module.join("::"))
+                    },
+                    nav_entries_expr(&item.expr),
+                ));
+            }
+            syn::Item::Mod(item) if !cfg_test_only(&item.attrs) => {
+                if let Some((_, inner)) = &item.content {
+                    module.push(item.ident.to_string());
+                    nav_entries_in_items(inner, found, module, path);
+                    module.pop();
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+/// Extract the one authoritative showcase page registry from source files.
+fn showcase_nav_registry(
+    files: &[(PathBuf, String)],
+) -> Result<(PathBuf, BTreeSet<String>), String> {
+    let mut found = Vec::new();
+    for (path, source) in files {
+        let ast =
+            syn::parse_file(source).map_err(|e| format!("{} does not parse: {e}", rel(path)))?;
+        nav_entries_in_items(&ast.items, &mut found, &mut Vec::new(), path);
+    }
+    match found.as_slice() {
+        [] => Err(
+            "apps/showcase/src has no `NAV_ENTRIES` registry; showcase coverage cannot be \
+             established"
+                .to_owned(),
+        ),
+        [(_, name, variants)] if variants.is_empty() => Err(format!(
+            "showcase registry `{name}` contains no `PageId` entries; refusing a \
+             green-empty coverage scan"
+        )),
+        [(path, _name, variants)] => Ok((path.clone(), variants.clone())),
+        many => Err(format!(
+            "showcase source contains {} `NAV_ENTRIES` registries ({:?}); \
+             coverage requires exactly one authoritative page registry",
+            many.len(),
+            many.iter().map(|(_, name, _)| name).collect::<Vec<_>>()
+        )),
+    }
+}
+
+fn page_name_variants(name: &str) -> BTreeSet<String> {
+    let mut out = BTreeSet::new();
+    let compact = name
+        .chars()
+        .flat_map(char::to_lowercase)
+        .collect::<String>();
+    out.insert(compact);
+    let mut snake = String::new();
+    for (i, c) in name.chars().enumerate() {
+        if c.is_ascii_uppercase() && i != 0 {
+            snake.push('_');
+        }
+        snake.extend(c.to_lowercase());
+    }
+    out.insert(snake);
+    out
+}
+
+/// Page source files reachable from the `PageId` variants in `NAV_ENTRIES`.
+/// A page left on disk but removed from the registry is deliberately excluded.
+fn showcase_page_sources(
+    files: &[(PathBuf, String)],
+    variants: &BTreeSet<String>,
+) -> Result<Vec<(String, String)>, String> {
+    let mut selected = Vec::new();
+    let mut missing = Vec::new();
+    for variant in variants {
+        let candidates = page_name_variants(variant);
+        let mut matches = files
+            .iter()
+            .filter(|(path, _)| {
+                let path_text = path.to_string_lossy().replace('\\', "/");
+                if !path_text.contains("/src/pages/") || path_text.ends_with("/pages/mod.rs") {
+                    return false;
+                }
+                path.file_stem()
+                    .and_then(|stem| stem.to_str())
+                    .is_some_and(|stem| candidates.contains(stem))
+            })
+            .map(|(path, source)| (rel(path), source.clone()))
+            .collect::<Vec<_>>();
+        if matches.is_empty() {
+            // Permit an inline page implementation, but only when the
+            // registered variant is named in that source. The fallback is
+            // intentionally narrow; arbitrary unregistered helpers cannot
+            // satisfy coverage.
+            matches = files
+                .iter()
+                .filter(|(path, source)| {
+                    let path_text = path.to_string_lossy().replace('\\', "/");
+                    path_text.contains("/src/pages/")
+                        && source.contains(&format!("PageId::{variant}"))
+                })
+                .map(|(path, source)| (rel(path), source.clone()))
+                .collect();
+        }
+        if matches.is_empty() {
+            missing.push(variant.clone());
+        } else {
+            selected.extend(matches);
+        }
+    }
+    if !missing.is_empty() {
+        return Err(format!(
+            "showcase registry entries {:?} have no reachable page source; \
+             coverage cannot be proven",
+            missing
+        ));
+    }
+    selected.sort_by(|a, b| a.0.cmp(&b.0));
+    selected.dedup_by(|a, b| a.0 == b.0);
+    if selected.is_empty() {
+        return Err(
+            "showcase page registry resolved to no source files; refusing a green-empty \
+             coverage scan"
+                .to_owned(),
+        );
+    }
+    // A common `pages/mod.rs` is part of every page's Rust module graph. The
+    // migration uses it for shared page implementations (including the
+    // component demos); include it so coverage follows the actual module
+    // boundary rather than only the tiny per-page wrappers.
+    if let Some((path, source)) = files
+        .iter()
+        .find(|(path, _)| rel(path) == "apps/showcase/src/pages/mod.rs")
+    {
+        selected.push((rel(path), source.clone()));
+    }
+    // The app root owns the registry and its always-visible chrome (for
+    // example the navigation list and help dialog), so those public
+    // components are demonstrations too.
+    if let Some((path, source)) = files
+        .iter()
+        .find(|(path, _)| rel(path) == "apps/showcase/src/app.rs")
+    {
+        selected.push((rel(path), source.clone()));
+    }
+    Ok(selected)
+}
+
+fn showcase_component_name(case: &str) -> Option<String> {
+    let name = case.strip_suffix("Case")?;
+    (name != "Probe").then(|| name.to_owned())
+}
+
+struct ShowcaseComponentUses {
+    names: BTreeSet<String>,
+}
+
+impl<'ast> syn::visit::Visit<'ast> for ShowcaseComponentUses {
+    fn visit_item(&mut self, item: &'ast syn::Item) {
+        if !cfg_test_only(item_attrs(item)) {
+            syn::visit::visit_item(self, item);
+        }
+    }
+
+    fn visit_item_use(&mut self, _item: &'ast syn::ItemUse) {
+        // Imports establish reachability but do not demonstrate a component.
+        // Count only paths in executable/type syntax below.
+    }
+
+    fn visit_path(&mut self, path: &'ast syn::Path) {
+        self.names.extend(
+            path.segments
+                .iter()
+                .map(|segment| segment.ident.to_string()),
+        );
+        syn::visit::visit_path(self, path);
+    }
+}
+
+fn showcase_component_names(pages: &[(String, String)]) -> Result<BTreeSet<String>, Vec<String>> {
+    let mut names = BTreeSet::new();
+    let mut errors = Vec::new();
+    for (path, source) in pages {
+        match syn::parse_file(source) {
+            Ok(ast) => {
+                let mut uses = ShowcaseComponentUses {
+                    names: BTreeSet::new(),
+                };
+                syn::visit::Visit::visit_file(&mut uses, &ast);
+                names.extend(uses.names);
+            }
+            Err(error) => errors.push(format!("{path} does not parse: {error}")),
+        }
+    }
+    if errors.is_empty() {
+        Ok(names)
+    } else {
+        Err(errors)
+    }
+}
+
+/// The pure coverage relation used by the filesystem check and its red-proof
+/// fixtures. Every registered conformance case except the test-only probe must
+/// occur in a page source reached through the page registry.
+fn showcase_coverage_hits(
+    cases: &BTreeSet<String>,
+    registry_variants: &BTreeSet<String>,
+    pages: &[(String, String)],
+) -> Vec<String> {
+    let mut hits = Vec::new();
+    if registry_variants.is_empty() {
+        hits.push("showcase page registry has no entries".to_owned());
+    }
+    if pages.is_empty() {
+        hits.push("showcase page registry reaches no page source".to_owned());
+    }
+    let page_names = match showcase_component_names(pages) {
+        Ok(names) => names,
+        Err(errors) => {
+            hits.extend(errors);
+            BTreeSet::new()
+        }
+    };
+    for case in cases {
+        let Some(component) = showcase_component_name(case) else {
+            continue;
+        };
+        if !page_names.contains(&component) {
+            hits.push(format!(
+                "{case}: no registered showcase page names public component `{component}`"
+            ));
+        }
+    }
+    hits
+}
+
+/// §16.5 / §47.5. The showcase page registry must reach every public
+/// component represented by the shared conformance suite.
+fn showcase_covers_every_public_component() -> Result<(), String> {
+    let md = metadata()?;
+    let due = due_apps(&md);
+    let apps = root().join("apps");
+    if !apps.exists() && due.is_empty() {
+        println!(
+            "showcase_covers_every_public_component: accepted temporary no-app state (root \
+             package still owns every application binary)"
+        );
+        return Ok(());
+    }
+    if !due.iter().any(|a| a.bin == "showcase") {
+        return Err(
+            "showcase coverage is due only after the showcase binary leaves the root package; \
+             an active apps/ tree without that atomic migration is invalid"
+                .to_owned(),
+        );
+    }
+    let _ = application_source_files(&md)?;
+    let showcase_src = root().join("apps/showcase/src");
+    let mut files = rust_files(&showcase_src)
+        .into_iter()
+        .map(|path| {
+            let source = read(&path);
+            (path, source)
+        })
+        .collect::<Vec<_>>();
+    files.sort_by(|a, b| a.0.cmp(&b.0));
+    let (_, variants) = showcase_nav_registry(&files)?;
+    let pages = showcase_page_sources(&files, &variants)?;
+    let cases = registered_conformance_cases(&root().join("crates/tui/tests/conformance.rs"))?;
+    let hits = showcase_coverage_hits(&cases, &variants, &pages);
+    if hits.is_empty() {
+        println!(
+            "showcase_covers_every_public_component: {} public conformance component(s) \
+             reached through {} registered page(s)",
+            cases
+                .iter()
+                .filter(|c| showcase_component_name(c).is_some())
+                .count(),
+            variants.len()
+        );
+        Ok(())
+    } else {
+        Err(hits.join("\n"))
+    }
+}
+
 /// §16.5 / §47.5. The multiset of `bin` target names across every workspace
 /// member equals `{showcase, tablepro, jackin-preview}`.
 ///
@@ -2647,7 +3317,7 @@ fn due_apps(md: &cargo_metadata::Metadata) -> Vec<&'static AppPackage> {
 /// name moves rather than changes.
 fn binary_names_are_preserved() -> Result<(), String> {
     let md = metadata()?;
-    let mut found: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    let mut found: BTreeMap<String, Vec<BinaryTarget>> = BTreeMap::new();
     let mut tooling: Vec<String> = Vec::new();
     for p in md.workspace_packages() {
         for t in &p.targets {
@@ -2658,13 +3328,21 @@ fn binary_names_are_preserved() -> Result<(), String> {
                 tooling.push(t.name.clone());
                 continue;
             }
-            found
-                .entry(t.name.clone())
-                .or_default()
-                .push(p.name.as_str().to_owned());
+            found.entry(t.name.clone()).or_default().push(BinaryTarget {
+                package: p.name.as_str().to_owned(),
+                source: t.src_path.as_std_path().to_path_buf(),
+            });
         }
     }
     let mut errors = Vec::new();
+    let root_bins = root_package_bins(&md);
+    let root_package = root_package(&md);
+    if !root_bins.is_empty() && root_package.map(|p| p.name.as_str()) != Some("junie-tui") {
+        errors.push(format!(
+            "the legacy root package must remain named `junie-tui` while it owns binaries; found {:?}",
+            root_package.map(|p| p.name.as_str())
+        ));
+    }
     // the tooling exclusion is by package, and the package is pinned to one bin
     if tooling != vec![TOOLING.to_owned()] {
         errors.push(format!(
@@ -2673,21 +3351,34 @@ fn binary_names_are_preserved() -> Result<(), String> {
         ));
     }
     for a in &APPS {
-        match found.get(a.bin) {
+        match found.get(a.bin).map(Vec::as_slice) {
             None => errors.push(format!(
                 "`[[bin]] {}` is missing from the workspace (owner {}): goal §21 preserves all \
                  three binary names across the split",
                 a.bin, a.slice
             )),
-            Some(pkgs) if pkgs.len() > 1 => errors.push(format!(
-                "`[[bin]] {}` is declared by {} packages {pkgs:?} — `target/debug/{}` is whichever \
+            Some(targets) if targets.len() > 1 => errors.push(format!(
+                "`[[bin]] {}` is declared by {} packages {:?} — `target/debug/{}` is whichever \
                  built last and the capture harness captures the wrong program (§47.5); §47.1 \
                  drops the root binary in the same commit that adds `{}`",
                 a.bin,
-                pkgs.len(),
+                targets.len(),
+                targets
+                    .iter()
+                    .map(|target| &target.package)
+                    .collect::<Vec<_>>(),
                 a.bin,
                 a.dir
             )),
+            Some([target]) => {
+                errors.extend(binary_target_layout_hits(
+                    a,
+                    root_bins.contains(a.bin),
+                    root_package.map(|p| p.name.as_str()),
+                    &target.package,
+                    &target.source,
+                ));
+            }
             Some(_) => {}
         }
     }
@@ -2695,7 +3386,8 @@ fn binary_names_are_preserved() -> Result<(), String> {
     for (name, pkgs) in &found {
         if !want.contains(name.as_str()) {
             errors.push(format!(
-                "unexpected `[[bin]] {name}` in {pkgs:?}: the workspace ships exactly {want:?}"
+                "unexpected `[[bin]] {name}` in packages {:?}: the workspace ships exactly {want:?}",
+                pkgs.iter().map(|target| &target.package).collect::<Vec<_>>()
             ));
         }
     }
@@ -2706,7 +3398,7 @@ fn binary_names_are_preserved() -> Result<(), String> {
                 let pkg = found
                     .get(a.bin)
                     .and_then(|p| p.first())
-                    .map_or("?", String::as_str);
+                    .map_or("?", |target| target.package.as_str());
                 format!("{}({pkg})", a.bin)
             })
             .collect();
@@ -2762,22 +3454,77 @@ fn app_libs_are_not_published_and_are_not_depended_on_by_the_library() -> Result
             (false, None) => {}
             (true, Some(p)) => {
                 present.push(a.lib);
+                let expected_manifest = root().join(a.dir).join("Cargo.toml");
+                if p.manifest_path.as_std_path() != expected_manifest {
+                    errors.push(format!(
+                        "package `{}` is loaded from `{}`, expected `{}` (§47.1 app package layout)",
+                        a.bin,
+                        rel(p.manifest_path.as_std_path()),
+                        rel(&expected_manifest)
+                    ));
+                }
+                let libs: Vec<&cargo_metadata::Target> = p
+                    .targets
+                    .iter()
+                    .filter(|t| t.kind.contains(&cargo_metadata::TargetKind::Lib))
+                    .collect();
                 if !p
                     .targets
                     .iter()
                     .any(|t| t.kind.contains(&cargo_metadata::TargetKind::Lib) && t.name == a.lib)
                 {
-                    let libs: Vec<&str> = p
-                        .targets
-                        .iter()
-                        .filter(|t| t.kind.contains(&cargo_metadata::TargetKind::Lib))
-                        .map(|t| t.name.as_str())
-                        .collect();
                     errors.push(format!(
-                        "package `{}` has lib target(s) {libs:?}, expected `[lib] {}` (§21 item \
+                        "package `{}` has lib target(s) {:?}, expected `[lib] {}` (§21 item \
                          23: the tests link the lib, so a binary-only package cannot host them)",
-                        a.bin, a.lib
+                        a.bin,
+                        libs.iter()
+                            .map(|target| target.name.as_str())
+                            .collect::<Vec<_>>(),
+                        a.lib
                     ));
+                } else if libs.len() != 1 {
+                    errors.push(format!(
+                        "package `{}` declares {} library targets {:?}; expected exactly `[lib] {}`",
+                        a.bin,
+                        libs.len(),
+                        libs.iter().map(|target| target.name.as_str()).collect::<Vec<_>>(),
+                        a.lib
+                    ));
+                } else if let Some(lib) = libs.first() {
+                    let expected_source = root().join(a.dir).join("src/lib.rs");
+                    if lib.src_path.as_std_path() != expected_source {
+                        errors.push(format!(
+                            "package `{}` lib source is `{}`, expected `{}`",
+                            a.bin,
+                            rel(lib.src_path.as_std_path()),
+                            rel(&expected_source)
+                        ));
+                    }
+                }
+                let bins: Vec<&cargo_metadata::Target> = p
+                    .targets
+                    .iter()
+                    .filter(|t| {
+                        t.kind.contains(&cargo_metadata::TargetKind::Bin) && t.name == a.bin
+                    })
+                    .collect();
+                if bins.len() != 1 {
+                    errors.push(format!(
+                        "package `{}` has {} binary target(s) named `{}`; expected exactly one thin app binary",
+                        a.bin,
+                        bins.len(),
+                        a.bin
+                    ));
+                } else if let Some(bin) = bins.first() {
+                    let expected_source = migrated_binary_source(a);
+                    if bin.src_path.as_std_path() != expected_source {
+                        errors.push(format!(
+                            "package `{}` binary source is `{}`, expected `{}`",
+                            a.bin,
+                            rel(bin.src_path.as_std_path()),
+                            rel(&expected_source)
+                        ));
+                    }
                 }
                 if !p.publish.as_ref().is_some_and(Vec::is_empty) {
                     errors.push(format!(
@@ -3012,6 +3759,7 @@ fn first_facade_line(text: &str, segment: &str) -> usize {
 fn applications_depend_only_on_the_library_facade() -> Result<(), String> {
     let md = metadata()?;
     let due = due_apps(&md);
+    let app_files = application_source_files(&md)?;
     let facade = library_facade_roots();
     let mut errors = Vec::new();
     let mut scanned = 0usize;
@@ -3021,67 +3769,44 @@ fn applications_depend_only_on_the_library_facade() -> Result<(), String> {
     let Ok(include) = Regex::new(r"\binclude!\s*\(") else {
         return Err("bad include! regex".to_owned());
     };
-    let apps_dir = root().join("apps");
-    let mut app_dirs: Vec<PathBuf> = Vec::new();
-    if let Ok(entries) = std::fs::read_dir(&apps_dir) {
-        for e in entries.filter_map(Result::ok) {
-            let src = e.path().join("src");
-            if src.is_dir() {
-                app_dirs.push(src);
+    for file in &app_files {
+        let text = read(file);
+        let Ok(ast) = syn::parse_file(&text) else {
+            errors.push(format!("{} does not parse", rel(file)));
+            continue;
+        };
+        scanned = scanned.saturating_add(1);
+        let mut visitor = FacadeUse {
+            krate: LIB_CRATE_IDENTS,
+            seen: BTreeSet::new(),
+        };
+        syn::visit::Visit::visit_file(&mut visitor, &ast);
+        for segment in &visitor.seen {
+            if facade.contains(segment) {
+                continue;
             }
-        }
-    }
-    app_dirs.sort();
-    for a in &due {
-        let src = root().join(a.dir).join("src");
-        if !app_dirs.contains(&src) {
             errors.push(format!(
-                "{}/src is missing, yet `{}` is due at {} (the root package no longer declares \
-                 `[[bin]] {}`): this check must never pass by scanning nothing (§47.5)",
-                a.dir, a.bin, a.slice, a.bin
+                "{}:{}: `{segment}` is not part of the library's root facade — an application \
+                 names only the crate root or `author` (§16.5, §22 §1.2)",
+                rel(file),
+                first_facade_line(&text, segment)
             ));
         }
-    }
-    for dir in &app_dirs {
-        for file in rust_files(dir) {
-            let text = read(&file);
-            let Ok(ast) = syn::parse_file(&text) else {
-                errors.push(format!("{} does not parse", rel(&file)));
-                continue;
-            };
-            scanned = scanned.saturating_add(1);
-            let mut visitor = FacadeUse {
-                krate: LIB_CRATE_IDENTS,
-                seen: BTreeSet::new(),
-            };
-            syn::visit::Visit::visit_file(&mut visitor, &ast);
-            for segment in &visitor.seen {
-                if facade.contains(segment) {
-                    continue;
-                }
+        for (n, line) in non_test_lines(&text) {
+            let code = code_line(line);
+            if path_attr.is_match(code) {
                 errors.push(format!(
-                    "{}:{}: `{segment}` is not part of the library's root facade — an application \
-                     names only the crate root or `author` (§16.5, §22 §1.2)",
-                    rel(&file),
-                    first_facade_line(&text, segment)
+                    "{}:{n}: `#[path]` is forbidden in an application — a module reached by \
+                     path is not a facade consumer (§16.5)",
+                    rel(file)
                 ));
             }
-            for (n, line) in non_test_lines(&text) {
-                let code = code_line(line);
-                if path_attr.is_match(code) {
-                    errors.push(format!(
-                        "{}:{n}: `#[path]` is forbidden in an application — a module reached by \
-                         path is not a facade consumer (§16.5)",
-                        rel(&file)
-                    ));
-                }
-                if include.is_match(code) {
-                    errors.push(format!(
-                        "{}:{n}: `include!` is forbidden in an application — included source \
-                         bypasses the crate boundary the workspace exists to create (§16.5)",
-                        rel(&file)
-                    ));
-                }
+            if include.is_match(code) {
+                errors.push(format!(
+                    "{}:{n}: `include!` is forbidden in an application — included source \
+                     bypasses the crate boundary the workspace exists to create (§16.5)",
+                    rel(file)
+                ));
             }
         }
     }
@@ -5738,6 +6463,200 @@ mod tests {
             scan_root_error(Path::new("crates/tui/src"), true, 1).is_none(),
             "a present root with Rust input is the green case"
         );
+    }
+
+    #[test]
+    fn application_scan_rejects_a_due_app_without_apps_root() {
+        let error = missing_apps_for_due(&[&APPS[0]])
+            .expect("a due application must not pass with no apps root");
+        assert!(error.contains("apps/ is missing"), "{error}");
+        assert!(error.contains("apps/showcase/src"), "{error}");
+        assert!(
+            missing_apps_for_due(&[]).is_none(),
+            "the accepted pre-Slice-5 state"
+        );
+    }
+
+    #[test]
+    fn binary_layout_gate_reports_wrong_owner_and_source() {
+        let app = &APPS[0];
+        let broken = binary_target_layout_hits(
+            app,
+            false,
+            None,
+            "wrong-package",
+            Path::new("apps/showcase/src/other.rs"),
+        );
+        assert_eq!(
+            broken.len(),
+            2,
+            "owner and path must both be checked: {broken:?}"
+        );
+        assert!(
+            broken
+                .iter()
+                .any(|hit| hit.contains("wrong migration boundary"))
+        );
+        assert!(
+            broken
+                .iter()
+                .any(|hit| hit.contains("apps/showcase/src/main.rs"))
+        );
+        assert!(
+            binary_target_layout_hits(
+                app,
+                true,
+                Some("junie-tui"),
+                "junie-tui",
+                &legacy_binary_source(app),
+            )
+            .is_empty()
+        );
+    }
+
+    #[test]
+    fn generic_component_copy_gate_reports_broken_fixture_and_allows_rain() {
+        let broken = "\
+fn render(&mut self) {}\n
+let style = Style::new();\n
+let block = Block::default();\n
+buf.set_string(x, y, text, style);\n";
+        let hits = generic_component_copy_hits("apps/showcase/src/page.rs", broken);
+        assert_eq!(
+            hits.len(),
+            4,
+            "every forbidden shape must be reported: {hits:?}"
+        );
+        assert!(hits.iter().any(|hit| hit.contains("fn render")), "{hits:?}");
+        assert!(
+            generic_component_copy_hits("apps/jackin-preview/src/rain.rs", broken).is_empty(),
+            "rain.rs is the sole named exception"
+        );
+        let fixture = "#[cfg(test)]\nmod tests {\nfn render(&mut self) {}\n}\n";
+        assert!(
+            generic_component_copy_hits("apps/showcase/src/page.rs", fixture).is_empty(),
+            "test-only helpers are not shipped application code"
+        );
+    }
+
+    #[test]
+    fn application_dispatch_gate_reports_broken_fixture_and_skips_tests() {
+        let broken = "\
+fn owns(x: Id) { registry.owns(x); }\n
+fn locate(x: Id) { registry.locate(x); }\n
+let _ = scrollbar::id_for(x);\n
+let _ = parent.child(x);\n";
+        let hits = owns_or_locate_hits("apps/showcase/src/page.rs", broken);
+        assert_eq!(
+            hits.len(),
+            4,
+            "every retired dispatch shape must be reported: {hits:?}"
+        );
+        let fixture = "#[cfg(test)]\nmod tests {\nfn route(x: Id) { registry.owns(x); }\n}\n";
+        assert!(
+            owns_or_locate_hits("apps/showcase/src/page.rs", fixture).is_empty(),
+            "test-only helpers are not shipped application code"
+        );
+    }
+
+    #[test]
+    fn showcase_coverage_gate_reports_missing_public_component() {
+        let cases = BTreeSet::from([
+            "ProbeCase".to_owned(),
+            "ButtonCase".to_owned(),
+            "DialogCase".to_owned(),
+        ]);
+        let registry = BTreeSet::from(["Buttons".to_owned(), "Dialogs".to_owned()]);
+        let pages = vec![
+            (
+                "apps/showcase/src/pages/buttons.rs".to_owned(),
+                "fn page() { Button::new(ID); }".to_owned(),
+            ),
+            (
+                "apps/showcase/src/pages/dialogs.rs".to_owned(),
+                "fn page() { Dialog::confirm(ID); }".to_owned(),
+            ),
+        ];
+        assert!(
+            showcase_coverage_hits(&cases, &registry, &pages).is_empty(),
+            "probe is test-only and the two public components are covered"
+        );
+
+        let missing = BTreeSet::from(["Buttons".to_owned()]);
+        let hits = showcase_coverage_hits(&cases, &missing, &pages[..1]);
+        assert_eq!(hits.len(), 1, "{hits:?}");
+        assert!(hits[0].contains("DialogCase"), "{hits:?}");
+
+        let empty = showcase_coverage_hits(&cases, &registry, &[]);
+        assert!(
+            empty
+                .iter()
+                .any(|hit| hit.contains("no registered showcase page")),
+            "a missing page source must fail closed: {empty:?}"
+        );
+
+        let prose = vec![(
+            "apps/showcase/src/pages/buttons.rs".to_owned(),
+            "fn page() { let _label = \"Dialog\"; /* Button */ }".to_owned(),
+        )];
+        let prose_hits = showcase_coverage_hits(&cases, &registry, &prose);
+        assert!(
+            prose_hits.iter().any(|hit| hit.contains("ButtonCase"))
+                && prose_hits.iter().any(|hit| hit.contains("DialogCase")),
+            "comments and strings must not count as a component demonstration: {prose_hits:?}"
+        );
+
+        let imports = vec![(
+            "apps/showcase/src/pages/buttons.rs".to_owned(),
+            "use tui_next::Button; fn page() {}".to_owned(),
+        )];
+        let import_hits = showcase_coverage_hits(&cases, &registry, &imports);
+        assert!(
+            import_hits.iter().any(|hit| hit.contains("ButtonCase")),
+            "an import alone must not count as a component demonstration: {import_hits:?}"
+        );
+
+        let test_only = vec![(
+            "apps/showcase/src/pages/buttons.rs".to_owned(),
+            "struct Demo;
+#[cfg(test)]
+const BUTTON: Option<Button> = None;
+#[cfg(test)]
+impl Demo { fn draw(&self) { Dialog::new(ID); } }
+"
+            .to_owned(),
+        )];
+        let names = showcase_component_names(&test_only).expect("fixture parses");
+        assert!(
+            !names.contains("Button") && !names.contains("Dialog"),
+            "test-only items must not count as showcase demonstrations: {names:?}"
+        );
+    }
+
+    #[test]
+    fn showcase_nav_registry_is_structural_and_non_empty() {
+        let files = vec![(
+            PathBuf::from("apps/showcase/src/app.rs"),
+            "const NAV_ENTRIES: &[NavEntry] = &[NavEntry { id: PageId::Buttons }];".to_owned(),
+        )];
+        let (_, variants) = showcase_nav_registry(&files).expect("registry parses");
+        assert_eq!(variants, BTreeSet::from(["Buttons".to_owned()]));
+
+        let empty = vec![(
+            PathBuf::from("apps/showcase/src/app.rs"),
+            "const NAV_ENTRIES: &[NavEntry] = &[];".to_owned(),
+        )];
+        let error = showcase_nav_registry(&empty).expect_err("empty registry must fail closed");
+        assert!(error.contains("no `PageId` entries"), "{error}");
+
+        let test_only = vec![(
+            PathBuf::from("apps/showcase/src/app.rs"),
+            "#[cfg(test)]\nconst NAV_ENTRIES: &[NavEntry] = &[NavEntry { id: PageId::Buttons }];"
+                .to_owned(),
+        )];
+        let error = showcase_nav_registry(&test_only)
+            .expect_err("a test-only registry must not satisfy production coverage");
+        assert!(error.contains("no `NAV_ENTRIES` registry"), "{error}");
     }
 
     fn signature_spec<'a>(
