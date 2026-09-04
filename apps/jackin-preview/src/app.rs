@@ -151,6 +151,7 @@ pub struct App {
     pub status: Option<(String, Tone, i64)>,
     pub size: (u16, u16),
     pub quit: bool,
+    pub(crate) public_keymap: crate::public_tui::KeyMap,
     too_small: bool,
     /// The application menu bar shown on every host screen.
     host_menu: MenuBar,
@@ -203,6 +204,7 @@ impl App {
             status: None,
             size: (0, 0),
             quit: false,
+            public_keymap: crate::public_shell::public_keymap(),
             too_small: false,
             host_menu: Self::build_host_menu(Route::Manager),
             host_menu_route: Route::Manager,

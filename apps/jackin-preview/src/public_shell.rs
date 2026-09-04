@@ -5,47 +5,42 @@
 //! the product app's state; only input resolution and painting cross the
 //! public facade here.
 
-use std::sync::OnceLock;
-
 use crate::public_tui::{self, App as PublicApp};
 use crate::screens::{Jx, PublicRequest, Screen};
 use crate::{App, MIN_HEIGHT, MIN_WIDTH, Route};
 
-fn public_keymap() -> &'static public_tui::KeyMap {
-    static MAP: OnceLock<public_tui::KeyMap> = OnceLock::new();
-    MAP.get_or_init(|| {
-        public_tui::KeyMap::new()
-            .bind(
-                public_tui::KeyPhase::Capture,
-                public_tui::Chord::key(public_tui::KeyCode::Up),
-                crate::screens::PUBLIC_NAV_UP,
-            )
-            .bind(
-                public_tui::KeyPhase::Capture,
-                public_tui::Chord::key(public_tui::KeyCode::Char('k')),
-                crate::screens::PUBLIC_NAV_UP,
-            )
-            .bind(
-                public_tui::KeyPhase::Capture,
-                public_tui::Chord::key(public_tui::KeyCode::Down),
-                crate::screens::PUBLIC_NAV_DOWN,
-            )
-            .bind(
-                public_tui::KeyPhase::Capture,
-                public_tui::Chord::key(public_tui::KeyCode::Char('j')),
-                crate::screens::PUBLIC_NAV_DOWN,
-            )
-            .bind(
-                public_tui::KeyPhase::Capture,
-                public_tui::Chord::key(public_tui::KeyCode::Enter),
-                crate::screens::PUBLIC_ACTIVATE,
-            )
-            .bind(
-                public_tui::KeyPhase::Capture,
-                public_tui::Chord::key(public_tui::KeyCode::Char('q')),
-                crate::screens::PUBLIC_QUIT,
-            )
-    })
+pub(crate) fn public_keymap() -> public_tui::KeyMap {
+    public_tui::KeyMap::new()
+        .bind(
+            public_tui::KeyPhase::Capture,
+            public_tui::Chord::key(public_tui::KeyCode::Up),
+            crate::screens::PUBLIC_NAV_UP,
+        )
+        .bind(
+            public_tui::KeyPhase::Capture,
+            public_tui::Chord::key(public_tui::KeyCode::Char('k')),
+            crate::screens::PUBLIC_NAV_UP,
+        )
+        .bind(
+            public_tui::KeyPhase::Capture,
+            public_tui::Chord::key(public_tui::KeyCode::Down),
+            crate::screens::PUBLIC_NAV_DOWN,
+        )
+        .bind(
+            public_tui::KeyPhase::Capture,
+            public_tui::Chord::key(public_tui::KeyCode::Char('j')),
+            crate::screens::PUBLIC_NAV_DOWN,
+        )
+        .bind(
+            public_tui::KeyPhase::Capture,
+            public_tui::Chord::key(public_tui::KeyCode::Enter),
+            crate::screens::PUBLIC_ACTIVATE,
+        )
+        .bind(
+            public_tui::KeyPhase::Capture,
+            public_tui::Chord::key(public_tui::KeyCode::Char('q')),
+            crate::screens::PUBLIC_QUIT,
+        )
 }
 
 fn apply_request(app: &mut App, request: PublicRequest) {
@@ -270,7 +265,7 @@ impl PublicApp for App {
     }
 
     fn keymap(&self) -> &public_tui::KeyMap {
-        public_keymap()
+        &self.public_keymap
     }
 
     fn min_size(&self) -> public_tui::Size {
