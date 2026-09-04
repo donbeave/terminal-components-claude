@@ -3,7 +3,7 @@
 use std::time::Duration;
 
 use tui_next::{
-    Cx, Id, Panel, PanelKind, ProgressBar, Rect, Response, Spinner, Status, Ui, id, layout,
+    Cx, Id, Meter, Panel, PanelKind, ProgressBar, Rect, Response, Spinner, Status, Ui, id, layout,
 };
 
 use super::{Page, frame, lines};
@@ -12,6 +12,7 @@ const BUILD: Id = id!("progress.build");
 const PIPELINE: Id = id!("progress.pipeline");
 const CHECKS: Id = id!("progress.checks");
 const SPINNER: Id = id!("progress.spinner");
+const METER: Id = id!("progress.meter");
 
 fn pipeline_panel() -> Panel<'static> {
     Panel::new(PIPELINE)
@@ -36,6 +37,10 @@ fn checks_bar(checks: u16, frame: usize) -> ProgressBar<'static> {
 
 fn test_spinner(frame: usize) -> Spinner<'static> {
     Spinner::new(SPINNER).label("running tests").frame(frame)
+}
+
+fn meter() -> Meter<'static> {
+    Meter::new(METER).ratio(0.72).value("72%")
 }
 
 /// Progress has no input controls, but owns the animation frame and work
@@ -65,6 +70,7 @@ impl Page for ProgressPage {
         let _ = build_bar(self.frame);
         let _ = checks_bar(self.checks, self.frame);
         let _ = test_spinner(self.frame);
+        let _ = meter();
         self.frame = self.frame.wrapping_add(1);
         self.checks = 60_u16.saturating_add(u16::try_from(self.frame.rem_euclid(41)).unwrap_or(0));
         cx.request_repaint_after(Duration::from_millis(120));
@@ -78,12 +84,14 @@ impl Page for ProgressPage {
             self.title(),
             "determinate · spinner · colour downgrade",
             |ui, body| {
-                let (meter, rest) = layout::split_v(body, 4);
-                pipeline_panel().draw(ui, meter, |ui, inner| {
+                let (meter_area, rest) = layout::split_v(body, 4);
+                pipeline_panel().draw(ui, meter_area, |ui, inner| {
                     build_bar(self.frame).draw(ui, inner);
                 });
-                let (check_area, spin_area) = layout::split_v(rest, 1);
+                let (check_area, rest) = layout::split_v(rest, 1);
+                let (meter_area, spin_area) = layout::split_v(rest, 1);
                 checks_bar(self.checks, self.frame).draw(ui, check_area);
+                meter().draw(ui, meter_area);
                 test_spinner(self.frame).draw(ui, spin_area);
                 lines(
                     ui,
