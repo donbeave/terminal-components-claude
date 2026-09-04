@@ -2,8 +2,8 @@
 
 use tui_next::{
     Brand, Chord, DerivedHintBar, Empty, EmptyState, HelpOverlay, HelpOverlayState, HelpSection,
-    Hint, HintBar, HintLayer, Id, KeyCode, KeyHint, Props, Rect, Response, TooSmall, Ui, id,
-    layout,
+    Hint, HintBar, HintLayer, Id, ItemKey, KeyCode, KeyHint, Props, PropsList, PropsRow,
+    PropsState, Rect, Response, TooSmall, Ui, id, layout,
 };
 
 use super::{Page, author::AuthorBadge, frame, lines};
@@ -16,6 +16,7 @@ const HINT_BAR: Id = id!("overview.hint-bar");
 const DERIVED_HINT_BAR: Id = id!("overview.derived-hint-bar");
 const HELP: Id = id!("overview.help");
 const TOO_SMALL: Id = id!("overview.too-small");
+const PROPS_LIST: Id = id!("overview.props-list");
 const PROPS: [(&str, &str); 6] = [
     ("Library", "tui-next"),
     ("Ownership", "application state"),
@@ -23,6 +24,23 @@ const PROPS: [(&str, &str); 6] = [
     ("Rendering", "public Ui facade"),
     ("Binary", "showcase"),
     ("Tokens", "surface · accent · focus"),
+];
+const PROPS_LIST_ROWS: [PropsRow<'static>; 3] = [
+    PropsRow::new(ItemKey::num(1), "Library", "tui-next"),
+    PropsRow::new(ItemKey::num(2), "Ownership", "application state"),
+    PropsRow::new(ItemKey::num(3), "Rendering", "public Ui facade"),
+];
+const FULL_COPY: [&str; 4] = [
+    "A complete app-owned migration of the legacy showcase.",
+    "Each page owns durable state and talks to tui-next through",
+    "the same public facade available to downstream binaries.",
+    "Tab focuses controls · Enter activates · Esc returns home.",
+];
+const COMPACT_COPY: [&str; 4] = [
+    "App-owned migration via tui-next.",
+    "Pages own state; one public facade.",
+    "Downstream binaries share that facade.",
+    "Tab focus · Enter activate · Esc home.",
 ];
 
 fn brand() -> Brand<'static> {
@@ -47,12 +65,17 @@ fn derived_hint_bar() -> DerivedHintBar<'static> {
     derived
 }
 
+fn props_list() -> PropsList<'static> {
+    PropsList::new(PROPS_LIST)
+}
+
 /// The landing page has no mutable controls; its content is deliberately
 /// useful as a smoke test for themes, clipping and public component exports.
 #[derive(Debug)]
 pub(crate) struct OverviewPage {
     author: AuthorBadge,
     help_state: HelpOverlayState,
+    props_state: PropsState,
 }
 
 impl OverviewPage {
@@ -60,6 +83,7 @@ impl OverviewPage {
         Self {
             author: AuthorBadge::new(AUTHOR),
             help_state: HelpOverlayState::default(),
+            props_state: PropsState::default(),
         }
     }
 }
@@ -83,6 +107,9 @@ impl Page for OverviewPage {
         response |= HelpOverlay::new(HELP, "overview", &sections)
             .update(cx, &mut self.help_state)
             .erase();
+        response |= props_list()
+            .update(cx, &mut self.props_state, &PROPS_LIST_ROWS)
+            .erase();
         let _ = Empty::new(
             EMPTY,
             EmptyState::Empty {
@@ -101,22 +128,26 @@ impl Page for OverviewPage {
         frame(ui, area, self.title(), "public tui-next API", |ui, body| {
             let (intro, rest) = layout::split_v(body, 4);
             brand().draw(ui, intro);
-            let (copy, props) = layout::split_h(rest, rest.width / 2);
+            // The property column needs 28 cells for its widest label/value
+            // pair. Keep a two-cell gutter so clipped copy cannot visually
+            // merge with the metadata at compact terminal sizes.
+            let props_width = 28.min(rest.width.saturating_sub(2));
+            let copy_width = rest.width.saturating_sub(props_width).saturating_sub(2);
+            let (copy, after_copy) = layout::split_h(rest, copy_width);
+            let (_, props) = layout::split_h(after_copy, 2);
             let (copy_text, author_area) = layout::split_v(copy, copy.height.saturating_sub(2));
             let (copy_text, inventory) =
                 layout::split_v(copy_text, copy_text.height.saturating_sub(7));
-            lines(
-                ui,
-                copy_text,
-                &[
-                    "A complete app-owned migration of the legacy showcase.",
-                    "Each page owns durable state and talks to tui-next through",
-                    "the same public facade available to downstream binaries.",
-                    "Tab focuses controls · Enter activates · Esc returns home.",
-                ],
-            );
+            let copy_lines: &[&str] = if copy.width >= 59 {
+                &FULL_COPY
+            } else {
+                &COMPACT_COPY
+            };
+            lines(ui, copy_text, copy_lines);
             self.author.draw(ui, author_area);
-            Props::new(&PROPS).draw(ui, props);
+            let (static_props, keyed_props) = layout::split_v(props, props.height / 2);
+            Props::new(&PROPS).draw(ui, static_props);
+            props_list().draw(ui, keyed_props, &self.props_state, &PROPS_LIST_ROWS);
 
             let hints = inventory_hints();
             let sections = [HelpSection::new("Overview", &hints)];
