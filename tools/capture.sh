@@ -60,6 +60,7 @@ cleanup_failed_start() {
         "$RUN_SESSION_ID_FILE" \
         "$RUN_EXIT_FILE" \
         "$RUN_BIN_FILE" \
+        "$RUN_EXECUTABLE_FILE" \
         "$RUN_CAPTURE_DIR_FILE" \
         "$RUN_MANIFEST_FILE" \
         "$RUN_STDERR_FILE" \
@@ -349,6 +350,97 @@ move_failed_generation_aside() {
   mv "$source" "$destination"
 }
 
+SHOT_LOCK_DIR=
+SHOT_LOCK_OWNER_FILE=
+SHOT_LOCK_OWNER=
+
+shot_lock_owner_is_live() {
+  local pid=$1
+  kill -0 "$pid" 2>/dev/null || ps -p "$pid" >/dev/null 2>&1
+}
+
+release_shot_lock() {
+  local owner
+  if [[ -z "$SHOT_LOCK_DIR" ]]; then
+    return 0
+  fi
+  if [[ -L "$SHOT_LOCK_DIR" || ! -d "$SHOT_LOCK_DIR" ]]; then
+    echo "capture cleanup failed: shot lock is not a directory: $SHOT_LOCK_DIR" >&2
+    return 1
+  fi
+  if [[ -L "$SHOT_LOCK_OWNER_FILE" || ! -f "$SHOT_LOCK_OWNER_FILE" ]]; then
+    echo "capture cleanup failed: shot lock owner is missing or unsafe: $SHOT_LOCK_OWNER_FILE" >&2
+    return 1
+  fi
+  owner=$(state_value "$SHOT_LOCK_OWNER_FILE" "")
+  if [[ "$owner" != "$SHOT_LOCK_OWNER" ]]; then
+    echo "capture cleanup failed: shot lock ownership changed: $SHOT_LOCK_DIR" >&2
+    return 1
+  fi
+  if ! rm -f "$SHOT_LOCK_OWNER_FILE" || ! rmdir "$SHOT_LOCK_DIR"; then
+    echo "capture cleanup failed: cannot release shot lock: $SHOT_LOCK_DIR" >&2
+    return 1
+  fi
+  SHOT_LOCK_DIR=
+  SHOT_LOCK_OWNER_FILE=
+  SHOT_LOCK_OWNER=
+}
+
+cleanup_shot_lock_only() {
+  local status=$?
+  trap - EXIT
+  release_shot_lock || true
+  exit "$status"
+}
+
+acquire_shot_lock() {
+  local name=$1 owner pid
+  SHOT_LOCK_DIR=$CAPTURE_DIR_PATH/.${name}.lock
+  SHOT_LOCK_OWNER_FILE=$SHOT_LOCK_DIR/owner
+  SHOT_LOCK_OWNER="$$:$CAPTURE_RUN_ID"
+  if mkdir -m 700 "$SHOT_LOCK_DIR" 2>/dev/null; then
+    if ! write_state "$SHOT_LOCK_OWNER_FILE" "$SHOT_LOCK_OWNER"; then
+      rmdir "$SHOT_LOCK_DIR" 2>/dev/null || true
+      echo "capture failed: cannot initialize shot lock: $SHOT_LOCK_DIR" >&2
+      return 1
+    fi
+    return 0
+  fi
+  if [[ -L "$SHOT_LOCK_DIR" || ! -d "$SHOT_LOCK_DIR" ]]; then
+    echo "capture failed: shot lock path is unsafe: $SHOT_LOCK_DIR" >&2
+    return 1
+  fi
+  if [[ -L "$SHOT_LOCK_OWNER_FILE" || ! -f "$SHOT_LOCK_OWNER_FILE" ]]; then
+    echo "capture failed: cannot prove shot lock is stale: $SHOT_LOCK_DIR" >&2
+    return 1
+  fi
+  owner=$(state_value "$SHOT_LOCK_OWNER_FILE" "")
+  if [[ ! "$owner" =~ ^([0-9]+):([A-Za-z0-9_-]{1,64})$ ]]; then
+    echo "capture failed: shot lock owner is invalid: $SHOT_LOCK_DIR" >&2
+    return 1
+  fi
+  pid=${BASH_REMATCH[1]}
+  if shot_lock_owner_is_live "$pid"; then
+    echo "capture failed: shot is already running: $name" >&2
+    return 1
+  fi
+  # A dead owner may be recovered, but only when the lock contains exactly
+  # the owner record. rmdir below refuses unexpected debris or replacement.
+  if ! rm -f "$SHOT_LOCK_OWNER_FILE" || ! rmdir "$SHOT_LOCK_DIR"; then
+    echo "capture failed: cannot recover stale shot lock: $SHOT_LOCK_DIR" >&2
+    return 1
+  fi
+  if ! mkdir -m 700 "$SHOT_LOCK_DIR" 2>/dev/null; then
+    echo "capture failed: shot lock was claimed concurrently: $SHOT_LOCK_DIR" >&2
+    return 1
+  fi
+  if ! write_state "$SHOT_LOCK_OWNER_FILE" "$SHOT_LOCK_OWNER"; then
+    rmdir "$SHOT_LOCK_DIR" 2>/dev/null || true
+    echo "capture failed: cannot initialize recovered shot lock: $SHOT_LOCK_DIR" >&2
+    return 1
+  fi
+}
+
 load_run_state() {
   validate_run_id "$CAPTURE_RUN_ID"
   STATE_ROOT_PATH=$(absolute_path "$CAPTURE_STATE_DIR")
@@ -443,6 +535,7 @@ case "$cmd" in
     RUN_SESSION_ID_FILE=$RUN_DIR/session.id
     RUN_EXIT_FILE=$RUN_DIR/exit.status
     RUN_BIN_FILE=$RUN_DIR/bin
+    RUN_EXECUTABLE_FILE=$RUN_DIR/executable
     RUN_CAPTURE_DIR_FILE=$RUN_DIR/capture.dir
     RUN_MANIFEST_FILE=$RUN_DIR/manifest
     RUN_STDERR_FILE=$RUN_DIR/stderr
@@ -507,6 +600,12 @@ case "$cmd" in
       --env "PYTHONHASHSEED=$(snapshot_value PYTHONHASHSEED | sed 's/^PYTHONHASHSEED=//')"
       --env "SOURCE_DATE_EPOCH=$(snapshot_value SOURCE_DATE_EPOCH | sed 's/^SOURCE_DATE_EPOCH=//')"
       --env "PATH=$(snapshot_value PATH | sed 's/^PATH=//')"
+      --env "HOME=$(snapshot_value HOME | sed 's/^HOME=//')"
+      --env "USER=$(snapshot_value USER | sed 's/^USER=//')"
+      --env "LOGNAME=$(snapshot_value LOGNAME | sed 's/^LOGNAME=//')"
+      --env "SHELL=$(snapshot_value SHELL | sed 's/^SHELL=//')"
+      --env "PWD=$(snapshot_value PWD | sed 's/^PWD=//')"
+      --env "TMPDIR=$(snapshot_value TMPDIR | sed 's/^TMPDIR=//')"
     )
     tool_versions=(
       --tool "bash=$BASH_VERSION"
@@ -528,12 +627,16 @@ case "$cmd" in
     write_state "$RUN_MANIFEST_FILE" "$CAPTURE_MANIFEST_PATH"
     write_state "$RUN_STDERR_FILE" "$STDERR_FILE"
     write_state "$RUN_COLOR_FILE" "$COLOR"
+    python3 "$PROVENANCE_TOOL" stage-binary \
+      --source "$BIN" \
+      --destination "$RUN_EXECUTABLE_FILE"
     python3 "$PROVENANCE_TOOL" init \
       --metadata "$RUN_METADATA_FILE" \
       --run-id "$CAPTURE_RUN_ID" \
       --session "$SESSION_NAME" \
       --session-id pending \
-      --binary "$BIN" \
+      --binary "$RUN_EXECUTABLE_FILE" \
+      --source-binary "$BIN" \
       --revision "$revision" \
       --dirty "$dirty" \
       --columns "$cols" \
@@ -638,6 +741,8 @@ case "$cmd" in
     load_run_state
     require_owned_session
     ensure_directory "$CAPTURE_DIR_PATH" "capture directory"
+    acquire_shot_lock "$name"
+    trap cleanup_shot_lock_only EXIT
     cols=$(tmux display -p -t "$SESSION_NAME" '#{pane_width}')
     rows=$(tmux display -p -t "$SESSION_NAME" '#{pane_height}')
     validate_dimensions "$cols" "$rows"
@@ -676,23 +781,28 @@ case "$cmd" in
     cleanup_temporary_artifacts() {
       local status=$? temporary artifact
       trap - EXIT
-      for temporary in "${temporary_artifacts[@]}"; do
-        if [[ -L "$temporary" ]]; then
-          echo "capture cleanup failed: refusing symlink temporary $temporary" >&2
-        elif [[ -e "$temporary" ]]; then
-          rm -f "$temporary" || true
-        fi
-      done
-      for artifact in "${staged_artifacts[@]}"; do
-        if [[ -L "$artifact" ]]; then
-          echo "capture cleanup failed: refusing symlink staged artifact $artifact" >&2
-        elif [[ -e "$artifact" ]]; then
-          rm -f "$artifact" || true
-        fi
-      done
+      if (( ${#temporary_artifacts[@]} > 0 )); then
+        for temporary in "${temporary_artifacts[@]}"; do
+          if [[ -L "$temporary" ]]; then
+            echo "capture cleanup failed: refusing symlink temporary $temporary" >&2
+          elif [[ -e "$temporary" ]]; then
+            rm -f "$temporary" || true
+          fi
+        done
+      fi
+      if (( ${#staged_artifacts[@]} > 0 )); then
+        for artifact in "${staged_artifacts[@]}"; do
+          if [[ -L "$artifact" ]]; then
+            echo "capture cleanup failed: refusing symlink staged artifact $artifact" >&2
+          elif [[ -e "$artifact" ]]; then
+            rm -f "$artifact" || true
+          fi
+        done
+      fi
       if [[ -n "$stage_dir" && -d "$stage_dir" && ! -L "$stage_dir" ]]; then
         rmdir "$stage_dir" 2>/dev/null || true
       fi
+      release_shot_lock || true
       exit "$status"
     }
     trap cleanup_temporary_artifacts EXIT

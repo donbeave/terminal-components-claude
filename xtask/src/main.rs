@@ -18,7 +18,6 @@ use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
-#[cfg(test)]
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use regex::Regex;
@@ -128,11 +127,17 @@ fn capture_matrix_cases() -> Vec<CaptureCase> {
 #[derive(Debug)]
 struct CaptureMatrixLock {
     path: PathBuf,
+    owner_path: PathBuf,
+    owner: String,
 }
 
 impl Drop for CaptureMatrixLock {
     fn drop(&mut self) {
-        let _ = fs::remove_dir(&self.path);
+        let owner = fs::read_to_string(&self.owner_path).ok();
+        if owner.as_deref() == Some(&self.owner) {
+            let _ = fs::remove_file(&self.owner_path);
+            let _ = fs::remove_dir(&self.path);
+        }
     }
 }
 
@@ -162,19 +167,134 @@ fn ensure_capture_directory(path: &Path) -> Result<(), String> {
     }
 }
 
+#[cfg(unix)]
+fn capture_process_is_live(pid: u32) -> bool {
+    // SAFETY: kill(pid, 0) only probes process existence and sends no signal.
+    let result = unsafe { libc::kill(pid as libc::pid_t, 0) };
+    result == 0 || std::io::Error::last_os_error().raw_os_error() == Some(libc::EPERM)
+}
+
+#[cfg(not(unix))]
+fn capture_process_is_live(_pid: u32) -> bool {
+    // Unknown liveness must not allow one process to replace another's lock.
+    true
+}
+
 fn acquire_capture_matrix_lock(shots: &Path) -> Result<CaptureMatrixLock, String> {
     let path = shots.join(".capture-matrix.lock");
-    match fs::create_dir(&path) {
-        Ok(()) => Ok(CaptureMatrixLock { path }),
-        Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => Err(format!(
-            "capture matrix is already running (lock: {})",
-            rel(&path)
-        )),
-        Err(error) => Err(format!(
-            "cannot acquire capture matrix lock {}: {error}",
-            rel(&path)
-        )),
+    let owner_path = path.join("owner");
+    let owner = format!(
+        "{}:{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_err(|error| format!("cannot create capture lock owner token: {error}"))?
+            .as_nanos()
+    );
+    for attempt in 0..2 {
+        match fs::create_dir(&path) {
+            Ok(()) => {
+                let mut file = OpenOptions::new()
+                    .write(true)
+                    .create_new(true)
+                    .open(&owner_path)
+                    .map_err(|error| {
+                        let _ = fs::remove_dir(&path);
+                        format!(
+                            "cannot create capture matrix lock owner {}: {error}",
+                            rel(&owner_path)
+                        )
+                    })?;
+                file.write_all(owner.as_bytes()).map_err(|error| {
+                    let _ = fs::remove_file(&owner_path);
+                    let _ = fs::remove_dir(&path);
+                    format!(
+                        "cannot write capture matrix lock owner {}: {error}",
+                        rel(&owner_path)
+                    )
+                })?;
+                file.sync_all().map_err(|error| {
+                    let _ = fs::remove_file(&owner_path);
+                    let _ = fs::remove_dir(&path);
+                    format!(
+                        "cannot sync capture matrix lock owner {}: {error}",
+                        rel(&owner_path)
+                    )
+                })?;
+                return Ok(CaptureMatrixLock {
+                    path,
+                    owner_path,
+                    owner,
+                });
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists && attempt == 0 => {
+                let metadata = fs::symlink_metadata(&path).map_err(|inspect| {
+                    format!(
+                        "cannot inspect capture matrix lock {}: {inspect}",
+                        rel(&path)
+                    )
+                })?;
+                if metadata.file_type().is_symlink() || !metadata.is_dir() {
+                    return Err(format!(
+                        "capture matrix lock path is not a directory: {}",
+                        rel(&path)
+                    ));
+                }
+                let owner_metadata = fs::symlink_metadata(&owner_path).map_err(|inspect| {
+                    format!(
+                        "cannot inspect capture matrix lock owner {}: {inspect}",
+                        rel(&owner_path)
+                    )
+                })?;
+                if owner_metadata.file_type().is_symlink() || !owner_metadata.is_file() {
+                    return Err(format!(
+                        "cannot prove capture matrix lock is stale: {}",
+                        rel(&path)
+                    ));
+                }
+                let existing = fs::read_to_string(&owner_path).map_err(|read| {
+                    format!(
+                        "cannot read capture matrix lock owner {}: {read}",
+                        rel(&owner_path)
+                    )
+                })?;
+                let Some((pid, _token)) = existing.trim().split_once(':') else {
+                    return Err(format!(
+                        "capture matrix lock owner is invalid: {}",
+                        rel(&path)
+                    ));
+                };
+                let pid = pid.parse::<u32>().map_err(|_| {
+                    format!("capture matrix lock owner pid is invalid: {}", rel(&path))
+                })?;
+                if capture_process_is_live(pid) {
+                    return Err(format!(
+                        "capture matrix is already running (lock: {})",
+                        rel(&path)
+                    ));
+                }
+                fs::remove_file(&owner_path).map_err(|remove| {
+                    format!(
+                        "cannot recover stale capture matrix lock owner {}: {remove}",
+                        rel(&owner_path)
+                    )
+                })?;
+                fs::remove_dir(&path).map_err(|remove| {
+                    format!(
+                        "cannot recover stale capture matrix lock {}: {remove}",
+                        rel(&path)
+                    )
+                })?;
+            }
+            Err(error) => {
+                return Err(format!(
+                    "cannot acquire capture matrix lock {}: {error}",
+                    rel(&path)
+                ));
+            }
+        }
     }
+    Err(format!("cannot acquire capture matrix lock {}", rel(&path)))
 }
 
 fn capture_matrix() -> Result<(), String> {
@@ -840,6 +960,9 @@ fn capture_script_contract_hits(script: &str) -> Vec<String> {
         ("serialized metadata handoff", "CAPTURE_METADATA_FILE"),
         ("staged artifact set", "stage_dir"),
         ("rollback publication", "backup_dir"),
+        ("per-shot lock", "acquire_shot_lock"),
+        ("shot lock cleanup", "cleanup_shot_lock_only"),
+        ("stale shot lock check", "shot_lock_owner_is_live"),
         ("COLOR dispatch", "case \"$COLOR\" in"),
         ("truecolor branch", "truecolor)"),
         ("256-color branch", "256)"),
@@ -925,6 +1048,21 @@ fn capture_matrix_contract() -> Result<(), String> {
             .map_err(|error| format!("cannot read capture runner {}: {error}", rel(&runner)))?;
         errors.extend(capture_exec_contract_hits(&runner_text));
     }
+    let provenance = root().join("tools/capture_provenance.py");
+    if !provenance.is_file() {
+        errors.push(format!(
+            "capture provenance helper is missing: {}",
+            rel(&provenance)
+        ));
+    } else {
+        let provenance_text = fs::read_to_string(&provenance).map_err(|error| {
+            format!(
+                "cannot read capture provenance helper {}: {error}",
+                rel(&provenance)
+            )
+        })?;
+        errors.extend(capture_provenance_contract_hits(&provenance_text));
+    }
     if !errors.is_empty() {
         return Err(errors.join("\n"));
     }
@@ -958,6 +1096,31 @@ fn capture_exec_contract_hits(script: &str) -> Vec<String> {
     .chain(
         (script.contains("$BIN") || script.contains("$ARGS")).then(|| {
             "capture runner interpolates BIN/ARGS into shell source; use its opaque argv".to_owned()
+        }),
+    )
+    .collect()
+}
+
+fn capture_provenance_contract_hits(script: &str) -> Vec<String> {
+    [
+        ("immutable binary staging", "stage-binary"),
+        ("executed argv metadata", "executed_argv"),
+        (
+            "recorded execution environment",
+            "recorded_environment(metadata)",
+        ),
+        (
+            "no inherited execution environment",
+            "environment = recorded_environment(metadata)",
+        ),
+    ]
+    .into_iter()
+    .filter(|(_, fragment)| !script.contains(fragment))
+    .map(|(label, fragment)| format!("capture provenance lacks {label}: `{fragment}`"))
+    .chain(
+        (script.contains("os.environ.copy()") || script.contains("env=os.environ")).then(|| {
+            "capture execution inherits the tmux environment; use the recorded sanitized snapshot"
+                .to_owned()
         }),
     )
     .collect()
@@ -8966,7 +9129,7 @@ esac
         write_executable(
             &fake_png,
             r#"#!/bin/bash
-printf 'new-png\n' > "$2"
+printf 'new-png\n' > "$3"
 "#,
         );
 
@@ -9017,6 +9180,158 @@ printf 'new-png\n' > "$2"
 
     #[cfg(unix)]
     #[test]
+    fn capture_shot_lock_serializes_concurrent_provenance() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let directory = std::env::temp_dir().join(format!(
+            "terminal-components-capture-concurrent-shot-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("clock after epoch")
+                .as_nanos()
+        ));
+        fs::create_dir(&directory).expect("create isolated concurrent shot fixture");
+        let shots = directory.join("shots");
+        let state_root = directory.join("state");
+        let run_dir = state_root.join("concurrent-run");
+        let fake_bin = directory.join("bin");
+        let ready = directory.join("provenance.ready");
+        fs::create_dir(&shots).expect("create concurrent shot output directory");
+        fs::create_dir_all(&run_dir).expect("create concurrent shot state directory");
+        fs::create_dir(&fake_bin).expect("create concurrent shot fake command directory");
+        let case_name = "concurrent";
+        for (name, contents) in [
+            ("bin", "/usr/bin/tail\n".to_owned()),
+            ("capture.dir", format!("{}\n", shots.display())),
+            (
+                "manifest",
+                format!("{}\n", directory.join("manifest.json").display()),
+            ),
+            (
+                "stderr",
+                format!("{}\n", run_dir.join("stderr.log").display()),
+            ),
+            ("color", "truecolor\n".to_owned()),
+            ("session.id", "$concurrent-session\n".to_owned()),
+        ] {
+            fs::write(run_dir.join(name), contents).expect("write concurrent shot state");
+        }
+        fs::write(run_dir.join("metadata.json"), b"{}\n").expect("write concurrent metadata");
+        let stale_lock = shots.join(format!(".{case_name}.lock"));
+        fs::create_dir(&stale_lock).expect("create stale shot lock");
+        fs::write(stale_lock.join("owner"), b"999999999:crashed-run\n")
+            .expect("write stale shot owner");
+
+        let write_executable = |path: &Path, contents: &str| {
+            fs::write(path, contents).expect("write concurrent fake executable");
+            let mut permissions = fs::metadata(path)
+                .expect("inspect concurrent fake executable")
+                .permissions();
+            permissions.set_mode(0o700);
+            fs::set_permissions(path, permissions).expect("make concurrent fake executable");
+        };
+        write_executable(
+            &fake_bin.join("tmux"),
+            r#"#!/bin/bash
+case "$1" in
+  has-session) exit 0 ;;
+  display-message) printf '%s\n' '$concurrent-session' ;;
+  display)
+    case "$*" in
+      *'#{pane_width}'*) printf '80\n' ;;
+      *'#{pane_height}'*) printf '24\n' ;;
+      *'#{cursor_x}'*) printf '1 1 1\n' ;;
+    esac
+    ;;
+  capture-pane)
+    case "$*" in
+      *' -e '*) printf '\033[31mnew\033[0m\n' ;;
+      *) printf 'new\n' ;;
+    esac
+    ;;
+esac
+exit 0
+"#,
+        );
+        write_executable(
+            &fake_bin.join("python3"),
+            r#"#!/bin/bash
+case "$1" in
+  *ansi2html.py) printf '<html>new</html>\n' > "$3" ;;
+  *capture_provenance.py) printf 'ready\n' > "$CAPTURE_PROVENANCE_READY"; sleep 1 ;;
+esac
+exit 0
+"#,
+        );
+        let fake_png = directory.join("fake-png");
+        write_executable(
+            &fake_png,
+            r#"#!/bin/bash
+printf 'new-png\n' > "$3"
+"#,
+        );
+
+        let original_path = std::env::var_os("PATH").expect("PATH is set");
+        let path = format!("{}:{}", fake_bin.display(), original_path.to_string_lossy());
+        let first = Command::new("/bin/bash")
+            .arg(root().join("tools/capture.sh"))
+            .arg("shot")
+            .arg(case_name)
+            .current_dir(root())
+            .env("PATH", &path)
+            .env("CAPTURE_PROVENANCE_READY", &ready)
+            .env("PY", &fake_png)
+            .env("BIN", "/usr/bin/tail")
+            .env("CAPTURE_RUN_ID", "concurrent-run")
+            .env("CAPTURE_DIR", &shots)
+            .env("CAPTURE_MANIFEST", directory.join("manifest.json"))
+            .env("CAPTURE_STATE_DIR", &state_root)
+            .spawn()
+            .expect("start first concurrent shot");
+        for _ in 0..500 {
+            if ready.exists() {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        assert!(ready.exists(), "first shot did not reach provenance");
+
+        let second = Command::new("/bin/bash")
+            .arg(root().join("tools/capture.sh"))
+            .arg("shot")
+            .arg(case_name)
+            .current_dir(root())
+            .env("PATH", &path)
+            .env("CAPTURE_PROVENANCE_READY", &ready)
+            .env("PY", &fake_png)
+            .env("BIN", "/usr/bin/tail")
+            .env("CAPTURE_RUN_ID", "concurrent-run")
+            .env("CAPTURE_DIR", &shots)
+            .env("CAPTURE_MANIFEST", directory.join("manifest.json"))
+            .env("CAPTURE_STATE_DIR", &state_root)
+            .output()
+            .expect("run concurrent shot contender");
+        assert!(!second.status.success(), "concurrent shot must be rejected");
+        assert!(
+            String::from_utf8_lossy(&second.stderr).contains("already running"),
+            "unexpected concurrent shot error: {}",
+            String::from_utf8_lossy(&second.stderr)
+        );
+
+        let first_output = first
+            .wait_with_output()
+            .expect("wait for first concurrent shot");
+        assert!(first_output.status.success(), "{first_output:?}");
+        assert!(
+            shots.join(case_name).is_dir(),
+            "first shot did not publish generation"
+        );
+        fs::remove_dir_all(directory).expect("remove isolated concurrent shot fixture");
+    }
+
+    #[cfg(unix)]
+    #[test]
     fn capture_matrix_rejects_a_symlinked_output_directory() {
         let directory = std::env::temp_dir().join(format!(
             "terminal-components-capture-shots-{}-{}",
@@ -9060,6 +9375,39 @@ printf 'new-png\n' > "$2"
         let released = acquire_capture_matrix_lock(&shots).expect("reacquire released lock");
         drop(released);
         fs::remove_dir_all(directory).expect("remove isolated lock fixture");
+    }
+
+    #[test]
+    fn capture_matrix_lock_recovers_a_dead_owner_without_removing_live_lock() {
+        let directory = std::env::temp_dir().join(format!(
+            "terminal-components-capture-stale-lock-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("clock after epoch")
+                .as_nanos()
+        ));
+        fs::create_dir(&directory).expect("create isolated stale lock fixture");
+        let shots = directory.join("shots");
+        fs::create_dir(&shots).expect("create stale lock output directory");
+        let stale_lock = shots.join(".capture-matrix.lock");
+        fs::create_dir(&stale_lock).expect("create stale matrix lock");
+        fs::write(stale_lock.join("owner"), b"999999999:crashed-run\n")
+            .expect("write stale lock owner");
+
+        let recovered = acquire_capture_matrix_lock(&shots).expect("recover dead owner lock");
+        assert!(
+            fs::read_to_string(stale_lock.join("owner"))
+                .expect("read recovered lock owner")
+                .starts_with(&format!("{}:", std::process::id())),
+            "recovery must install the current owner token"
+        );
+        drop(recovered);
+        assert!(
+            !stale_lock.exists(),
+            "recovered lock must be released cleanly"
+        );
+        fs::remove_dir_all(directory).expect("remove isolated stale lock fixture");
     }
 
     #[cfg(unix)]
@@ -9313,6 +9661,8 @@ set -eu
             .arg("junie")
             .arg("--color")
             .arg("truecolor")
+            .arg("--env")
+            .arg("COLOR=truecolor")
             .arg("--argv")
             .arg("/usr/bin/printf")
             .arg("%s\\n")
@@ -9345,5 +9695,133 @@ set -eu
             "serialized argv was evaluated as shell source"
         );
         fs::remove_dir_all(directory).expect("remove isolated serialized runner fixture");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn capture_exec_uses_the_staged_binary_and_recorded_environment() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let directory = std::env::temp_dir().join(format!(
+            "terminal-components-capture-staged-exec-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("clock after epoch")
+                .as_nanos()
+        ));
+        fs::create_dir(&directory).expect("create isolated staged exec fixture");
+        let run_dir = directory.join("run");
+        fs::create_dir(&run_dir).expect("create private run directory");
+        let mut run_permissions = fs::metadata(&run_dir)
+            .expect("inspect run directory")
+            .permissions();
+        run_permissions.set_mode(0o700);
+        fs::set_permissions(&run_dir, run_permissions).expect("protect run directory");
+
+        let source = directory.join("source-app");
+        fs::write(&source, b"#!/bin/sh\nprintf '%s\\n' \"$POISON\" > \"$1\"\n")
+            .expect("write source executable");
+        let mut source_permissions = fs::metadata(&source)
+            .expect("inspect source executable")
+            .permissions();
+        source_permissions.set_mode(0o700);
+        fs::set_permissions(&source, source_permissions).expect("make source executable");
+
+        let executable = run_dir.join("executable");
+        let stage = Command::new("python3")
+            .arg(root().join("tools/capture_provenance.py"))
+            .arg("stage-binary")
+            .arg("--source")
+            .arg(&source)
+            .arg("--destination")
+            .arg(&executable)
+            .output()
+            .expect("stage immutable executable");
+        assert!(stage.status.success(), "{stage:?}");
+
+        // Replacing the source after staging must not alter the bytes that run.
+        fs::write(
+            &source,
+            b"#!/bin/sh\nprintf '%s\\n' swapped > \"$1\"\nexit 37\n",
+        )
+        .expect("swap source executable");
+
+        let metadata = run_dir.join("metadata.json");
+        let stderr = run_dir.join("stderr");
+        let exit = run_dir.join("exit.status");
+        let output_file = directory.join("observed-environment");
+        let init = Command::new("python3")
+            .arg(root().join("tools/capture_provenance.py"))
+            .arg("init")
+            .arg("--metadata")
+            .arg(&metadata)
+            .arg("--run-id")
+            .arg("staged-run")
+            .arg("--session")
+            .arg("staged-session")
+            .arg("--session-id")
+            .arg("$staged")
+            .arg("--binary")
+            .arg(&executable)
+            .arg("--source-binary")
+            .arg(&source)
+            .arg("--revision")
+            .arg("0".repeat(40))
+            .arg("--dirty")
+            .arg("false")
+            .arg("--columns")
+            .arg("80")
+            .arg("--rows")
+            .arg("24")
+            .arg("--capture-dir")
+            .arg(&directory)
+            .arg("--manifest")
+            .arg(directory.join("manifest.json"))
+            .arg("--stderr")
+            .arg(&stderr)
+            .arg("--theme")
+            .arg("junie")
+            .arg("--color")
+            .arg("truecolor")
+            .arg("--env")
+            .arg("COLOR=truecolor")
+            .arg("--env")
+            .arg("POISON=recorded")
+            .arg("--argv")
+            .arg(&source)
+            .arg(&output_file)
+            .output()
+            .expect("initialize staged executable metadata");
+        assert!(init.status.success(), "{init:?}");
+
+        fs::write(
+            &source,
+            b"#!/bin/sh\nprintf '%s\\n' replaced-after-init > \"$1\"\nexit 39\n",
+        )
+        .expect("swap source after metadata initialization");
+
+        let path = std::env::var_os("PATH").expect("PATH is set");
+        let execution = Command::new("/bin/bash")
+            .arg(root().join("tools/capture_exec.sh"))
+            .env("CAPTURE_METADATA_FILE", &metadata)
+            .env("CAPTURE_RUN_ID", "staged-run")
+            .env("CAPTURE_STDERR_FILE", &stderr)
+            .env("CAPTURE_EXIT_FILE", &exit)
+            .env("CAPTURE_COLOR_MODE", "truecolor")
+            .env("PATH", path)
+            .env("POISON", "poisoned-inherited-value")
+            .output()
+            .expect("execute staged executable");
+        assert!(execution.status.success(), "{execution:?}");
+        assert_eq!(
+            fs::read_to_string(&output_file).expect("read recorded environment"),
+            "recorded\n"
+        );
+        assert_eq!(
+            fs::read_to_string(&exit).expect("read execution status"),
+            "0\n"
+        );
+        fs::remove_dir_all(directory).expect("remove isolated staged exec fixture");
     }
 }
