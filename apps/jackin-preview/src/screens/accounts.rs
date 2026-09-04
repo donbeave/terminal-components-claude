@@ -147,6 +147,11 @@ impl AccountsScreen {
         }
     }
 
+    /// Rebuild the public row projection after fixture or registry changes.
+    pub fn reconcile_public(&mut self, w: &World) {
+        self.build_rows(w);
+    }
+
     fn build_rows(&mut self, w: &World) {
         let mut rows = vec![Row {
             sel: Sel::Overview,
@@ -2594,5 +2599,96 @@ impl LegacyScreen for AccountsScreen {
 
     fn is_editing(&self) -> bool {
         false
+    }
+}
+
+const PUBLIC_ACCOUNTS_PANEL: crate::public_tui::Id =
+    crate::public_tui::Id::root("jackin.accounts.panel");
+
+impl super::Screen for AccountsScreen {
+    fn update(
+        &mut self,
+        _cx: &mut crate::public_tui::Cx<'_>,
+        jx: &mut super::Jx<'_>,
+        world: &mut World,
+    ) -> crate::public_tui::Response<()> {
+        self.build_rows(world);
+        match _cx.command() {
+            Some(super::PUBLIC_NAV_UP) => self.move_cursor(-1),
+            Some(super::PUBLIC_NAV_DOWN) => self.move_cursor(1),
+            Some(super::PUBLIC_ACTIVATE) => match self.selected.clone() {
+                Sel::Overview => jx.status("Usage overview selected"),
+                Sel::Provider(surface) => {
+                    if !self.folded.remove(&surface) {
+                        self.folded.insert(surface);
+                    }
+                    self.build_rows(world);
+                }
+                Sel::Account(id) => {
+                    if let Some(account) = world.accounts.get(&id) {
+                        jx.status(format!("{} · {}", account.title(), account.status_word()));
+                    } else {
+                        self.selected = Sel::Overview;
+                        self.build_rows(world);
+                    }
+                }
+                Sel::Add => jx.status("Account registration is available from the full form"),
+            },
+            _ => return crate::public_tui::Response::ignored(),
+        }
+        crate::public_tui::Response::changed()
+    }
+
+    fn draw(
+        &self,
+        ui: &mut crate::public_tui::Ui<'_>,
+        area: crate::public_tui::Rect,
+        world: &World,
+    ) {
+        let title = format!("Accounts · {}", world.accounts.accounts.len());
+        crate::public_tui::Panel::new(PUBLIC_ACCOUNTS_PANEL)
+            .title(&title)
+            .focused(true)
+            .draw(ui, area, |ui, inner| {
+                for (offset, row) in self.rows.iter().enumerate() {
+                    let y = inner.y.saturating_add(offset as u16);
+                    if y >= inner.bottom() {
+                        break;
+                    }
+                    let marker = if row.sel == self.selected { "▸" } else { " " };
+                    let indent = "  ".repeat(usize::from(row.depth));
+                    let health = row.health.map(|(glyph, _)| format!(" {glyph}"));
+                    let line = format!(
+                        "{marker} {indent}{}{}  {}{}",
+                        row.label,
+                        health.unwrap_or_default(),
+                        row.meta,
+                        if row.star { " ★" } else { "" }
+                    );
+                    ui.paint_str(
+                        crate::public_tui::Rect {
+                            x: inner.x,
+                            y,
+                            width: inner.width,
+                            height: 1,
+                        },
+                        &line,
+                        crate::public_tui::Style::default(),
+                    );
+                }
+            });
+    }
+
+    fn crumb(&self, world: &World) -> String {
+        match &self.selected {
+            Sel::Overview => "Accounts › Overview".into(),
+            Sel::Provider(surface) => format!("Accounts › {}", surface.surface_name()),
+            Sel::Account(id) => world
+                .accounts
+                .get(id)
+                .map(|account| format!("Accounts › {}", account.title()))
+                .unwrap_or_else(|| "Accounts".into()),
+            Sel::Add => "Accounts › new account".into(),
+        }
     }
 }

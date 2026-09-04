@@ -1276,3 +1276,150 @@ impl LegacyScreen for SettingsScreen {
         Outcome::Changed
     }
 }
+
+const PUBLIC_SETTINGS_PANEL: crate::public_tui::Id =
+    crate::public_tui::Id::root("jackin.settings.panel");
+
+impl super::Screen for SettingsScreen {
+    fn update(
+        &mut self,
+        cx: &mut crate::public_tui::Cx<'_>,
+        jx: &mut super::Jx<'_>,
+        _world: &mut World,
+    ) -> crate::public_tui::Response<()> {
+        match cx.command() {
+            Some(super::PUBLIC_NAV_UP) => {
+                let current = StTab::ALL
+                    .iter()
+                    .position(|tab| *tab == self.tab)
+                    .unwrap_or(0);
+                self.tab = StTab::ALL[current.saturating_sub(1)];
+                crate::public_tui::Response::changed()
+            }
+            Some(super::PUBLIC_NAV_DOWN) => {
+                let current = StTab::ALL
+                    .iter()
+                    .position(|tab| *tab == self.tab)
+                    .unwrap_or(0);
+                self.tab = StTab::ALL[(current + 1).min(StTab::ALL.len() - 1)];
+                crate::public_tui::Response::changed()
+            }
+            Some(super::PUBLIC_ACTIVATE) => {
+                match self.tab {
+                    StTab::General => {
+                        self.pending.coauthor_trailer = !self.pending.coauthor_trailer;
+                        self.cfg.pending.apply_to_global(&mut self.pending);
+                        jx.status(format!(
+                            "Co-authored-by trailer {}",
+                            if self.pending.coauthor_trailer {
+                                "on"
+                            } else {
+                                "off"
+                            }
+                        ));
+                    }
+                    StTab::Trust => {
+                        if let Some(row) = self.pending.trust.get_mut(self.trust_cursor) {
+                            row.trusted = !row.trusted;
+                        }
+                    }
+                    StTab::Agents => {
+                        let agent = Agent::ALL[self.agents_cursor.min(Agent::ALL.len() - 1)];
+                        let modes = agent.auth_modes();
+                        let current = self
+                            .pending
+                            .agent_modes
+                            .get(&agent)
+                            .copied()
+                            .unwrap_or(AuthMode::Sync);
+                        let next = modes
+                            .iter()
+                            .position(|mode| *mode == current)
+                            .map_or(modes[0], |index| modes[(index + 1) % modes.len()]);
+                        self.pending.agent_modes.insert(agent, next);
+                    }
+                    StTab::Mounts | StTab::Environments => {
+                        jx.status("Configuration rows are edited from the settings form");
+                    }
+                }
+                crate::public_tui::Response::changed()
+            }
+            _ => crate::public_tui::Response::ignored(),
+        }
+    }
+
+    fn draw(
+        &self,
+        ui: &mut crate::public_tui::Ui<'_>,
+        area: crate::public_tui::Rect,
+        world: &World,
+    ) {
+        crate::public_tui::Panel::new(PUBLIC_SETTINGS_PANEL)
+            .title("Settings · global")
+            .focused(true)
+            .draw(ui, area, |ui, inner| {
+                let tab_index = StTab::ALL
+                    .iter()
+                    .position(|tab| *tab == self.tab)
+                    .unwrap_or(0);
+                let tabs = TAB_NAMES.join("  ·  ");
+                let mut rows = vec![
+                    tabs,
+                    format!("Active: {}", TAB_NAMES[tab_index]),
+                    format!(
+                        "Co-authored-by trailer: {}",
+                        if self.pending.coauthor_trailer {
+                            "on"
+                        } else {
+                            "off"
+                        }
+                    ),
+                    format!(
+                        "DCO sign-off: {}",
+                        if self.pending.dco_signoff {
+                            "on"
+                        } else {
+                            "off"
+                        }
+                    ),
+                    format!(
+                        "Mounts: {} · Environment entries: {}",
+                        self.pending.mounts.len(),
+                        self.pending.env.len()
+                    ),
+                    format!(
+                        "Roles: {} · Trust rows: {}",
+                        world.roles.len(),
+                        self.pending.trust.len()
+                    ),
+                    format!("Unsaved changes: {}", self.change_count()),
+                ];
+                rows.extend(self.cfg.public_summary());
+                rows.push("↑↓ tab · Enter edit · Esc back".into());
+                for (offset, line) in rows.iter().enumerate() {
+                    let y = inner.y.saturating_add(offset as u16);
+                    if y >= inner.bottom() {
+                        break;
+                    }
+                    ui.paint_str(
+                        crate::public_tui::Rect {
+                            x: inner.x,
+                            y,
+                            width: inner.width,
+                            height: 1,
+                        },
+                        line,
+                        crate::public_tui::Style::default(),
+                    );
+                }
+            });
+    }
+
+    fn crumb(&self, _world: &World) -> String {
+        let index = StTab::ALL
+            .iter()
+            .position(|tab| *tab == self.tab)
+            .unwrap_or(0);
+        format!("Settings › global › {}", TAB_NAMES[index])
+    }
+}

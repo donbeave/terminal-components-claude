@@ -29,8 +29,9 @@ use junie_tui::widgets::splitter::Splitter;
 
 use super::modals::{InfoDialog, InfoResult};
 use super::{
-    Cx, Go, Jx, LegacyScreen, Modal, ModalResult, ModalTag, PUBLIC_MANAGER_ACTIVATE,
-    PUBLIC_MANAGER_DOWN, PUBLIC_MANAGER_UP, Screen, plural,
+    Cx, Go, Jx, LegacyScreen, Modal, ModalResult, ModalTag, PUBLIC_ACTIVATE,
+    PUBLIC_MANAGER_ACTIVATE, PUBLIC_MANAGER_DOWN, PUBLIC_MANAGER_UP, PUBLIC_NAV_DOWN,
+    PUBLIC_NAV_UP, Screen, plural,
 };
 use crate::domain::agent::Agent;
 use crate::domain::instance::{DaemonSnapshot, InstanceStatus};
@@ -1639,15 +1640,15 @@ impl Screen for ManagerScreen {
             .update(cx)
             .activated();
         match cx.command() {
-            Some(PUBLIC_MANAGER_UP) => {
+            Some(PUBLIC_MANAGER_UP | PUBLIC_NAV_UP) => {
                 self.move_cursor(-1);
                 crate::public_tui::Response::changed()
             }
-            Some(PUBLIC_MANAGER_DOWN) => {
+            Some(PUBLIC_MANAGER_DOWN | PUBLIC_NAV_DOWN) => {
                 self.move_cursor(1);
                 crate::public_tui::Response::changed()
             }
-            Some(PUBLIC_MANAGER_ACTIVATE) => {
+            Some(PUBLIC_MANAGER_ACTIVATE | PUBLIC_ACTIVATE) => {
                 match self.selected.clone() {
                     RowKey::NewWorkspace => jx.go(Go::Prelude),
                     RowKey::Workspace(id) => jx.go(Go::Editor {

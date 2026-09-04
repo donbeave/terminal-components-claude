@@ -18,27 +18,27 @@ fn public_keymap() -> &'static public_tui::KeyMap {
             .bind(
                 public_tui::KeyPhase::Capture,
                 public_tui::Chord::key(public_tui::KeyCode::Up),
-                crate::screens::PUBLIC_MANAGER_UP,
+                crate::screens::PUBLIC_NAV_UP,
             )
             .bind(
                 public_tui::KeyPhase::Capture,
                 public_tui::Chord::key(public_tui::KeyCode::Char('k')),
-                crate::screens::PUBLIC_MANAGER_UP,
+                crate::screens::PUBLIC_NAV_UP,
             )
             .bind(
                 public_tui::KeyPhase::Capture,
                 public_tui::Chord::key(public_tui::KeyCode::Down),
-                crate::screens::PUBLIC_MANAGER_DOWN,
+                crate::screens::PUBLIC_NAV_DOWN,
             )
             .bind(
                 public_tui::KeyPhase::Capture,
                 public_tui::Chord::key(public_tui::KeyCode::Char('j')),
-                crate::screens::PUBLIC_MANAGER_DOWN,
+                crate::screens::PUBLIC_NAV_DOWN,
             )
             .bind(
                 public_tui::KeyPhase::Capture,
                 public_tui::Chord::key(public_tui::KeyCode::Enter),
-                crate::screens::PUBLIC_MANAGER_ACTIVATE,
+                crate::screens::PUBLIC_ACTIVATE,
             )
             .bind(
                 public_tui::KeyPhase::Capture,
@@ -56,11 +56,28 @@ fn apply_request(app: &mut App, request: PublicRequest) {
         PublicRequest::Quit => app.quit = true,
         PublicRequest::Go(go) => match go {
             crate::screens::Go::Manager => app.route = Route::Manager,
-            crate::screens::Go::Settings => app.route = Route::Settings,
-            crate::screens::Go::Accounts { .. } => app.route = Route::Accounts,
+            crate::screens::Go::Settings => {
+                if app.screens.settings.is_none() {
+                    app.screens.settings =
+                        Some(crate::screens::settings::SettingsScreen::new(&app.world));
+                }
+                app.route = Route::Settings;
+            }
+            crate::screens::Go::Accounts { select } => {
+                if let Some(id) = select {
+                    app.screens.accounts.select(Some(id));
+                }
+                app.route = Route::Accounts;
+            }
             crate::screens::Go::Usage { .. } => app.route = Route::Usage,
             crate::screens::Go::Editor { .. } => app.route = Route::Editor,
-            crate::screens::Go::Prelude => app.route = Route::Prelude,
+            crate::screens::Go::Prelude => {
+                if app.screens.prelude.is_none() {
+                    app.screens.prelude =
+                        Some(crate::screens::prelude::PreludeScreen::new(&app.world));
+                }
+                app.route = Route::Prelude;
+            }
             crate::screens::Go::Launch { .. } => app.route = Route::Cockpit,
             crate::screens::Go::Attach { .. } | crate::screens::Go::NewSession { .. } => {
                 app.route = Route::Capsule;
@@ -133,6 +150,19 @@ impl PublicApp for App {
             let mut jx = Jx::new(&mut requests);
             match self.route {
                 Route::Manager => self.screens.manager.update(cx, &mut jx, &mut self.world),
+                Route::Accounts => self.screens.accounts.update(cx, &mut jx, &mut self.world),
+                Route::Settings => self
+                    .screens
+                    .settings
+                    .as_mut()
+                    .map(|screen| screen.update(cx, &mut jx, &mut self.world))
+                    .unwrap_or_else(public_tui::Response::ignored),
+                Route::Prelude => self
+                    .screens
+                    .prelude
+                    .as_mut()
+                    .map(|screen| screen.update(cx, &mut jx, &mut self.world))
+                    .unwrap_or_else(public_tui::Response::ignored),
                 _ => public_tui::Response::ignored(),
             }
         };
@@ -155,6 +185,17 @@ impl PublicApp for App {
         }
         match self.route {
             Route::Manager => self.screens.manager.draw(ui, area, &self.world),
+            Route::Accounts => self.screens.accounts.draw(ui, area, &self.world),
+            Route::Settings => {
+                if let Some(screen) = self.screens.settings.as_ref() {
+                    screen.draw(ui, area, &self.world);
+                }
+            }
+            Route::Prelude => {
+                if let Some(screen) = self.screens.prelude.as_ref() {
+                    screen.draw(ui, area, &self.world);
+                }
+            }
             _ => draw_generic(ui, area, self),
         }
     }
@@ -179,7 +220,37 @@ impl PublicApp for App {
             self.quit = true;
             cx.quit();
         } else {
-            self.route = Route::Manager;
+            let mut requests = Vec::new();
+            let response = {
+                let mut jx = Jx::new(&mut requests);
+                match self.route {
+                    Route::Accounts => {
+                        self.screens
+                            .accounts
+                            .on_esc_top(cx, &mut jx, &mut self.world)
+                    }
+                    Route::Settings => self
+                        .screens
+                        .settings
+                        .as_mut()
+                        .map(|screen| screen.on_esc_top(cx, &mut jx, &mut self.world))
+                        .unwrap_or_else(public_tui::Response::ignored),
+                    Route::Prelude => self
+                        .screens
+                        .prelude
+                        .as_mut()
+                        .map(|screen| screen.on_esc_top(cx, &mut jx, &mut self.world))
+                        .unwrap_or_else(public_tui::Response::ignored),
+                    _ => {
+                        self.route = Route::Manager;
+                        public_tui::Response::changed()
+                    }
+                }
+            };
+            for request in requests {
+                apply_request(self, request);
+            }
+            return response;
         }
         public_tui::Response::changed()
     }
@@ -203,5 +274,31 @@ mod tests {
     fn public_shell_minimum_size_matches_legacy_fixture_contract() {
         assert_eq!((MIN_WIDTH, MIN_HEIGHT), (72, 20));
         assert_eq!(route_title(Route::Manager), "Workspaces");
+    }
+
+    #[test]
+    fn public_routes_materialize_product_screen_state() {
+        let mut app = App::for_scenario(Scenario::FirstUse, Motion::Reduced);
+        assert!(app.screens.settings.is_none());
+        assert!(app.screens.prelude.is_none());
+        apply_request(&mut app, PublicRequest::Go(crate::screens::Go::Settings));
+        assert!(app.screens.settings.is_some());
+        apply_request(&mut app, PublicRequest::Go(crate::screens::Go::Prelude));
+        let prelude = app.screens.prelude.as_ref().expect("public prelude");
+        assert_eq!(
+            prelude.stepper_line(),
+            "Source · Destination · Edit · Working dir · Name"
+        );
+    }
+
+    #[test]
+    fn public_accounts_selection_reconciles_against_fixture_rows() {
+        let mut app = App::for_scenario(Scenario::FirstUse, Motion::Reduced);
+        app.screens.accounts.select(Some("missing-account".into()));
+        app.screens.accounts.reconcile_public(&app.world);
+        assert_eq!(
+            app.screens.accounts.selected,
+            crate::screens::accounts::Sel::Overview
+        );
     }
 }

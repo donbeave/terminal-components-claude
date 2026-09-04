@@ -413,6 +413,19 @@ pub const PUBLIC_MANAGER_ACTIVATE: crate::public_tui::ActionKey =
 pub const PUBLIC_QUIT: crate::public_tui::ActionKey =
     crate::public_tui::ActionKey::custom("jackin.quit");
 
+/// Public navigation commands shared by the migrated route screens.
+///
+/// They are shell-owned identities rather than legacy key events.  A route
+/// decides what moving or activating means for its own state in `update`.
+pub const PUBLIC_NAV_UP: crate::public_tui::ActionKey =
+    crate::public_tui::ActionKey::custom("jackin.navigation.up");
+pub const PUBLIC_NAV_DOWN: crate::public_tui::ActionKey =
+    crate::public_tui::ActionKey::custom("jackin.navigation.down");
+pub const PUBLIC_ACTIVATE: crate::public_tui::ActionKey =
+    crate::public_tui::ActionKey::custom("jackin.navigation.activate");
+pub const PUBLIC_BACK: crate::public_tui::ActionKey =
+    crate::public_tui::ActionKey::custom("jackin.navigation.back");
+
 /// Product-owned command sink for the public screen contract.
 pub struct Jx<'a> {
     requests: &'a mut Vec<PublicRequest>,

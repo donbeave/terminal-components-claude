@@ -536,3 +536,159 @@ impl LegacyScreen for PreludeScreen {
         Outcome::Changed
     }
 }
+
+const PUBLIC_PRELUDE_PANEL: crate::public_tui::Id =
+    crate::public_tui::Id::root("jackin.prelude.panel");
+
+impl super::Screen for PreludeScreen {
+    fn update(
+        &mut self,
+        cx: &mut crate::public_tui::Cx<'_>,
+        jx: &mut super::Jx<'_>,
+        world: &mut World,
+    ) -> crate::public_tui::Response<()> {
+        let command = cx.command();
+        if command == Some(super::PUBLIC_NAV_UP) {
+            self.step = match self.step {
+                Step::Source => Step::Source,
+                Step::Destination => Step::Source,
+                Step::Edit => Step::Destination,
+                Step::Workdir => {
+                    if self.edit_used {
+                        Step::Edit
+                    } else {
+                        Step::Destination
+                    }
+                }
+                Step::Name => Step::Workdir,
+            };
+            return crate::public_tui::Response::changed();
+        }
+        if command == Some(super::PUBLIC_NAV_DOWN) {
+            self.step = match self.step {
+                Step::Source => Step::Destination,
+                Step::Destination => {
+                    if self.edit_used {
+                        Step::Edit
+                    } else {
+                        Step::Workdir
+                    }
+                }
+                Step::Edit => Step::Workdir,
+                Step::Workdir => Step::Name,
+                Step::Name => Step::Name,
+            };
+            return crate::public_tui::Response::changed();
+        }
+        if command != Some(super::PUBLIC_ACTIVATE) {
+            return crate::public_tui::Response::ignored();
+        }
+
+        match self.step {
+            Step::Source => {
+                self.source = Some(Source::Host {
+                    path: self.cwd.clone(),
+                    readonly: true,
+                });
+                self.step = Step::Destination;
+                jx.status("Source selected");
+            }
+            Step::Destination => {
+                self.destination = self.source.as_ref().map(Source::default_destination);
+                self.step = Step::Workdir;
+            }
+            Step::Edit => {
+                self.destination = self
+                    .dest_text
+                    .clone()
+                    .or_else(|| self.source.as_ref().map(Source::default_destination));
+                self.edit_used = true;
+                self.step = Step::Workdir;
+            }
+            Step::Workdir => {
+                self.workdir = self.destination.clone();
+                self.step = Step::Name;
+            }
+            Step::Name => {
+                let destination = self
+                    .destination
+                    .clone()
+                    .unwrap_or_else(|| "/work/project".into());
+                let name = self
+                    .name
+                    .clone()
+                    .unwrap_or_else(|| basename(&destination).to_owned());
+                match Self::validate_name(&name, world) {
+                    Ok(name) => {
+                        self.name = Some(name.clone());
+                        let workdir = self.workdir.clone().unwrap_or(destination.clone());
+                        let mut workspace =
+                            Workspace::new(world.next_workspace_id, &name, &workdir);
+                        if let Some(source) = &self.source {
+                            workspace.mounts = vec![match source {
+                                Source::Host { path, readonly } => {
+                                    Mount::host(&world.tilde(path), &destination)
+                                        .readonly(*readonly)
+                                }
+                                Source::Git { url } => Mount::git(url, &destination),
+                            }];
+                        }
+                        jx.status(format!("Workspace {name} · review and save in the editor"));
+                        jx.go(super::Go::Editor {
+                            workspace: None,
+                            pending: Some(Box::new(workspace)),
+                        });
+                    }
+                    Err(error) => jx.status(error),
+                }
+            }
+        }
+        crate::public_tui::Response::changed()
+    }
+
+    fn draw(
+        &self,
+        ui: &mut crate::public_tui::Ui<'_>,
+        area: crate::public_tui::Rect,
+        _world: &World,
+    ) {
+        let title = Self::title(self.step);
+        crate::public_tui::Panel::new(PUBLIC_PRELUDE_PANEL)
+            .title(title)
+            .focused(true)
+            .draw(ui, area, |ui, inner| {
+                let lines = [
+                    self.stepper_line(),
+                    String::new(),
+                    match self.step {
+                        Step::Source => "Choose a host directory or Git source.".into(),
+                        Step::Destination => "Confirm the mount destination.".into(),
+                        Step::Edit => "Enter an absolute destination path.".into(),
+                        Step::Workdir => "Choose the working directory.".into(),
+                        Step::Name => "Name the workspace, then review it in the editor.".into(),
+                    },
+                    "↑↓ move · Enter continue · Esc back".into(),
+                ];
+                for (offset, line) in lines.iter().enumerate() {
+                    let y = inner.y.saturating_add(offset as u16);
+                    if y >= inner.bottom() {
+                        break;
+                    }
+                    ui.paint_str(
+                        crate::public_tui::Rect {
+                            x: inner.x,
+                            y,
+                            width: inner.width,
+                            height: 1,
+                        },
+                        line,
+                        crate::public_tui::Style::default(),
+                    );
+                }
+            });
+    }
+
+    fn crumb(&self, _world: &World) -> String {
+        "Workspaces › new workspace".into()
+    }
+}

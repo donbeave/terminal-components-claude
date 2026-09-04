@@ -438,6 +438,29 @@ impl ConfigTabs {
         v
     }
 
+    /// Compact state projection used by the public settings screen.
+    ///
+    /// The projection deliberately contains no legacy widget or buffer
+    /// types.  It gives the public `Ui` enough information to explain the
+    /// pending document while the row editor moves over in a later slice.
+    pub fn public_summary(&self) -> Vec<String> {
+        let mut lines = Vec::new();
+        if self.pending.mounts != self.original.mounts {
+            lines.push(format!("Mounts · {} pending", self.pending.mounts.len()));
+        }
+        if self.pending.env != self.original.env || self.pending.role_env != self.original.role_env
+        {
+            lines.push(format!(
+                "Environments · {} host entries",
+                self.pending.env.len()
+            ));
+        }
+        if lines.is_empty() {
+            lines.push("Configuration unchanged".into());
+        }
+        lines
+    }
+
     // ------------------------------------------------------------- rows
 
     fn build_rows(&mut self, tab: Tab, w: &World) {
