@@ -3465,7 +3465,8 @@ fn showcase_page_sources(
                 missing.push(variant.clone());
             } else {
                 return Err(format!(
-                    "showcase registry entry `{variant}` resolves to {} page source files; +                     exactly one named page module is required",
+                    "showcase registry entry `{variant}` resolves to {} page source files; \
+                     exactly one named page module is required",
                     matches.len()
                 ));
             }
@@ -3484,7 +3485,8 @@ fn showcase_page_sources(
     selected.dedup_by(|a, b| a.0 == b.0);
     if selected.len() != variants.len() {
         return Err(format!(
-            "showcase registry resolves {} page source file(s) for {} page identities; +             every one of the exact {SHOWCASE_PAGE_COUNT} pages needs its own module",
+            "showcase registry resolves {} page source file(s) for {} page identities; \
+             every one of the exact {SHOWCASE_PAGE_COUNT} pages needs its own module",
             selected.len(),
             variants.len()
         ));
@@ -3868,8 +3870,8 @@ fn binary_names_are_preserved() -> Result<(), String> {
 /// in the library's normal dependency closure.
 ///
 /// **The expected set is slice-indexed and a missing member is a failure**
-/// (§47.5): `{showcase_app}` from Slice 5, `+ tablepro_app` from 6,
-/// `+ jackin_app` from 7, with `due_apps` reading the index off the root
+/// (§47.5): `{showcase_app}` from Slice 5, `tablepro_app` from 6,
+/// `jackin_app` from 7, with `due_apps` reading the index off the root
 /// package's remaining `[[bin]]`s rather than off a hand-maintained constant.
 ///
 /// **Honest statement of what is vacuous today.** No `apps/` package exists,

@@ -1,0 +1,14 @@
+/private/tmp/tc-slice5-guards-luna/target-guards/debug/deps/thiserror-c2f323c360f7b99b.d: /Users/donbeave/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.20/src/lib.rs /Users/donbeave/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.20/src/aserror.rs /Users/donbeave/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.20/src/display.rs /Users/donbeave/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.20/src/var.rs /Users/donbeave/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.20/src/private.rs /private/tmp/tc-slice5-guards-luna/target-guards/debug/build/thiserror-d244a628b14ea922/out/private.rs
+
+/private/tmp/tc-slice5-guards-luna/target-guards/debug/deps/libthiserror-c2f323c360f7b99b.rlib: /Users/donbeave/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.20/src/lib.rs /Users/donbeave/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.20/src/aserror.rs /Users/donbeave/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.20/src/display.rs /Users/donbeave/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.20/src/var.rs /Users/donbeave/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.20/src/private.rs /private/tmp/tc-slice5-guards-luna/target-guards/debug/build/thiserror-d244a628b14ea922/out/private.rs
+
+/private/tmp/tc-slice5-guards-luna/target-guards/debug/deps/libthiserror-c2f323c360f7b99b.rmeta: /Users/donbeave/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.20/src/lib.rs /Users/donbeave/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.20/src/aserror.rs /Users/donbeave/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.20/src/display.rs /Users/donbeave/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.20/src/var.rs /Users/donbeave/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.20/src/private.rs /private/tmp/tc-slice5-guards-luna/target-guards/debug/build/thiserror-d244a628b14ea922/out/private.rs
+
+/Users/donbeave/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.20/src/lib.rs:
+/Users/donbeave/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.20/src/aserror.rs:
+/Users/donbeave/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.20/src/display.rs:
+/Users/donbeave/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.20/src/var.rs:
+/Users/donbeave/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.20/src/private.rs:
+/private/tmp/tc-slice5-guards-luna/target-guards/debug/build/thiserror-d244a628b14ea922/out/private.rs:
+
+# env-dep:OUT_DIR=/private/tmp/tc-slice5-guards-luna/target-guards/debug/build/thiserror-d244a628b14ea922/out
