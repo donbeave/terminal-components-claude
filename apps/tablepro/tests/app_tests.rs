@@ -17,6 +17,13 @@ fn connected() -> TableProApp {
     app
 }
 
+fn query_tab(tab: &mut Tab) -> Result<&mut tablepro_app::tabs::QueryTab, String> {
+    match tab {
+        Tab::Query(query) => Ok(query),
+        Tab::Table(_) | Tab::History(_) => Err("new query was not a query tab".to_owned()),
+    }
+}
+
 #[test]
 fn connections_screen_lists_and_connects_with_keyboard() {
     let mut app = TableProApp::default();
@@ -115,9 +122,7 @@ fn cancel_running_query() -> Result<(), String> {
         .tabs
         .get_mut(index)
         .ok_or_else(|| "new query tab was not created".to_owned())?;
-    let Tab::Query(query) = tab else {
-        return Err("new query was not a query tab".to_owned());
-    };
+    let query = query_tab(tab)?;
     query.running = true;
     query.running = false;
     assert!(!query.running);
@@ -140,9 +145,7 @@ fn explain_opens_plan_tree() -> Result<(), String> {
         .tabs
         .get_mut(index)
         .ok_or_else(|| "new query tab was not created".to_owned())?;
-    let Tab::Query(query) = tab else {
-        return Err("new query was not a query tab".to_owned());
-    };
+    let query = query_tab(tab)?;
     query
         .explain(&catalog)
         .map_err(|error| format!("explain failed: {error}"))?;
