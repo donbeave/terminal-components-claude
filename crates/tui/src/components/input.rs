@@ -483,8 +483,8 @@ impl EditorDraft {
 
     pub(crate) fn same(&self, other: &Self) -> bool {
         match (self, other) {
-            (EditorDraft::Unclassified(left), EditorDraft::Unclassified(right)) => left == right,
-            (EditorDraft::Plain(left), EditorDraft::Plain(right)) => left == right,
+            (EditorDraft::Unclassified(left), EditorDraft::Unclassified(right))
+            | (EditorDraft::Plain(left), EditorDraft::Plain(right)) => left == right,
             (
                 EditorDraft::Secret(_) | EditorDraft::RedactedSecret(_),
                 EditorDraft::Secret(_) | EditorDraft::RedactedSecret(_),
@@ -522,12 +522,44 @@ impl EditorDraft {
 pub(crate) enum ErrorState {
     /// Error received before the controlled target's sensitivity is known.
     /// Its message is never exposed until classification completes.
-    Pending(FieldError),
-    Plain(FieldError),
+    Pending(RetainedError),
+    Plain(RetainedError),
     Sensitive,
 }
 
+pub(crate) struct RetainedError(FieldError);
+
+impl RetainedError {
+    fn new(error: FieldError) -> Self {
+        RetainedError(error)
+    }
+
+    const fn as_ref(&self) -> &FieldError {
+        &self.0
+    }
+}
+
+impl Clone for RetainedError {
+    fn clone(&self) -> Self {
+        RetainedError::new(self.0.clone())
+    }
+}
+
+impl Drop for RetainedError {
+    fn drop(&mut self) {
+        wipe_error(&mut self.0);
+    }
+}
+
 impl ErrorState {
+    pub(crate) fn pending(error: FieldError) -> Self {
+        ErrorState::Pending(RetainedError::new(error))
+    }
+
+    pub(crate) fn plain(error: FieldError) -> Self {
+        ErrorState::Plain(RetainedError::new(error))
+    }
+
     pub(crate) fn sensitive() -> Self {
         ErrorState::Sensitive
     }
@@ -538,9 +570,8 @@ impl ErrorState {
 
     pub(crate) const fn as_ref(&self) -> &FieldError {
         match self {
-            ErrorState::Pending(_) => &INVALID_VALUE,
-            ErrorState::Plain(error) => error,
-            ErrorState::Sensitive => &INVALID_VALUE,
+            ErrorState::Pending(_) | ErrorState::Sensitive => &INVALID_VALUE,
+            ErrorState::Plain(error) => error.as_ref(),
         }
     }
 
@@ -550,33 +581,23 @@ impl ErrorState {
 
     pub(crate) fn clone_snapshot(&self) -> Self {
         match self {
-            ErrorState::Pending(_) => ErrorState::Pending(FieldError::new("Invalid value")),
-            ErrorState::Plain(error) => ErrorState::Plain(error.clone()),
+            ErrorState::Pending(_) => ErrorState::pending(FieldError::new("Invalid value")),
+            ErrorState::Plain(error) => ErrorState::plain(error.as_ref().clone()),
             ErrorState::Sensitive => ErrorState::Sensitive,
         }
     }
 
     pub(crate) fn same(&self, other: &Self) -> bool {
         match (self, other) {
-            (ErrorState::Pending(_), ErrorState::Pending(_)) => true,
-            (ErrorState::Plain(left), ErrorState::Plain(right)) => left == right,
-            (ErrorState::Sensitive, ErrorState::Sensitive) => true,
+            (ErrorState::Pending(_), ErrorState::Pending(_))
+            | (ErrorState::Sensitive, ErrorState::Sensitive) => true,
+            (ErrorState::Plain(left), ErrorState::Plain(right)) => left.as_ref() == right.as_ref(),
             _ => false,
         }
     }
 
     pub(crate) fn discard(self) {
         drop(self);
-    }
-}
-
-impl Drop for ErrorState {
-    fn drop(&mut self) {
-        let old = core::mem::replace(self, ErrorState::Sensitive);
-        match old {
-            ErrorState::Pending(error) | ErrorState::Plain(error) => discard_error(error),
-            ErrorState::Sensitive => {}
-        }
     }
 }
 
@@ -685,15 +706,13 @@ impl TextInputState {
         self.error = match (sensitive, error) {
             (true, Some(ErrorState::Sensitive)) => Some(ErrorState::Sensitive),
             (true, Some(ErrorState::Pending(error) | ErrorState::Plain(error))) => {
-                discard_error(error);
+                drop(error);
                 Some(ErrorState::sensitive())
             }
-            (true, None) => None,
-            (false, Some(ErrorState::Sensitive)) => None,
+            (true | false, None) | (false, Some(ErrorState::Sensitive)) => None,
             (false, Some(ErrorState::Pending(error) | ErrorState::Plain(error))) => {
                 Some(ErrorState::Plain(error))
             }
-            (false, None) => None,
         };
     }
 
@@ -705,11 +724,18 @@ impl TextInputState {
                 discard_error(error);
                 ErrorState::sensitive()
             } else if self.draft.is_classified() {
-                ErrorState::Plain(error)
+                ErrorState::plain(error)
             } else {
-                ErrorState::Pending(error)
+                ErrorState::pending(error)
             });
         }
+    }
+
+    /// Set an error when an internal controlled bridge has already
+    /// classified its target as non-sensitive.
+    pub(crate) fn set_plain_error(&mut self, e: Option<FieldError>) {
+        self.clear_error();
+        self.error = e.map(ErrorState::plain);
     }
 
     /// Begin an edit over `current` (a no-op while editing).
@@ -811,7 +837,7 @@ impl TextInputState {
                 Err(FieldError::new("Invalid value"))
             }
             Err(error) => {
-                self.error = Some(ErrorState::Plain(error.clone()));
+                self.error = Some(ErrorState::plain(error.clone()));
                 Err(error)
             }
         }
@@ -825,8 +851,13 @@ impl TextInputState {
 }
 
 pub(crate) fn discard_error(error: FieldError) {
-    if let std::borrow::Cow::Owned(mut message) = error.message {
-        zeroize_string(&mut message);
+    let mut error = error;
+    wipe_error(&mut error);
+}
+
+fn wipe_error(error: &mut FieldError) {
+    if let std::borrow::Cow::Owned(message) = &mut error.message {
+        zeroize_string(message);
     }
 }
 
@@ -1792,6 +1823,8 @@ mod tests {
         let mut rt = Runtime::new(Stub::default(), Theme::junie());
         let mut buf = Buffer::empty(SCREEN);
         let mut st = TextInputState::default();
+        st.begin("ada");
+        st.cancel();
         st.set_error(Some(FieldError::coded("Already taken", "dup")));
         for _ in 0..3 {
             rt.draw_scene(SCREEN, &mut buf, |ui, a| {
@@ -1887,6 +1920,35 @@ mod tests {
         let copy = state.clone();
         assert_eq!(copy.draft.text(), "•••••••");
         assert!(!copy.draft.text().contains("hunter2"));
+    }
+
+    #[test]
+    fn sensitive_clone_is_not_a_committable_draft() {
+        let mut state = secret_state();
+        state.begin("hunter2");
+        let mut copy = state.clone();
+        let mut value = "unchanged".to_owned();
+        copy.commit(&mut value, &NoValidate)
+            .expect("redacted clone validates");
+        assert_eq!(value, "unchanged");
+    }
+
+    #[test]
+    fn pending_error_is_redacted_until_target_classification() {
+        let mut state = TextInputState::default();
+        state.set_error(Some(FieldError::new("hunter2")));
+        assert_eq!(
+            state.error().map(|error| error.message.as_ref()),
+            Some("Invalid value")
+        );
+        assert!(!format!("{state:?}").contains("hunter2"));
+        let copy = state.clone();
+        assert_eq!(
+            copy.error().map(|error| error.message.as_ref()),
+            Some("Invalid value")
+        );
+        drop(copy);
+        drop(state);
     }
 
     #[test]

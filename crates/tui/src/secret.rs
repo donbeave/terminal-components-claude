@@ -184,4 +184,14 @@ mod tests {
         assert_eq!(SecretPolicy::default().mask, GlyphRole::SecretMask);
         assert_ne!(SecretPolicy::default().mask, GlyphRole::Dirty);
     }
+
+    #[test]
+    fn zeroize_releases_the_full_string_allocation() {
+        let mut value = String::with_capacity(128);
+        value.push_str("hunter2");
+        assert!(value.capacity() >= 128);
+        zeroize_string(&mut value);
+        assert!(value.is_empty());
+        assert_eq!(value.capacity(), 0);
+    }
 }

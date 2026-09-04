@@ -557,9 +557,9 @@ impl FormState {
                 discard_error(error);
                 ErrorState::sensitive()
             } else if self.slot_is_classified(id) {
-                ErrorState::Plain(error)
+                ErrorState::plain(error)
             } else {
-                ErrorState::Pending(error)
+                ErrorState::pending(error)
             }
         });
         if let Some(index) = self.errors.iter().position(|(key, _)| *key == id) {
@@ -595,6 +595,18 @@ impl FormState {
         if let Some((_, current)) = self.errors.iter_mut().find(|(key, _)| *key == id) {
             let old = core::mem::replace(current, ErrorState::sensitive());
             old.discard();
+        }
+    }
+
+    fn classify_error(&mut self, id: Id) {
+        if let Some((_, current)) = self.errors.iter_mut().find(|(key, _)| *key == id)
+            && current.is_pending()
+        {
+            let old = core::mem::replace(current, ErrorState::sensitive());
+            *current = match old {
+                ErrorState::Pending(error) => ErrorState::Plain(error),
+                other => other,
+            };
         }
     }
 
@@ -954,6 +966,8 @@ impl<'a> Form<'a> {
             st.clear_error(id);
         } else if secret {
             st.redact_error(id);
+        } else {
+            st.classify_error(id);
         }
         st.slots.get_mut(index)
     }
@@ -1572,6 +1586,7 @@ mod tests {
     use crate::runtime::stub::Stub;
     use crate::secret::SecretPolicy;
     use crate::theme::Theme;
+    use crate::validate::NoValidate;
 
     const FORM: Id = Id::root("form.tests");
     const SCREEN: Rect = Rect::new(0, 0, 60, 30);
@@ -2529,6 +2544,31 @@ mod tests {
             Some("Invalid value")
         );
         assert!(!format!("{copy:?}").contains("swordfish"));
+        let mut cloned_input = slot.input.clone();
+        let mut value = "unchanged".to_owned();
+        cloned_input
+            .commit(&mut value, &NoValidate)
+            .expect("redacted clone validates");
+        assert_eq!(value, "unchanged");
+    }
+
+    #[test]
+    fn pending_form_error_is_redacted_until_field_classification() {
+        let id = Id::root("form.pending");
+        let mut state = FormState::default();
+        state.set_error(id, Some(FieldError::new("swordfish")));
+        assert_eq!(
+            state.error(id).map(|error| error.message.as_ref()),
+            Some("Invalid value")
+        );
+        assert!(!format!("{state:?}").contains("swordfish"));
+        let copy = state.clone();
+        assert_eq!(
+            copy.error(id).map(|error| error.message.as_ref()),
+            Some("Invalid value")
+        );
+        drop(copy);
+        drop(state);
     }
 
     #[test]

@@ -394,4 +394,11 @@ mod tests {
         );
         assert_eq!(Chord::key(KeyCode::Esc).to_string(), "Esc");
     }
+
+    #[test]
+    fn paste_debug_is_redacted_and_input_is_droppable() {
+        let input = Input::Paste("hunter2".to_owned());
+        assert!(!format!("{input:?}").contains("hunter2"));
+        assert!(core::mem::needs_drop::<Input>());
+    }
 }

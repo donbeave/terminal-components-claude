@@ -359,15 +359,13 @@ impl TextAreaState {
         self.error = match (sensitive, error) {
             (true, Some(ErrorState::Sensitive)) => Some(ErrorState::Sensitive),
             (true, Some(ErrorState::Pending(error) | ErrorState::Plain(error))) => {
-                discard_error(error);
+                drop(error);
                 Some(ErrorState::sensitive())
             }
-            (true, None) => None,
-            (false, Some(ErrorState::Sensitive)) => None,
+            (true | false, None) | (false, Some(ErrorState::Sensitive)) => None,
             (false, Some(ErrorState::Pending(error) | ErrorState::Plain(error))) => {
                 Some(ErrorState::Plain(error))
             }
-            (false, None) => None,
         };
     }
 
@@ -379,9 +377,9 @@ impl TextAreaState {
                 discard_error(error);
                 ErrorState::sensitive()
             } else if self.draft.is_classified() {
-                ErrorState::Plain(error)
+                ErrorState::plain(error)
             } else {
-                ErrorState::Pending(error)
+                ErrorState::pending(error)
             });
         }
     }
@@ -486,7 +484,7 @@ impl TextAreaState {
                 Err(FieldError::new("Invalid value"))
             }
             Err(error) => {
-                self.error = Some(ErrorState::Plain(error.clone()));
+                self.error = Some(ErrorState::plain(error.clone()));
                 Err(error)
             }
         }
@@ -1491,6 +1489,17 @@ mod tests {
         let copy = left.clone();
         assert_eq!(copy.draft.text(), "•••");
         assert!(!copy.draft.text().contains("one"));
+    }
+
+    #[test]
+    fn sensitive_clone_is_not_a_committable_draft() {
+        let mut state = secret_state();
+        state.begin("one");
+        let mut copy = state.clone();
+        let mut value = "unchanged".to_owned();
+        copy.commit(&mut value, &NoValidate)
+            .expect("redacted clone validates");
+        assert_eq!(value, "unchanged");
     }
 
     #[test]

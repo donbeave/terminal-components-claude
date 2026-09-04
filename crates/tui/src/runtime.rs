@@ -940,7 +940,7 @@ impl<A: App> Runtime<A> {
     }
 
     /// `Runtime::handle` — steps 1–9.
-    pub fn handle(&mut self, input: Input) -> Response<()> {
+    pub fn handle(&mut self, mut input: Input) -> Response<()> {
         self.ensure_bootstrap();
         self.services.diagnostics.clear();
         self.sync_keymap();

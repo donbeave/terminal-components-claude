@@ -324,10 +324,6 @@ impl IntentQueue {
         );
     }
 
-    pub(crate) fn paste(&mut self, owner: Id, text: &str) {
-        self.paste_owned(owner, text.to_owned());
-    }
-
     pub(crate) fn paste_owned(&mut self, owner: Id, text: String) {
         let start = self.arena.len() as u32;
         if self.arena.is_empty() {
@@ -581,7 +577,7 @@ mod tests {
         let mut q = IntentQueue::new();
         let a = Id::root("a");
         let b = Id::root("b");
-        q.paste(a, "hello");
+        q.paste_owned(a, "hello".to_owned());
         let got: Vec<Intent<'_>> = q.iter(a).collect();
         assert_eq!(got, vec![Intent::Paste("hello")]);
         assert_eq!(q.iter(b).count(), 0);
@@ -593,7 +589,7 @@ mod tests {
     fn paste_debug_output_redacts_payload_and_queue_arena() {
         let mut q = IntentQueue::new();
         let owner = Id::root("debug");
-        q.paste(owner, "hunter2");
+        q.paste_owned(owner, "hunter2".to_owned());
         let intent = q.iter(owner).next().expect("paste intent");
         assert!(!format!("{intent:?}").contains("hunter2"));
         assert!(!format!("{q:?}").contains("hunter2"));
