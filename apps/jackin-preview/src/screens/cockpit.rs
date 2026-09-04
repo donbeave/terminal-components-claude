@@ -2,6 +2,10 @@
 //! identity, credentials origin, activity, atmosphere, and the build log,
 //! failure, container-info and quit overlays.
 
+use crate::ratatui::buffer::Buffer;
+use crate::ratatui::crossterm::event::KeyCode;
+use crate::ratatui::layout::{Position, Rect};
+use crate::ratatui::style::{Modifier, Style};
 use junie_tui::core::event::{Key, Outcome};
 use junie_tui::core::id::WidgetId;
 use junie_tui::theme::{Theme, Tone};
@@ -15,10 +19,6 @@ use junie_tui::widgets::props::Prop;
 use junie_tui::widgets::segments::Segment;
 use junie_tui::widgets::steps::{Step, StepRail, StepState};
 use junie_tui::widgets::viewport::{Span, TextViewport};
-use ratatui::buffer::Buffer;
-use ratatui::crossterm::event::KeyCode;
-use ratatui::layout::{Position, Rect};
-use ratatui::style::{Modifier, Style};
 
 use super::modals::{InfoDialog, InfoResult, modal_frame};
 use super::{Cx, Go, Modal, ModalResult, ModalTag, Screen};

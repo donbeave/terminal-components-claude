@@ -3,6 +3,10 @@
 //! inputs, masked secrets, choose-buttons), the 1Password reference chain,
 //! the read-only info dialog with copyable rows, and the help overlay.
 
+use crate::ratatui::buffer::Buffer;
+use crate::ratatui::crossterm::event::KeyCode;
+use crate::ratatui::layout::{Position, Rect};
+use crate::ratatui::style::{Modifier, Style};
 use junie_tui::core::event::{Key, Outcome};
 use junie_tui::core::focus::{Focus, FocusRing};
 use junie_tui::core::id::WidgetId;
@@ -21,10 +25,6 @@ use junie_tui::widgets::progress::render_spinner;
 use junie_tui::widgets::props::{Prop, PropsEvent, PropsList};
 use junie_tui::widgets::scrollbar;
 use junie_tui::widgets::select::Select;
-use ratatui::buffer::Buffer;
-use ratatui::crossterm::event::KeyCode;
-use ratatui::layout::{Position, Rect};
-use ratatui::style::{Modifier, Style};
 
 use crate::domain::onepassword::OpReference;
 use crate::sim::onepassword::{FieldKind, OpError, SimOnePassword};
@@ -72,11 +72,11 @@ pub fn modal_frame(
     };
     let bg = t.surface_elevated;
     fill(buf, area, Style::new().bg(bg));
-    let block = ratatui::widgets::Block::new()
-        .borders(ratatui::widgets::Borders::ALL)
-        .border_type(ratatui::widgets::BorderType::Rounded)
+    let block = crate::ratatui::widgets::Block::new()
+        .borders(crate::ratatui::widgets::Borders::ALL)
+        .border_type(crate::ratatui::widgets::BorderType::Rounded)
         .border_style(t.border(true).bg(bg));
-    ratatui::widgets::Widget::render(block, area, buf);
+    crate::ratatui::widgets::Widget::render(block, area, buf);
     if area.width > 6 {
         let tt = format!(
             " {} ",
@@ -92,7 +92,7 @@ pub fn modal_frame(
         }
     }
     ctx.hits.register(WidgetId::of("modal.surface"), area);
-    (area, area.inner(ratatui::layout::Margin::new(3, 1)))
+    (area, area.inner(crate::ratatui::layout::Margin::new(3, 1)))
 }
 
 fn hint_row(buf: &mut Buffer, inner: Rect, t: &Theme, text: &str) {

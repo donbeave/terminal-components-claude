@@ -15,6 +15,8 @@ pub mod prelude;
 pub mod settings;
 pub mod usage;
 
+use crate::ratatui::buffer::Buffer;
+use crate::ratatui::layout::{Position, Rect};
 use junie_tui::core::event::{Key, Outcome};
 use junie_tui::core::focus::{Focus, FocusRing};
 use junie_tui::core::id::WidgetId;
@@ -23,8 +25,6 @@ use junie_tui::widgets::dialog::Dialog;
 use junie_tui::widgets::keyhint::Hint;
 use junie_tui::widgets::picker::{Picker, PickerItem};
 use junie_tui::widgets::segments::Segment;
-use ratatui::buffer::Buffer;
-use ratatui::layout::{Position, Rect};
 
 use crate::domain::account::AccountId;
 use crate::domain::agent::Agent;

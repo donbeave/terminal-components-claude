@@ -2,6 +2,9 @@
 //! Nothing is persisted here; the last step hands a pending Workspace to
 //! the Editor. Every rewind reopens the previous modal with its last state.
 
+use crate::ratatui::buffer::Buffer;
+use crate::ratatui::crossterm::event::KeyCode;
+use crate::ratatui::layout::Rect;
 use junie_tui::core::event::{Key, Outcome};
 use junie_tui::core::id::WidgetId;
 use junie_tui::theme::Tone;
@@ -12,9 +15,6 @@ use junie_tui::widgets::dialog::Dialog;
 use junie_tui::widgets::input::TextInput;
 use junie_tui::widgets::keyhint::{Hint, hint};
 use junie_tui::widgets::picker::{Picker, PickerItem};
-use ratatui::buffer::Buffer;
-use ratatui::crossterm::event::KeyCode;
-use ratatui::layout::Rect;
 
 use super::modals::{BrowserResult, ChoiceDialog, FileBrowser};
 use super::{Cx, Go, Modal, ModalResult, ModalTag, Screen};

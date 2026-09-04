@@ -7,9 +7,9 @@
 //! Tones are theme tokens only: the white ladder (primary → ghost), the
 //! accent chain for signal trails, and the pill (on-accent on accent).
 
-use ratatui::buffer::Buffer;
-use ratatui::layout::Rect;
-use ratatui::style::{Color, Modifier, Style};
+use crate::ratatui::buffer::Buffer;
+use crate::ratatui::layout::Rect;
+use crate::ratatui::style::{Color, Modifier, Style};
 
 use junie_tui::theme::Theme;
 

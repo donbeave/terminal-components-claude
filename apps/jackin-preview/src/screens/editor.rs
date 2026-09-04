@@ -2,6 +2,10 @@
 //! separate original and pending state, `• N changes` in the strip, a save
 //! preview and an asynchronous save that returns to the manager.
 
+use crate::ratatui::buffer::Buffer;
+use crate::ratatui::crossterm::event::KeyCode;
+use crate::ratatui::layout::{Position, Rect};
+use crate::ratatui::style::Modifier;
 use junie_tui::core::event::{Key, Outcome};
 use junie_tui::core::id::WidgetId;
 use junie_tui::core::scroll::ScrollState;
@@ -20,10 +24,6 @@ use junie_tui::widgets::scrollbar;
 use junie_tui::widgets::segments::Segment;
 use junie_tui::widgets::select::Select;
 use junie_tui::widgets::tabs::{TabEvent, TabItem, Tabs};
-use ratatui::buffer::Buffer;
-use ratatui::crossterm::event::KeyCode;
-use ratatui::layout::{Position, Rect};
-use ratatui::style::Modifier;
 
 use super::config::{ConfigTabs, Doc, Scope, Tab as CfgTab};
 use super::modals::InfoDialog;
@@ -1776,7 +1776,7 @@ impl Screen for EditorScreen {
                         if same {
                             let k = Key {
                                 code: KeyCode::Char(' '),
-                                mods: ratatui::crossterm::event::KeyModifiers::NONE,
+                                mods: crate::ratatui::crossterm::event::KeyModifiers::NONE,
                             };
                             return self.accounts_key(&k, w, cx);
                         }
@@ -1814,7 +1814,7 @@ impl Screen for EditorScreen {
                         if same {
                             let k = Key {
                                 code: KeyCode::Char(' '),
-                                mods: ratatui::crossterm::event::KeyModifiers::NONE,
+                                mods: crate::ratatui::crossterm::event::KeyModifiers::NONE,
                             };
                             return self.roles_key(&k, w, cx);
                         }

@@ -5,6 +5,10 @@
 
 use std::collections::HashSet;
 
+use crate::ratatui::buffer::Buffer;
+use crate::ratatui::crossterm::event::KeyCode;
+use crate::ratatui::layout::{Position, Rect};
+use crate::ratatui::style::{Modifier, Style};
 use junie_tui::core::event::{Key, Outcome};
 use junie_tui::core::id::WidgetId;
 use junie_tui::core::scroll::ScrollState;
@@ -24,10 +28,6 @@ use junie_tui::widgets::scrollbar;
 use junie_tui::widgets::segments::Segment;
 use junie_tui::widgets::select::Select;
 use junie_tui::widgets::splitter::Splitter;
-use ratatui::buffer::Buffer;
-use ratatui::crossterm::event::KeyCode;
-use ratatui::layout::{Position, Rect};
-use ratatui::style::{Modifier, Style};
 
 use super::modals::{BrowserResult, FileBrowser, FormDialog, FormField, FormValues, OpFlow};
 use super::{Cx, Go, Modal, ModalResult, ModalTag, Screen, plural};

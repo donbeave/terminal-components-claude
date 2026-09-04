@@ -3,6 +3,10 @@
 //! is a source-control style viewer with a changed-file tree beside a diff
 //! preview. Both offer the unified listing and the review layout.
 
+use crate::ratatui::buffer::Buffer;
+use crate::ratatui::crossterm::event::KeyCode;
+use crate::ratatui::layout::{Position, Rect};
+use crate::ratatui::style::{Modifier, Style};
 use junie_tui::core::event::{Key, Outcome};
 use junie_tui::core::focus::{Focus, FocusRing};
 use junie_tui::core::id::WidgetId;
@@ -17,10 +21,6 @@ use junie_tui::widgets::keyhint::{Hint, hint};
 use junie_tui::widgets::scrollbar;
 use junie_tui::widgets::splitter::Splitter;
 use junie_tui::widgets::tree::{TreeEvent, TreeNode, TreeView};
-use ratatui::buffer::Buffer;
-use ratatui::crossterm::event::KeyCode;
-use ratatui::layout::{Position, Rect};
-use ratatui::style::{Modifier, Style};
 
 use super::modals::modal_frame;
 use super::{CustomModal, ModalResult};
@@ -351,7 +351,7 @@ impl InspectChanges {
         inner: Rect,
         buf: &mut Buffer,
         ctx: &mut RenderCtx,
-        bg: ratatui::style::Color,
+        bg: crate::ratatui::style::Color,
     ) {
         let t = ctx.theme;
         if self.open {
@@ -480,7 +480,7 @@ impl InspectChanges {
         inner: Rect,
         buf: &mut Buffer,
         ctx: &mut RenderCtx,
-        bg: ratatui::style::Color,
+        bg: crate::ratatui::style::Color,
     ) {
         let t = ctx.theme;
         let summary = self.changes.summary();
@@ -778,12 +778,12 @@ impl CustomModal for InspectChanges {
 mod tests {
     use super::*;
     use crate::domain::fixtures::world_for;
+    use crate::ratatui::crossterm::event::KeyModifiers;
     use crate::scenario::Scenario;
     use crate::sim::changes::changes_for;
     use junie_tui::core::hit::HitRegistry;
     use junie_tui::theme::Theme;
     use junie_tui::ui::ctx::Interaction;
-    use ratatui::crossterm::event::KeyModifiers;
 
     fn key(code: KeyCode) -> Key {
         Key {

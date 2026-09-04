@@ -3,6 +3,10 @@
 //! select › prefix › normal), scrollback, selection, copy, the command
 //! palette and every Capsule dialog, detach, takeover and dirty exit.
 
+use crate::ratatui::buffer::Buffer;
+use crate::ratatui::crossterm::event::KeyCode;
+use crate::ratatui::layout::{Position, Rect};
+use crate::ratatui::style::{Modifier, Style};
 use junie_tui::core::event::{Key, Outcome};
 use junie_tui::core::focus::{Focus, FocusRing};
 use junie_tui::core::id::WidgetId;
@@ -26,10 +30,6 @@ use junie_tui::widgets::scrollbar;
 use junie_tui::widgets::segments::{self, Segment};
 use junie_tui::widgets::statusbar::{StatusBar, StatusItem};
 use junie_tui::widgets::tabs::{TabEvent, TabItem, Tabs};
-use ratatui::buffer::Buffer;
-use ratatui::crossterm::event::KeyCode;
-use ratatui::layout::{Position, Rect};
-use ratatui::style::{Modifier, Style};
 
 use super::modals::{ChoiceDialog, InfoDialog, InfoResult, modal_frame};
 use super::{CustomModal, Cx, Go, Modal, ModalResult, ModalTag, Screen, plural};
@@ -217,7 +217,7 @@ impl CapsuleScreen {
 
     fn inner_of(&self, w: &World, r: Rect) -> Rect {
         if self.framed(w) {
-            r.inner(ratatui::layout::Margin::new(1, 1))
+            r.inner(crate::ratatui::layout::Margin::new(1, 1))
         } else {
             r
         }
@@ -1496,17 +1496,17 @@ impl CapsuleScreen {
             };
             let focused = focused_pane == pid;
             let inner = if framed {
-                r.inner(ratatui::layout::Margin::new(1, 1))
+                r.inner(crate::ratatui::layout::Margin::new(1, 1))
             } else {
                 r
             };
             if framed {
                 let hovered = ctx.interaction.hovered(PANES.child(pid as usize));
-                let block = ratatui::widgets::Block::new()
-                    .borders(ratatui::widgets::Borders::ALL)
-                    .border_type(ratatui::widgets::BorderType::Rounded)
+                let block = crate::ratatui::widgets::Block::new()
+                    .borders(crate::ratatui::widgets::Borders::ALL)
+                    .border_type(crate::ratatui::widgets::BorderType::Rounded)
                     .border_style(t.border(focused).bg(t.canvas));
-                ratatui::widgets::Widget::render(block, r, buf);
+                crate::ratatui::widgets::Widget::render(block, r, buf);
                 let (g, gt) = match pane.state() {
                     AgentState::Blocked => ("●", t.warning),
                     AgentState::Done => ("○", t.text_secondary),
