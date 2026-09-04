@@ -17,7 +17,7 @@ use junie_tui::widgets::keyhint::{Hint, hint};
 use junie_tui::widgets::picker::{Picker, PickerItem};
 
 use super::modals::{BrowserResult, ChoiceDialog, FileBrowser};
-use super::{Cx, Go, Modal, ModalResult, ModalTag, LegacyScreen};
+use super::{Cx, Go, LegacyScreen, Modal, ModalResult, ModalTag};
 use crate::domain::workspace::{Mount, Workspace};
 use crate::sim::world::World;
 

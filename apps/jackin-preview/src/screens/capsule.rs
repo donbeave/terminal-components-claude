@@ -32,7 +32,7 @@ use junie_tui::widgets::statusbar::{StatusBar, StatusItem};
 use junie_tui::widgets::tabs::{TabEvent, TabItem, Tabs};
 
 use super::modals::{ChoiceDialog, InfoDialog, InfoResult, modal_frame};
-use super::{LegacyCustomModal, Cx, Go, Modal, ModalResult, ModalTag, LegacyScreen, plural};
+use super::{Cx, Go, LegacyCustomModal, LegacyScreen, Modal, ModalResult, ModalTag, plural};
 use crate::domain::account::AccountId;
 use crate::domain::account::AccountRegistry;
 use crate::domain::agent::Agent;

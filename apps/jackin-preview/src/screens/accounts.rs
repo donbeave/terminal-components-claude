@@ -30,7 +30,7 @@ use junie_tui::widgets::select::Select;
 use junie_tui::widgets::splitter::Splitter;
 
 use super::modals::{BrowserResult, FileBrowser, FormDialog, FormField, FormValues, OpFlow};
-use super::{Cx, Go, Modal, ModalResult, ModalTag, LegacyScreen, plural};
+use super::{Cx, Go, LegacyScreen, Modal, ModalResult, ModalTag, plural};
 use crate::domain::account::{
     Account, AccountId, AccountOrigin, CredentialSource, DetectedKind, DuplicateProbe, IssueCode,
     Lifecycle, ValidationState, fingerprint, masked, tail_of,

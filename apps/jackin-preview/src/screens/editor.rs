@@ -27,7 +27,7 @@ use junie_tui::widgets::tabs::{TabEvent, TabItem, Tabs};
 
 use super::config::{ConfigTabs, Doc, Scope, Tab as CfgTab};
 use super::modals::InfoDialog;
-use super::{Cx, Go, Modal, ModalResult, ModalTag, LegacyScreen, plural};
+use super::{Cx, Go, LegacyScreen, Modal, ModalResult, ModalTag, plural};
 use crate::domain::account::AccountId;
 use crate::domain::agent::Provider;
 use crate::domain::workspace::{

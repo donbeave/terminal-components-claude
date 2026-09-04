@@ -32,7 +32,7 @@ use crate::screens::modals::{FormEvent, HelpOverlay, InfoResult};
 use crate::screens::prelude::PreludeScreen;
 use crate::screens::settings::SettingsScreen;
 use crate::screens::usage::UsageScreen;
-use crate::screens::{Cx, Go, Modal, ModalResult, ModalTag, Request, LegacyScreen};
+use crate::screens::{Cx, Go, LegacyScreen, Modal, ModalResult, ModalTag, Request};
 use crate::sim::launch::LaunchPlan;
 use crate::sim::world::{Msg, World};
 use junie_tui::widgets::brand::Lockup;

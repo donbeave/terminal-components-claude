@@ -366,7 +366,7 @@ pub trait Screen {
     fn draw(
         &self,
         ui: &mut crate::public_tui::Ui<'_>,
-        area: Rect,
+        area: crate::public_tui::Rect,
         world: &World,
     );
 

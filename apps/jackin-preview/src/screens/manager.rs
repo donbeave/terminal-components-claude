@@ -29,8 +29,8 @@ use junie_tui::widgets::splitter::Splitter;
 
 use super::modals::{InfoDialog, InfoResult};
 use super::{
-    Cx, Go, Jx, LegacyScreen, Modal, ModalResult, ModalTag, Screen, PUBLIC_MANAGER_ACTIVATE,
-    PUBLIC_MANAGER_DOWN, PUBLIC_MANAGER_UP, plural,
+    Cx, Go, Jx, LegacyScreen, Modal, ModalResult, ModalTag, PUBLIC_MANAGER_ACTIVATE,
+    PUBLIC_MANAGER_DOWN, PUBLIC_MANAGER_UP, Screen, plural,
 };
 use crate::domain::agent::Agent;
 use crate::domain::instance::{DaemonSnapshot, InstanceStatus};
@@ -1701,7 +1701,8 @@ impl Screen for ManagerScreen {
             .focused(true)
             .draw(ui, area, |ui, inner| {
                 let mut y = inner.y;
-                for row in self.rows.iter().take(usize::from(inner.height)) {
+                let row_height = inner.height.saturating_sub(1);
+                for row in self.rows.iter().take(usize::from(row_height)) {
                     let indent = "  ".repeat(usize::from(row.depth));
                     let line = format!("{indent}{} {}", row.glyph, row.label);
                     ui.paint_str(

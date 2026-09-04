@@ -21,7 +21,7 @@ use junie_tui::widgets::steps::{Step, StepRail, StepState};
 use junie_tui::widgets::viewport::{Span, TextViewport};
 
 use super::modals::{InfoDialog, InfoResult, modal_frame};
-use super::{Cx, Go, Modal, ModalResult, ModalTag, LegacyScreen};
+use super::{Cx, Go, LegacyScreen, Modal, ModalResult, ModalTag};
 use crate::domain::account::AccountId;
 use crate::domain::agent::Agent;
 use crate::domain::fixtures::PrecedenceLevel;

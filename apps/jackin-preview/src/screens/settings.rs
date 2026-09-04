@@ -23,7 +23,7 @@ use junie_tui::widgets::tabs::{TabEvent, TabItem, Tabs};
 
 use super::config::{ConfigTabs, Doc, Scope, Tab as CfgTab, mode_label};
 use super::modals::InfoDialog;
-use super::{Cx, Go, Modal, ModalResult, ModalTag, LegacyScreen, plural};
+use super::{Cx, Go, LegacyScreen, Modal, ModalResult, ModalTag, plural};
 use crate::domain::agent::{Agent, AuthMode};
 use crate::domain::workspace::RoleName;
 use crate::sim::world::{GlobalConfig, Msg, World};

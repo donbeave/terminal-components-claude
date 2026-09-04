@@ -9,7 +9,7 @@ use std::sync::OnceLock;
 
 use crate::public_tui::{self, App as PublicApp};
 use crate::screens::{Jx, PublicRequest, Screen};
-use crate::{App, Route, MIN_HEIGHT, MIN_WIDTH};
+use crate::{App, MIN_HEIGHT, MIN_WIDTH, Route};
 
 fn public_keymap() -> &'static public_tui::KeyMap {
     static MAP: OnceLock<public_tui::KeyMap> = OnceLock::new();
@@ -89,11 +89,7 @@ fn route_title(route: Route) -> &'static str {
     }
 }
 
-fn draw_generic(
-    ui: &mut public_tui::Ui<'_>,
-    area: public_tui::Rect,
-    app: &App,
-) {
+fn draw_generic(ui: &mut public_tui::Ui<'_>, area: public_tui::Rect, app: &App) {
     let title = route_title(app.route);
     let panel = public_tui::Panel::new(public_tui::Id::root("jackin.public.route"))
         .title(title)
@@ -189,3 +185,23 @@ impl PublicApp for App {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::scenario::{Motion, Scenario};
+
+    #[test]
+    fn public_navigation_requests_update_the_product_route() {
+        let mut app = App::for_scenario(Scenario::FirstUse, Motion::Reduced);
+        apply_request(&mut app, PublicRequest::Go(crate::screens::Go::Settings));
+        assert_eq!(app.route, Route::Settings);
+        apply_request(&mut app, PublicRequest::Go(crate::screens::Go::Manager));
+        assert_eq!(app.route, Route::Manager);
+    }
+
+    #[test]
+    fn public_shell_minimum_size_matches_legacy_fixture_contract() {
+        assert_eq!((MIN_WIDTH, MIN_HEIGHT), (72, 20));
+        assert_eq!(route_title(Route::Manager), "Workspaces");
+    }
+}
