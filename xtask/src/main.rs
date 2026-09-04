@@ -645,7 +645,7 @@ fn capture_exec_contract_hits(script: &str) -> Vec<String> {
     .filter(|(_, fragment)| !script.contains(fragment))
     .map(|(label, fragment)| format!("capture runner lacks {label}: `{fragment}`"))
     .chain(
-        (script.contains("${BIN") || script.contains("${ARGS")).then(|| {
+        (script.contains("$BIN") || script.contains("$ARGS")).then(|| {
             "capture runner interpolates BIN/ARGS into shell source; use its opaque argv".to_owned()
         }),
     )
