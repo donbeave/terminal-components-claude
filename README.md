@@ -321,9 +321,11 @@ way: `f_*` are the showcase, `s_*` the new component pages, `t_*` the
 workbench, and `j_*` the Jackin preview (`tools/capture.sh start 120 40 --
 target/debug/jackin-preview --scenario returning --motion reduced`; use the
 tmux key name `Escape`, not `Esc`, when scripting). Each start prints a unique
-run id; pass it as `CAPTURE_RUN_ID` to `shot` and `stop`. The capture manifest
-records the exact argv, binary hash, Git dirty state, environment, and tool
-versions.
+run id; pass it as `CAPTURE_RUN_ID` to `shot` and `stop`. Each published shot
+is a complete `<name>/` directory containing `ansi`, `txt`, `cursor`, `html`,
+and `png`; failed conversion never replaces the previous complete directory.
+The capture manifest records the exact argv, binary hash, Git dirty state,
+environment, and tool versions.
 
 The showcase also carries a visual baseline (`apps/showcase/tests/baselines/showcase.txt`):
 a digest of every page at 120×40 and 80×24, excluding the navigation sidebar.
