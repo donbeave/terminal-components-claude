@@ -253,14 +253,17 @@ fn keyed<T: PartialEq>(a: &[T], b: &[T], key: impl Fn(&T) -> String) -> usize {
     let mut matched = vec![false; b.len()];
     for x in a {
         let x_key = key(x);
-        let matching = b
-            .iter()
-            .enumerate()
-            .find(|(index, y)| !matched[*index] && key(y) == x_key);
+        let matching = b.iter().enumerate().find(|(index, y)| {
+            matched
+                .get(*index)
+                .is_some_and(|matched| !*matched && key(y) == x_key)
+        });
         match matching {
             None => n += 1,
             Some((index, y)) => {
-                matched[index] = true;
+                if let Some(used) = matched.get_mut(index) {
+                    *used = true;
+                }
                 if y != x {
                     n += 1;
                 }

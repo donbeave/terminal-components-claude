@@ -1325,6 +1325,15 @@ impl TuiApp for App {
             return Response::changed();
         }
         if self.route == Route::Capsule && self.world.running_count() > 1 {
+            if let Some(instance) = self
+                .world
+                .instances
+                .iter_mut()
+                .find(|instance| instance.status == InstanceStatus::Running)
+            {
+                instance.status = InstanceStatus::CleanExited;
+            }
+            self.world.sync_arbiter();
             self.status = Some("Still inside the Construct · another instance is running".into());
             self.route = Route::Manager;
             return Response::changed();

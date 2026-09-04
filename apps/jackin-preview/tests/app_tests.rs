@@ -115,7 +115,9 @@ fn manager_navigation_expand_and_detail_focus() {
             .any(|workspace| workspace.name == "infra-control-plane")
     );
 
-    let _ = returning.click_id(jackin_app::MANAGER_LIST);
+    if let Some((x, y)) = returning.find("jk-7f3a") {
+        let _ = returning.click(x, y);
+    }
     assert_eq!(returning.app().route(), Route::Capsule);
     let _ = returning.key(KeyCode::Esc);
     assert_eq!(returning.app().route(), Route::Manager);
@@ -209,7 +211,7 @@ fn still_inside_feedback_when_other_instances_remain() {
     let _ = app.key(KeyCode::Esc);
     assert_eq!(app.app().route(), Route::Manager);
     assert!(app.text().contains("Still inside the Construct"));
-    assert_eq!(app.app().world.running_count(), 2);
+    assert_eq!(app.app().world.running_count(), 1);
 }
 
 #[test]
@@ -238,7 +240,7 @@ fn accounts_register_with_a_1password_reference_and_never_render_the_secret() {
             .as_ref()
             .is_ok_and(|field| field.masked.ends_with("k7Qz"))
     );
-    let classified = op.resolve_into(&reference, |secret| secret.classify());
+    let classified = op.resolve_into(&reference, jackin_app::sim::onepassword::Secret::classify);
     assert_eq!(
         classified,
         Ok(SecretClass::Key {
@@ -350,7 +352,12 @@ fn prelude_creates_a_pending_workspace_and_opens_the_editor() {
     assert_eq!(pending.name, "data-pipeline");
     assert_eq!(pending.workdir, "/Users/alexey/src/data-pipeline");
     assert_eq!(pending.mounts.len(), 1);
-    assert_eq!(pending.mounts[0].destination, "/workspace");
+    assert!(
+        pending
+            .mounts
+            .first()
+            .is_some_and(|mount| mount.destination == "/workspace")
+    );
     assert_eq!(original.workspaces.len(), 1);
     assert!(
         !original
@@ -387,7 +394,10 @@ fn prelude_refuses_a_duplicate_name_and_cancels_cleanly() {
     )]);
     browser.set_read_only(true);
     assert_eq!(browser.choose(), None);
-    assert_eq!(FileBrowserAction::Cancel, FileBrowserAction::Cancel);
+    let before_cancel = browser.clone();
+    let action = FileBrowserAction::Cancel;
+    assert!(matches!(action, FileBrowserAction::Cancel));
+    assert_eq!(browser, before_cancel);
 }
 
 #[test]
@@ -401,7 +411,12 @@ fn editor_edits_count_once_preview_then_saves_and_returns() {
     assert_eq!(draft.change_count(&original), 1);
     let changes = changes_for("jk-7f3a", &["src/settlement/retry.rs".into()], 1, 0);
     assert_eq!(changes.files.len(), 1);
-    assert!(matches!(changes.files[0].status, DiffStatus::Modified));
+    assert!(
+        changes
+            .files
+            .first()
+            .is_some_and(|file| matches!(file.status, DiffStatus::Modified))
+    );
 
     let mut world = world_for(Scenario::Returning);
     world.schedule(
@@ -684,7 +699,7 @@ fn environments_stay_readable_with_a_hundred_roles() {
     let unique = world
         .roles
         .iter()
-        .map(|role| role.full_name())
+        .map(jackin_app::domain::workspace::RoleEntry::full_name)
         .collect::<BTreeSet<_>>();
     assert_eq!(unique.len(), world.roles.len());
 
@@ -708,8 +723,8 @@ fn environments_stay_readable_with_a_hundred_roles() {
 #[test]
 fn cockpit_resolves_every_effective_account_for_the_container() {
     let world = world_for(Scenario::LaunchRunning);
+    assert!(world.workspace(PAYMENTS_WORKSPACE).is_some());
     let Some(workspace) = world.workspace(PAYMENTS_WORKSPACE) else {
-        assert!(false, "launch fixture workspace missing");
         return;
     };
     let effective = workspace.effective_accounts(&world.accounts);
