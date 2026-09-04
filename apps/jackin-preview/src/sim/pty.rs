@@ -4,11 +4,11 @@
 
 use std::collections::VecDeque;
 
+use crate::ratatui::layout::Rect;
 use junie_tui::core::id::WidgetId;
 use junie_tui::theme::Tone;
 use junie_tui::ui::layout::{Split, SplitDir};
 use junie_tui::widgets::viewport::{Line, Span, TextViewport};
-use ratatui::layout::Rect;
 
 use crate::domain::account::AccountId;
 use crate::domain::agent::Agent;

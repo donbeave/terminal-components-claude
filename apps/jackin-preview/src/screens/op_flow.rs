@@ -5,9 +5,19 @@
 //! display state; credential material remains inside `SimOnePassword`'s
 //! closure and is never stored here.
 
-use tui_next::{ItemKey, Status};
-
+use crate::core::id::WidgetId as ItemKey;
 use crate::sim::onepassword::OpError;
+
+/// Status projection consumed by the legacy picker composition.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Status {
+    /// The stage can accept input.
+    Ready,
+    /// The stage is waiting on a deterministic provider operation.
+    Loading,
+    /// The stage has a recoverable operator-facing error.
+    Error,
+}
 
 /// Ordered stages in the 1Password reference flow.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -21,11 +31,11 @@ pub enum OpFlowStage {
 impl OpFlowStage {
     /// Stable stage key used by `PickerChain`.
     pub const fn key(self) -> ItemKey {
-        ItemKey::num(match self {
-            Self::Account => 1,
-            Self::Vault => 2,
-            Self::Item => 3,
-            Self::Field => 4,
+        ItemKey::of(match self {
+            Self::Account => "op.account",
+            Self::Vault => "op.vault",
+            Self::Item => "op.item",
+            Self::Field => "op.field",
         })
     }
 

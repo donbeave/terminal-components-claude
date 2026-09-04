@@ -6,3 +6,8 @@ pub mod runtime;
 pub mod theme;
 pub mod ui;
 pub mod widgets;
+
+// Compatibility facade consumers use the public Ratatui types without adding
+// a second direct terminal dependency to an application package.
+#[doc(hidden)]
+pub use ratatui;

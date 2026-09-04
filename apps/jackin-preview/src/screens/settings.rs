@@ -2,6 +2,10 @@
 //! Editor's stage grammar, a `global` scope column on every scoped row and
 //! the same preview → async save flow.
 
+use crate::ratatui::buffer::Buffer;
+use crate::ratatui::crossterm::event::KeyCode;
+use crate::ratatui::layout::{Position, Rect};
+use crate::ratatui::style::Modifier;
 use junie_tui::core::event::{Key, Outcome};
 use junie_tui::core::id::WidgetId;
 use junie_tui::theme::Tone;
@@ -16,10 +20,6 @@ use junie_tui::widgets::progress::spinner_frame;
 use junie_tui::widgets::props::Prop;
 use junie_tui::widgets::segments::Segment;
 use junie_tui::widgets::tabs::{TabEvent, TabItem, Tabs};
-use ratatui::buffer::Buffer;
-use ratatui::crossterm::event::KeyCode;
-use ratatui::layout::{Position, Rect};
-use ratatui::style::Modifier;
 
 use super::config::{ConfigTabs, Doc, Scope, Tab as CfgTab, mode_label};
 use super::modals::InfoDialog;
@@ -407,7 +407,7 @@ impl SettingsScreen {
                 x + 41,
                 y,
                 "•",
-                ratatui::style::Style::new().fg(t.warning).bg(bg),
+                crate::ratatui::style::Style::new().fg(t.warning).bg(bg),
             );
         }
         y += 1;
@@ -417,7 +417,7 @@ impl SettingsScreen {
                 x + 41,
                 y,
                 "•",
-                ratatui::style::Style::new().fg(t.warning).bg(bg),
+                crate::ratatui::style::Style::new().fg(t.warning).bg(bg),
             );
         }
         y += 2;
@@ -1009,7 +1009,7 @@ impl Screen for SettingsScreen {
                         if same {
                             let k = Key {
                                 code: KeyCode::Char(' '),
-                                mods: ratatui::crossterm::event::KeyModifiers::NONE,
+                                mods: crate::ratatui::crossterm::event::KeyModifiers::NONE,
                             };
                             return self.agents_key(&k, w, cx);
                         }
@@ -1027,7 +1027,7 @@ impl Screen for SettingsScreen {
                         if same {
                             let k = Key {
                                 code: KeyCode::Char(' '),
-                                mods: ratatui::crossterm::event::KeyModifiers::NONE,
+                                mods: crate::ratatui::crossterm::event::KeyModifiers::NONE,
                             };
                             return self.trust_key(&k, cx);
                         }

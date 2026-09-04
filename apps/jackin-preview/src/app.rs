@@ -2,6 +2,10 @@
 //! host control plane, cockpit, handoff, Capsule, outro), the modal stack,
 //! focus/hover/press state, the identity strip and the footer.
 
+use crate::ratatui::Frame;
+use crate::ratatui::buffer::Buffer;
+use crate::ratatui::crossterm::event::{KeyCode, KeyModifiers};
+use crate::ratatui::layout::{Position, Rect};
 use junie_tui::core::event::{Input, Key, Mouse, MouseKind, Outcome};
 use junie_tui::core::focus::{Focus, FocusRing};
 use junie_tui::core::hit::HitRegistry;
@@ -14,10 +18,6 @@ use junie_tui::widgets::hintbar::{HintBar, HintLayer};
 use junie_tui::widgets::keyhint::{Hint, hint};
 use junie_tui::widgets::picker::PickerEvent;
 use junie_tui::widgets::segments::{self, Segment};
-use ratatui::Frame;
-use ratatui::buffer::Buffer;
-use ratatui::crossterm::event::{KeyCode, KeyModifiers};
-use ratatui::layout::{Position, Rect};
 
 use crate::arbiter::{EntryDecision, ExitDecision};
 use crate::domain::instance::InstanceStatus;

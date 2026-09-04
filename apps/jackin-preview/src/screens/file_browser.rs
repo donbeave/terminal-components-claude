@@ -4,7 +4,7 @@
 //! to `tui_next::Dialog`, `Form`, and `List`; this type keeps the source path,
 //! URL-mode toggle, and keyed selection stable while the list is reconciled.
 
-use tui_next::ItemKey;
+use crate::core::id::WidgetId as ItemKey;
 
 /// A source the operator can choose for a workspace mount.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -36,7 +36,7 @@ impl FileBrowserEntry {
 
     /// Key used by the library `List`/`Picker` collection.
     pub fn key(&self) -> ItemKey {
-        ItemKey::text(&self.path)
+        ItemKey::of(&self.path)
     }
 }
 
