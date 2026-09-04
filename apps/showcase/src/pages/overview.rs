@@ -24,6 +24,18 @@ const PROPS: [(&str, &str); 6] = [
     ("Binary", "showcase"),
     ("Tokens", "surface · accent · focus"),
 ];
+const FULL_COPY: [&str; 4] = [
+    "A complete app-owned migration of the legacy showcase.",
+    "Each page owns durable state and talks to tui-next through",
+    "the same public facade available to downstream binaries.",
+    "Tab focuses controls · Enter activates · Esc returns home.",
+];
+const COMPACT_COPY: [&str; 4] = [
+    "App-owned migration via tui-next.",
+    "Pages own state; one public facade.",
+    "Downstream binaries share that facade.",
+    "Tab focus · Enter activate · Esc home.",
+];
 
 fn brand() -> Brand<'static> {
     Brand::new(BRAND, "Junie").tagline("component showcase")
@@ -101,20 +113,22 @@ impl Page for OverviewPage {
         frame(ui, area, self.title(), "public tui-next API", |ui, body| {
             let (intro, rest) = layout::split_v(body, 4);
             brand().draw(ui, intro);
-            let (copy, props) = layout::split_h(rest, rest.width / 2);
+            // The property column needs 28 cells for its widest label/value
+            // pair. Keep a two-cell gutter so clipped copy cannot visually
+            // merge with the metadata at compact terminal sizes.
+            let props_width = 28.min(rest.width.saturating_sub(2));
+            let copy_width = rest.width.saturating_sub(props_width).saturating_sub(2);
+            let (copy, after_copy) = layout::split_h(rest, copy_width);
+            let (_, props) = layout::split_h(after_copy, 2);
             let (copy_text, author_area) = layout::split_v(copy, copy.height.saturating_sub(2));
             let (copy_text, inventory) =
                 layout::split_v(copy_text, copy_text.height.saturating_sub(7));
-            lines(
-                ui,
-                copy_text,
-                &[
-                    "A complete app-owned migration of the legacy showcase.",
-                    "Each page owns durable state and talks to tui-next through",
-                    "the same public facade available to downstream binaries.",
-                    "Tab focuses controls · Enter activates · Esc returns home.",
-                ],
-            );
+            let copy_lines: &[&str] = if copy.width >= 59 {
+                &FULL_COPY
+            } else {
+                &COMPACT_COPY
+            };
+            lines(ui, copy_text, copy_lines);
             self.author.draw(ui, author_area);
             Props::new(&PROPS).draw(ui, props);
 
