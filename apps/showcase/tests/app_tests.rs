@@ -1,15 +1,5 @@
 //! Behaviour matrix retained from the legacy showcase, exercised through the
 //! public `tui-next-testing` harness.
-#![allow(
-    clippy::arithmetic_side_effects,
-    clippy::indexing_slicing,
-    clippy::panic,
-    clippy::unwrap_used,
-    clippy::expect_used,
-    clippy::too_many_lines,
-    unused_must_use
-)]
-
 use showcase_app::{App, NAV_ENTRIES, PageId};
 use tui_next::{Axis, ColorLevel, KeyCode, Theme};
 use tui_next_testing::Harness;

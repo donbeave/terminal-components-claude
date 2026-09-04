@@ -187,7 +187,7 @@ impl DemoPage {
     -> Tree<'static, TreeNode, impl Fn(&TreeNode) -> ItemKey, impl Fn(&TreeNode, &mut RowUi<'_>)>
     {
         Tree::new(TREE_ID)
-            .key(|node: &TreeNode| ItemKey::Num(u64::from(node.depth())))
+            .key(|node: &TreeNode| node.key().unwrap_or(ItemKey::num(0)))
             .node(&Self::tree_node)
             .row(|node: &TreeNode, row: &mut RowUi<'_>| {
                 let name = if node.depth() == 0 {

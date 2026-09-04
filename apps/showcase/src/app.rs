@@ -314,8 +314,7 @@ fn nav_row(entry: &NavEntry, row: &mut tui_next::RowUi<'_>) {
     row.label(entry.label);
 }
 
-#[allow(clippy::unnecessary_literal_bound)]
-fn nav_icon(_entry: &NavEntry) -> &str {
+fn nav_icon(_entry: &NavEntry) -> &'static str {
     "•"
 }
 
