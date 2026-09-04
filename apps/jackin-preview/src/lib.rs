@@ -1,31 +1,49 @@
-//! Jackin Preview: a deterministic terminal app built on `tui-next`.
+//! Jackin, redesigned: an interactive deterministic terminal preview.
 #![deny(unsafe_code)]
-#![cfg_attr(
-    test,
-    allow(
-        clippy::arithmetic_side_effects,
-        clippy::expect_used,
-        clippy::indexing_slicing,
-        clippy::panic,
-        clippy::unwrap_used
-    )
-)]
 
 mod app;
+#[cfg(test)]
+mod app_tests;
+#[cfg(test)]
+mod app_tests_chrome;
 mod arbiter;
 mod clock;
-pub mod domain;
+mod domain;
+#[cfg(test)]
+mod perf_tests;
+mod rain;
 mod scenario;
-pub mod sim;
+mod screens;
+mod sim;
+#[cfg(test)]
+mod visual_tests;
 
-pub use app::{
-    ACCOUNT_PICKER, ACCOUNTS, APP, CAPSULE, CAPSULE_PANES, CAPSULE_TABS, ENTER, LAUNCH,
-    LAUNCH_DIALOG, MANAGER, MANAGER_LIST, ROLE_CHOOSE, ROLE_PICKER, SETTINGS, USAGE, App, Route,
-};
-pub use domain::instance::RunId;
+pub use app::{App, Route};
 pub use scenario::{Motion, Scenario};
 
-/// Run the interactive preview through the public `tui-next` entry point.
+impl junie_tui::runtime::Application for App {
+    fn handle(&mut self, input: junie_tui::core::event::Input) -> junie_tui::core::event::Outcome {
+        App::handle(self, input)
+    }
+
+    fn render(&mut self, frame: &mut ratatui::Frame<'_>) {
+        App::render(self, frame);
+    }
+
+    fn should_quit(&self) -> bool {
+        self.quit
+    }
+
+    fn tick_interval(&self) -> std::time::Duration {
+        App::tick_interval(self)
+    }
+}
+
+/// Run the interactive preview using the public junie-tui runtime.
 pub fn run() -> std::io::Result<()> {
-    tui_next::run(App::default(), tui_next::Theme::junie())
+    use junie_tui::theme::{ColorLevel, Theme, ThemeKind};
+
+    let theme = Theme::for_theme(ThemeKind::Junie, ColorLevel::TrueColor);
+    let mut app = App::for_scenario(Scenario::FirstUse, Motion::Full, 0, theme);
+    junie_tui::runtime::run(&mut app)
 }

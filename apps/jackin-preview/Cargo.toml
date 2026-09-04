@@ -19,7 +19,10 @@ path = "src/main.rs"
 workspace = true
 
 [dependencies]
-tui-next.workspace = true
+junie-tui = { path = "../.." }
+ratatui = { version = "0.30", features = ["crossterm_0_29"] }
+unicode-segmentation = "1.13"
+unicode-width = "0.2.2"
 
 [dev-dependencies]
 tui-next-testing.workspace = true
