@@ -23,7 +23,7 @@ use junie_tui::widgets::tabs::{TabEvent, TabItem, Tabs};
 
 use super::config::{ConfigTabs, Doc, Scope, Tab as CfgTab, mode_label};
 use super::modals::InfoDialog;
-use super::{Cx, Go, Modal, ModalResult, ModalTag, Screen, plural};
+use super::{Cx, Go, Modal, ModalResult, ModalTag, LegacyScreen, plural};
 use crate::domain::agent::{Agent, AuthMode};
 use crate::domain::workspace::RoleName;
 use crate::sim::world::{GlobalConfig, Msg, World};
@@ -782,7 +782,7 @@ fn is_sensitive(path: &str) -> bool {
         || p.starts_with("/.config/op")
 }
 
-impl Screen for SettingsScreen {
+impl LegacyScreen for SettingsScreen {
     fn enter(&mut self, _w: &mut World, cx: &mut Cx) {
         cx.focus.focus(TABS);
     }

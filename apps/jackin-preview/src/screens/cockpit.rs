@@ -21,7 +21,7 @@ use junie_tui::widgets::steps::{Step, StepRail, StepState};
 use junie_tui::widgets::viewport::{Span, TextViewport};
 
 use super::modals::{InfoDialog, InfoResult, modal_frame};
-use super::{Cx, Go, Modal, ModalResult, ModalTag, Screen};
+use super::{Cx, Go, Modal, ModalResult, ModalTag, LegacyScreen};
 use crate::domain::account::AccountId;
 use crate::domain::agent::Agent;
 use crate::domain::fixtures::PrecedenceLevel;
@@ -534,7 +534,7 @@ fn wrapped_arrow(buf: &mut Buffer, area: Rect, t: &Theme) {
     let _ = (buf, area, t);
 }
 
-impl Screen for CockpitScreen {
+impl LegacyScreen for CockpitScreen {
     fn enter(&mut self, _w: &mut World, cx: &mut Cx) {
         cx.focus.focus(RAIL);
     }

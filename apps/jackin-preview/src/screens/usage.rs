@@ -18,7 +18,7 @@ use junie_tui::widgets::panel::Panel;
 use junie_tui::widgets::progress::{Meter, MeterTone, MeterVisual, spinner_frame};
 use junie_tui::widgets::scrollbar;
 
-use super::{Cx, Go, Screen, plural};
+use super::{Cx, Go, LegacyScreen, plural};
 use crate::domain::account::{Account, AccountId, IssueCode, Lifecycle};
 use crate::domain::agent::UsageSurface;
 use crate::domain::usage::{Freshness, OverallSummary, QuotaStatus};
@@ -690,7 +690,7 @@ impl UsageScreen {
     }
 }
 
-impl Screen for UsageScreen {
+impl LegacyScreen for UsageScreen {
     fn enter(&mut self, w: &mut World, cx: &mut Cx) {
         self.build_rows(w);
         self.show_detail = false;

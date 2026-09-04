@@ -28,7 +28,7 @@ use junie_tui::widgets::segments::Segment;
 use junie_tui::widgets::splitter::Splitter;
 
 use super::modals::{InfoDialog, InfoResult};
-use super::{Cx, Go, Modal, ModalResult, ModalTag, Screen, plural};
+use super::{Cx, Go, Modal, ModalResult, ModalTag, LegacyScreen, plural};
 use crate::domain::agent::Agent;
 use crate::domain::instance::{DaemonSnapshot, InstanceStatus};
 use crate::domain::workspace::WorkspaceId;
@@ -1664,7 +1664,7 @@ fn agent_rows(
     (items, targets)
 }
 
-impl Screen for ManagerScreen {
+impl LegacyScreen for ManagerScreen {
     fn enter(&mut self, w: &mut World, cx: &mut Cx) {
         self.build_rows(w);
         cx.focus.focus(TREE);

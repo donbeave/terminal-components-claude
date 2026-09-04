@@ -32,7 +32,7 @@ use crate::screens::modals::{FormEvent, HelpOverlay, InfoResult};
 use crate::screens::prelude::PreludeScreen;
 use crate::screens::settings::SettingsScreen;
 use crate::screens::usage::UsageScreen;
-use crate::screens::{Cx, Go, Modal, ModalResult, ModalTag, Request, Screen};
+use crate::screens::{Cx, Go, Modal, ModalResult, ModalTag, Request, LegacyScreen};
 use crate::sim::launch::LaunchPlan;
 use crate::sim::world::{Msg, World};
 use junie_tui::widgets::brand::Lockup;
@@ -100,30 +100,30 @@ pub struct Screens {
 }
 
 impl Screens {
-    fn get_mut(&mut self, route: Route) -> Option<&mut dyn Screen> {
+    fn get_mut(&mut self, route: Route) -> Option<&mut dyn LegacyScreen> {
         match route {
             Route::Manager => Some(&mut self.manager),
             Route::Accounts => Some(&mut self.accounts),
             Route::Usage => Some(&mut self.usage),
-            Route::Settings => self.settings.as_mut().map(|s| s as &mut dyn Screen),
-            Route::Editor => self.editor.as_mut().map(|s| s as &mut dyn Screen),
-            Route::Prelude => self.prelude.as_mut().map(|s| s as &mut dyn Screen),
-            Route::Cockpit => self.cockpit.as_mut().map(|s| s as &mut dyn Screen),
-            Route::Capsule => self.capsule.as_mut().map(|s| s as &mut dyn Screen),
+            Route::Settings => self.settings.as_mut().map(|s| s as &mut dyn LegacyScreen),
+            Route::Editor => self.editor.as_mut().map(|s| s as &mut dyn LegacyScreen),
+            Route::Prelude => self.prelude.as_mut().map(|s| s as &mut dyn LegacyScreen),
+            Route::Cockpit => self.cockpit.as_mut().map(|s| s as &mut dyn LegacyScreen),
+            Route::Capsule => self.capsule.as_mut().map(|s| s as &mut dyn LegacyScreen),
             Route::Intro | Route::Outro | Route::Handoff => None,
         }
     }
 
-    fn get(&self, route: Route) -> Option<&dyn Screen> {
+    fn get(&self, route: Route) -> Option<&dyn LegacyScreen> {
         match route {
             Route::Manager => Some(&self.manager),
             Route::Accounts => Some(&self.accounts),
             Route::Usage => Some(&self.usage),
-            Route::Settings => self.settings.as_ref().map(|s| s as &dyn Screen),
-            Route::Editor => self.editor.as_ref().map(|s| s as &dyn Screen),
-            Route::Prelude => self.prelude.as_ref().map(|s| s as &dyn Screen),
-            Route::Cockpit => self.cockpit.as_ref().map(|s| s as &dyn Screen),
-            Route::Capsule => self.capsule.as_ref().map(|s| s as &dyn Screen),
+            Route::Settings => self.settings.as_ref().map(|s| s as &dyn LegacyScreen),
+            Route::Editor => self.editor.as_ref().map(|s| s as &dyn LegacyScreen),
+            Route::Prelude => self.prelude.as_ref().map(|s| s as &dyn LegacyScreen),
+            Route::Cockpit => self.cockpit.as_ref().map(|s| s as &dyn LegacyScreen),
+            Route::Capsule => self.capsule.as_ref().map(|s| s as &dyn LegacyScreen),
             Route::Intro | Route::Outro | Route::Handoff => None,
         }
     }

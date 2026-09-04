@@ -32,7 +32,7 @@ use junie_tui::widgets::statusbar::{StatusBar, StatusItem};
 use junie_tui::widgets::tabs::{TabEvent, TabItem, Tabs};
 
 use super::modals::{ChoiceDialog, InfoDialog, InfoResult, modal_frame};
-use super::{CustomModal, Cx, Go, Modal, ModalResult, ModalTag, Screen, plural};
+use super::{LegacyCustomModal, Cx, Go, Modal, ModalResult, ModalTag, LegacyScreen, plural};
 use crate::domain::account::AccountId;
 use crate::domain::account::AccountRegistry;
 use crate::domain::agent::Agent;
@@ -1812,7 +1812,7 @@ impl CapsuleScreen {
     }
 }
 
-impl Screen for CapsuleScreen {
+impl LegacyScreen for CapsuleScreen {
     fn enter(&mut self, w: &mut World, cx: &mut Cx) {
         if let Some(pane) = self.initial_pane.take()
             && let Some(tab) = self.daemon_mut(w).and_then(|d| d.active_tab_mut())
@@ -2580,7 +2580,7 @@ impl UsageDialog {
     }
 }
 
-impl CustomModal for UsageDialog {
+impl LegacyCustomModal for UsageDialog {
     fn on_key(&mut self, key: &Key, _focus: &mut Focus, _ring: &FocusRing, w: &World) -> Outcome {
         let n = self.accounts.len() + 1;
         match key.code {
