@@ -108,15 +108,15 @@ impl H {
         assert_eq!(leaves.len(), 4, "four panes on the active tab");
         for id in leaves {
             let pane = d.pane_mut(id).unwrap();
-            let mut i = pane.term.len();
-            while pane.term.len() < SCROLLBACK {
+            let start = pane.term.len();
+            assert!(start <= SCROLLBACK, "fixture pane exceeds scrollback cap");
+            for i in start..SCROLLBACK {
                 pane.term.push(vec![
                     Span::new(format!("[{i:05}] "), Tone::Secondary),
                     Span::plain(format!(
                         "lorem ipsum dolor sit amet, consectetur adipiscing elit {i}"
                     )),
                 ]);
-                i += 1;
             }
             assert_eq!(pane.term.len(), SCROLLBACK);
         }
