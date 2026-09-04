@@ -1,0 +1,6 @@
+# perf baseline: name ns allocs bytes [hits ring]
+# migrated unchanged from the workspace Jackin entries; regenerate only with
+# PERF_BLESS=1 in a release build after visual/performance review.
+frame_jackin_capsule_4panes_120x40 24572550 1080602 74131917 26 3
+frame_jackin_manager_100rows_120x40 86353 499 19333 55 5
+key_jackin_manager_move 3035 132 5495
