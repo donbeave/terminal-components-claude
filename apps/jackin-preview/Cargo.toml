@@ -20,6 +20,7 @@ workspace = true
 
 [dependencies]
 tui-next = { package = "junie-tui", path = "../.." }
+tui-next-public = { package = "tui-next", path = "../../crates/tui" }
 
 [dev-dependencies]
 ratatui = { version = "0.30", features = ["crossterm_0_29"] }

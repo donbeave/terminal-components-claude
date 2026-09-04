@@ -31,6 +31,7 @@
     reason = "all arithmetic is over bounded deterministic fixture values"
 )]
 pub extern crate tui_next as legacy_facade;
+pub extern crate tui_next_public as public_tui;
 
 extern crate self as junie_tui;
 
@@ -44,13 +45,14 @@ pub use legacy_facade::widgets;
 mod app;
 mod arbiter;
 mod clock;
+mod public_shell;
 pub mod domain;
 pub mod rain;
 mod scenario;
 pub mod screens;
 pub mod sim;
 
-pub use app::{App, Route};
+pub use app::{App, MIN_HEIGHT, MIN_WIDTH, Route};
 pub use scenario::{Motion, Scenario};
 
 /// Run the interactive preview through the legacy facade.
@@ -64,6 +66,16 @@ pub fn run_scenario(scenario: Scenario, motion: Motion, frame: u64) -> std::io::
     let mut app = App::for_scenario_with_theme(scenario, motion, frame, theme);
     let _ = runtime::drain_pending_input();
     runtime::run(&mut app)
+}
+
+/// Run the preview through the public two-phase `tui-next` runtime.
+///
+/// The legacy entry point remains available for the deterministic compatibility
+/// harness; new product launches can opt into this boundary while screens move
+/// from the adapter one route at a time.
+pub fn run_public() -> std::io::Result<()> {
+    let app = App::for_scenario(Scenario::FirstUse, Motion::Full);
+    public_tui::run(app, public_tui::Theme::junie())
 }
 
 impl runtime::Application for App {

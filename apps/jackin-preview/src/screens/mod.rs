@@ -65,7 +65,7 @@ impl ModalTag {
 }
 
 /// A screen-specific modal that still lives on the shared modal stack.
-pub trait CustomModal {
+pub trait LegacyCustomModal {
     fn on_key(&mut self, key: &Key, focus: &mut Focus, ring: &FocusRing, w: &World) -> Outcome;
     fn on_click(
         &mut self,
@@ -106,7 +106,7 @@ pub enum Modal {
     Op(OpFlow),
     Info(InfoDialog),
     Help(HelpOverlay),
-    Custom(Box<dyn CustomModal>),
+    Custom(Box<dyn LegacyCustomModal>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -192,13 +192,20 @@ pub enum Request {
     WithForm(Box<dyn FnOnce(&mut FormDialog)>),
 }
 
-pub struct Cx<'a> {
+pub struct LegacyCx<'a> {
     pub focus: &'a mut Focus,
     pub ring: &'a FocusRing,
     pub requests: Vec<Request>,
 }
 
-impl Cx<'_> {
+/// Compatibility name for the pre-public shell context.
+///
+/// New screens use [`crate::public_tui::Cx`] through [`Screen`]. Keeping the
+/// alias here lets the legacy event adapter be migrated one route at a time
+/// without changing its request semantics.
+pub type Cx<'a> = LegacyCx<'a>;
+
+impl LegacyCx<'_> {
     pub fn focus_next(&mut self) {
         self.focus.next(self.ring);
     }
@@ -230,9 +237,15 @@ impl Cx<'_> {
 
 /// Everything a route screen can do. Default bodies let small screens stay
 /// small; the shell calls only what it needs.
-pub trait Screen {
-    fn on_key(&mut self, key: &Key, w: &mut World, cx: &mut Cx) -> Outcome;
-    fn on_click(&mut self, _id: WidgetId, _pos: Position, _w: &mut World, _cx: &mut Cx) -> Outcome {
+pub trait LegacyScreen {
+    fn on_key(&mut self, key: &Key, w: &mut World, cx: &mut LegacyCx) -> Outcome;
+    fn on_click(
+        &mut self,
+        _id: WidgetId,
+        _pos: Position,
+        _w: &mut World,
+        _cx: &mut LegacyCx,
+    ) -> Outcome {
         Outcome::Ignored
     }
     fn on_double_click(
@@ -240,7 +253,7 @@ pub trait Screen {
         id: WidgetId,
         pos: Position,
         w: &mut World,
-        cx: &mut Cx,
+        cx: &mut LegacyCx,
     ) -> Outcome {
         let _ = (id, pos, w, cx);
         Outcome::Ignored
@@ -254,13 +267,19 @@ pub trait Screen {
         _id: WidgetId,
         _pos: Position,
         _w: &mut World,
-        _cx: &mut Cx,
+        _cx: &mut LegacyCx,
     ) -> Outcome {
         Outcome::Ignored
     }
     /// Mouse button went down on `id`; a drag may follow before the click
     /// completes on release. Screens that select text anchor here.
-    fn on_press(&mut self, _id: WidgetId, _pos: Position, _w: &mut World, _cx: &mut Cx) -> Outcome {
+    fn on_press(
+        &mut self,
+        _id: WidgetId,
+        _pos: Position,
+        _w: &mut World,
+        _cx: &mut LegacyCx,
+    ) -> Outcome {
         Outcome::Ignored
     }
     fn on_release(
@@ -268,7 +287,7 @@ pub trait Screen {
         _pressed: WidgetId,
         _pos: Position,
         _w: &mut World,
-        _cx: &mut Cx,
+        _cx: &mut LegacyCx,
     ) -> Outcome {
         Outcome::Ignored
     }
@@ -326,6 +345,94 @@ pub trait Screen {
     fn on_esc_top(&mut self, _w: &mut World, cx: &mut Cx) -> Outcome {
         cx.go(Go::Manager);
         Outcome::Changed
+    }
+}
+
+/// Public two-phase screen contract used by the migrated shell.
+///
+/// This deliberately has no access to the legacy event/render adapter. A
+/// route receives input in [`update`](Screen::update), then paints from an
+/// immutable snapshot in [`draw`](Screen::draw). Product routes can adopt it
+/// independently while the legacy adapter remains available for compatibility
+/// tests during the migration.
+pub trait Screen {
+    fn update(
+        &mut self,
+        cx: &mut crate::public_tui::Cx<'_>,
+        jx: &mut Jx<'_>,
+        world: &mut World,
+    ) -> crate::public_tui::Response<()>;
+
+    fn draw(
+        &self,
+        ui: &mut crate::public_tui::Ui<'_>,
+        area: Rect,
+        world: &World,
+    );
+
+    fn hints(&self, _world: &World) -> crate::public_tui::HintLayer {
+        crate::public_tui::HintLayer::empty()
+    }
+
+    fn crumb(&self, _world: &World) -> String {
+        String::new()
+    }
+
+    fn primary_focus(&self) -> Option<crate::public_tui::Id> {
+        None
+    }
+
+    fn on_esc_top(
+        &mut self,
+        _cx: &mut crate::public_tui::Cx<'_>,
+        jx: &mut Jx<'_>,
+        _world: &mut World,
+    ) -> crate::public_tui::Response<()> {
+        jx.go(Go::Manager);
+        crate::public_tui::Response::consumed().repaint()
+    }
+}
+
+/// Requests emitted by a public screen and consumed by the public app shell.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PublicRequest {
+    Status(String),
+    Go(Go),
+    Quit,
+}
+
+/// Commands owned by the public Jackin shell. They are intentionally stable
+/// identities, so the shell keymap and a route's update phase share one
+/// vocabulary without exposing the legacy event enum.
+pub const PUBLIC_MANAGER_UP: crate::public_tui::ActionKey =
+    crate::public_tui::ActionKey::custom("jackin.manager.up");
+pub const PUBLIC_MANAGER_DOWN: crate::public_tui::ActionKey =
+    crate::public_tui::ActionKey::custom("jackin.manager.down");
+pub const PUBLIC_MANAGER_ACTIVATE: crate::public_tui::ActionKey =
+    crate::public_tui::ActionKey::custom("jackin.manager.activate");
+pub const PUBLIC_QUIT: crate::public_tui::ActionKey =
+    crate::public_tui::ActionKey::custom("jackin.quit");
+
+/// Product-owned command sink for the public screen contract.
+pub struct Jx<'a> {
+    requests: &'a mut Vec<PublicRequest>,
+}
+
+impl Jx<'_> {
+    pub fn new(requests: &mut Vec<PublicRequest>) -> Jx<'_> {
+        Jx { requests }
+    }
+
+    pub fn status(&mut self, status: impl Into<String>) {
+        self.requests.push(PublicRequest::Status(status.into()));
+    }
+
+    pub fn go(&mut self, route: Go) {
+        self.requests.push(PublicRequest::Go(route));
+    }
+
+    pub fn quit(&mut self) {
+        self.requests.push(PublicRequest::Quit);
     }
 }
 
