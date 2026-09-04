@@ -1,6 +1,6 @@
 # Junie TUI — a Ratatui design system and its first real application
 
-Three binaries share one library:
+Three application packages share one library:
 
 - **`showcase`** — the approved design-system laboratory: every component in
   every interaction state, two composed screens, and the visual baseline that
@@ -28,19 +28,19 @@ the language hold up when a real tool is built from it?*
 ## Run
 
 ```sh
-cargo run --release                                  # the showcase (default binary)
-cargo run --release -- --page datagrid               # start on a page (overview, buttons, … codeeditor, datagrid, chipsselects, pickers)
-cargo run --release -- --color 256                   # cap the colour level: truecolor|256|16|none
+cargo run -p showcase --release                      # the showcase
+cargo run -p showcase --release -- --page datagrid   # start on a page (overview, buttons, … codeeditor, datagrid, chipsselects, pickers)
+cargo run -p showcase --release -- --color 256       # cap the colour level: truecolor|256|16|none
 
-cargo run --release --bin tablepro                   # the workbench, starting on the connections screen
-cargo run --release --bin tablepro -- --connect Production   # connect straight away
+cargo run -p tablepro --release                       # the workbench, starting on the connections screen
+cargo run -p tablepro --release -- --connect Production   # connect straight away
 
-cargo run --release --bin jackin-preview             # Jackin redesign, first-use scenario (intro → manager)
-cargo run --release --bin jackin-preview -- --scenario accounts-mixed   # first-use | returning | accounts-mixed |
+cargo run -p jackin-preview --release                # Jackin redesign, first-use scenario (intro → manager)
+cargo run -p jackin-preview --release -- --scenario accounts-mixed   # first-use | returning | accounts-mixed |
                                                      # launch-running | launch-failure | capsule-multi | outro-last | hard-cases
-cargo run --release --bin jackin-preview -- --scenario launch-running --motion reduced   # full | reduced | paused
-cargo run --release --bin jackin-preview -- --scenario first-use --motion paused --frame 282    # freeze one frame
-JACKIN_NO_MOTION=1 cargo run --release --bin jackin-preview   # same as --motion reduced
+cargo run -p jackin-preview --release -- --scenario launch-running --motion reduced   # full | reduced | paused
+cargo run -p jackin-preview --release -- --scenario first-use --motion paused --frame 282    # freeze one frame
+JACKIN_NO_MOTION=1 cargo run -p jackin-preview --release   # same as --motion reduced
 ```
 
 Every screen's first row is the application menu bar (`F10`, or click a
@@ -56,7 +56,8 @@ every screen, dialog, picker and menu shares.
 
 The preview's scenarios are deterministic: the same `--scenario`, `--motion`,
 `--frame` and terminal size always render the same picture, which is what
-`src/bin/jackin_preview/app_tests.rs` and the `j_*` captures rely on. No
+the integration tests under `apps/jackin-preview/tests/` and the `j_*` captures
+rely on. No
 secret ever reaches a frame — 1Password references resolve only inside the
 simulated credential service, plain-text keys live in transient edit state
 and render masked with a synthetic four-character tail.
@@ -75,8 +76,8 @@ Verify:
 
 ```sh
 cargo fmt --check
-cargo clippy --all-targets -- -D warnings
-cargo test
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+cargo test --workspace --all-targets --all-features
 ```
 
 ## Keyboard and mouse
@@ -203,7 +204,8 @@ From the live site's CSS custom properties and computed styles:
 
 ## Design tokens
 
-All values live in `src/theme.rs`; rendering code never spells an RGB value.
+All values live in `crates/tui/src/theme/`; rendering code never spells an RGB
+value.
 
 | Token | Value | Source on junie.jetbrains.com |
 |---|---|---|
@@ -279,16 +281,13 @@ editing, so the two never look alike.
 ## Architecture
 
 ```
-src/core      framework primitives — ids, focus ring, hit registry, scroll state, text buffer, events
-src/theme.rs  design tokens + component style resolvers
-src/ui        render context (interaction snapshot, hit/focus registration), text helpers
-src/widgets   button, input, textarea, choice, list, tree, table, panel, tabs, dialog, progress, scrollbar,
-              code (editor), completion, grid (data grid), chips, select, picker, segments, props, empty, keyhint
-src/runtime   the shared event loop (raw mode, mouse, bracketed paste, coalesced input, ticks on demand)
-src/bin/showcase   pages/ (one per component + two composed screens), app.rs shell, data.rs, app_tests.rs (+ visual baseline)
-src/bin/tablepro   db.rs (demo catalog + row generator), sql.rs (tokens, statements, safety tiers, runner, EXPLAIN),
-                   model.rs (history, completion, switcher index), tabs.rs (table / query / history tabs),
-                   workbench.rs, connections.rs, app.rs (modals, safety gate, chords), app_tests.rs
+crates/tui/src/            reusable library — runtime, UI, theme, layout, text, collections, components
+crates/tui/examples/       external API consumers (01_button.rs … 13_connection_form.rs)
+crates/tui/tests/          conformance, render, architecture, perf, and library baselines
+apps/showcase/src/         pages, application shell, showcase data
+apps/tablepro/src/         database adapter, SQL/query/workbench screens, application shell
+apps/jackin-preview/src/   domain/simulation screens, application shell, runtime fixtures
+apps/*/tests/               integration, visual, and perf tests with per-app baselines
 tools/        headless capture harness (tmux → ANSI → PNG) used for visual review
 ```
 
@@ -324,7 +323,9 @@ pages, `t_*` the workbench, `j_*` the Jackin preview (`BIN=target/debug/jackin-p
 ARGS="--scenario returning --motion reduced"`; use the tmux key name `Escape`,
 not `Esc`, when scripting).
 
-The showcase also carries a visual baseline (`tests/showcase_baseline.txt`):
+The showcase also carries a visual baseline
+(`apps/showcase/tests/baselines/showcase.txt`):
 a digest of every page at 120×40 and 80×24, excluding the navigation sidebar.
-`cargo test` fails when a page changes; regenerate deliberately with
-`UPDATE_BASELINE=1 cargo test --bin showcase showcase_visual_baseline`.
+The showcase visual test fails when a page changes; regenerate deliberately
+with `UPDATE_BASELINE=1 cargo test -p showcase --test visual
+showcase_visual_baseline`.
