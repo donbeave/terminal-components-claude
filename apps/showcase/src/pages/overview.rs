@@ -2,8 +2,8 @@
 
 use tui_next::{
     Brand, Chord, DerivedHintBar, Empty, EmptyState, HelpOverlay, HelpOverlayState, HelpSection,
-    Hint, HintBar, HintLayer, Id, KeyCode, KeyHint, Props, Rect, Response, TooSmall, Ui, id,
-    layout,
+    Hint, HintBar, HintLayer, Id, ItemKey, KeyCode, KeyHint, PropsList, PropsState, Rect, Response,
+    RowUi, TooSmall, Ui, id, layout,
 };
 
 use super::{Page, author::AuthorBadge, frame, lines};
@@ -16,7 +16,8 @@ const HINT_BAR: Id = id!("overview.hint-bar");
 const DERIVED_HINT_BAR: Id = id!("overview.derived-hint-bar");
 const HELP: Id = id!("overview.help");
 const TOO_SMALL: Id = id!("overview.too-small");
-const PROPS: [(&str, &str); 6] = [
+const PROPS_ID: Id = id!("overview.props");
+const PROPS: [(&'static str, &'static str); 6] = [
     ("Library", "tui-next"),
     ("Ownership", "application state"),
     ("Input", "runtime intents"),
@@ -24,6 +25,28 @@ const PROPS: [(&str, &str); 6] = [
     ("Binary", "showcase"),
     ("Tokens", "surface · accent · focus"),
 ];
+
+type OverviewPropsList = PropsList<
+    'static,
+    (&'static str, &'static str),
+    fn(&(&'static str, &'static str)) -> ItemKey,
+    fn(&(&'static str, &'static str), &mut RowUi<'_>),
+>;
+
+fn prop_key((label, _value): &(&'static str, &'static str)) -> ItemKey {
+    ItemKey::text(label)
+}
+
+fn prop_row((label, value): &(&'static str, &'static str), row: &mut RowUi<'_>) {
+    row.label(label);
+    row.meta(value);
+}
+
+fn props_list() -> OverviewPropsList {
+    PropsList::new(PROPS_ID)
+        .key(prop_key as fn(&(&'static str, &'static str)) -> ItemKey)
+        .row(prop_row as fn(&(&'static str, &'static str), &mut RowUi<'_>))
+}
 const FULL_COPY: [&str; 4] = [
     "A complete app-owned migration of the legacy showcase.",
     "Each page owns durable state and talks to tui-next through",
@@ -59,12 +82,13 @@ fn derived_hint_bar() -> DerivedHintBar<'static> {
     derived
 }
 
-/// The landing page has no mutable controls; its content is deliberately
-/// useful as a smoke test for themes, clipping and public component exports.
+/// The landing page has one caller-owned property-list cursor; its content is
+/// deliberately useful as a smoke test for themes, clipping and public exports.
 #[derive(Debug)]
 pub(crate) struct OverviewPage {
     author: AuthorBadge,
     help_state: HelpOverlayState,
+    props_state: PropsState,
 }
 
 impl OverviewPage {
@@ -72,6 +96,7 @@ impl OverviewPage {
         Self {
             author: AuthorBadge::new(AUTHOR),
             help_state: HelpOverlayState::default(),
+            props_state: PropsState::default(),
         }
     }
 }
@@ -94,6 +119,9 @@ impl Page for OverviewPage {
         let sections = [HelpSection::new("Overview", &hints)];
         response |= HelpOverlay::new(HELP, "overview", &sections)
             .update(cx, &mut self.help_state)
+            .erase();
+        response |= props_list()
+            .update(cx, &mut self.props_state, &PROPS)
             .erase();
         let _ = Empty::new(
             EMPTY,
@@ -130,7 +158,7 @@ impl Page for OverviewPage {
             };
             lines(ui, copy_text, copy_lines);
             self.author.draw(ui, author_area);
-            Props::new(&PROPS).draw(ui, props);
+            props_list().draw(ui, props, &self.props_state, &PROPS);
 
             let hints = inventory_hints();
             let sections = [HelpSection::new("Overview", &hints)];
