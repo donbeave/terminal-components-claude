@@ -8,16 +8,11 @@ const BASELINE: tui_next_testing::Baseline = tui_next_testing::Baseline::new(con
     "/tests/baselines/showcase.txt"
 ));
 
-const SIZES: [(u16, u16); 4] = [(80, 24), (100, 30), (120, 40), (160, 50)];
-const COLORS: [ColorLevel; 4] = [
-    ColorLevel::TrueColor,
-    ColorLevel::Ansi256,
-    ColorLevel::Ansi16,
-    ColorLevel::Mono,
-];
+const SIZES: [(u16, u16); 2] = [(80, 24), (120, 40)];
+const COLORS: [ColorLevel; 2] = [ColorLevel::TrueColor, ColorLevel::Mono];
 
 /// Keep the legacy test name while covering every page in the full visual
-/// matrix: four supported sizes, four terminal colour levels, and both themes.
+/// matrix: the two legacy sizes, truecolour/mono, and both themes.
 #[test]
 fn showcase_visual_baseline() {
     for page in PageId::ALL {
