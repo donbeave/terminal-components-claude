@@ -5,19 +5,9 @@
 //! display state; credential material remains inside `SimOnePassword`'s
 //! closure and is never stored here.
 
-use crate::core::id::WidgetId as ItemKey;
-use crate::sim::onepassword::OpError;
+use tui_next::{ItemKey, Status};
 
-/// Status projection consumed by the legacy picker composition.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Status {
-    /// The stage can accept input.
-    Ready,
-    /// The stage is waiting on a deterministic provider operation.
-    Loading,
-    /// The stage has a recoverable operator-facing error.
-    Error,
-}
+use crate::sim::onepassword::OpError;
 
 /// Ordered stages in the 1Password reference flow.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -31,11 +21,11 @@ pub enum OpFlowStage {
 impl OpFlowStage {
     /// Stable stage key used by `PickerChain`.
     pub const fn key(self) -> ItemKey {
-        ItemKey::of(match self {
-            Self::Account => "op.account",
-            Self::Vault => "op.vault",
-            Self::Item => "op.item",
-            Self::Field => "op.field",
+        ItemKey::num(match self {
+            Self::Account => 1,
+            Self::Vault => 2,
+            Self::Item => 3,
+            Self::Field => 4,
         })
     }
 
@@ -136,29 +126,6 @@ impl OpFlowState {
         self.selected
             .get(Self::index(stage))
             .and_then(Option::as_deref)
-    }
-
-    /// Reconcile one selected provider key against the latest collection.
-    ///
-    /// A picker may outlive an asynchronous refresh.  If its selected item
-    /// disappeared, clear that key and every dependent breadcrumb rather
-    /// than dispatching an action for stale provider data.
-    pub fn reconcile_selection(&mut self, stage: OpFlowStage, valid: &[String]) -> bool {
-        let index = Self::index(stage);
-        let Some(selected) = self.selected.get(index).and_then(Option::as_deref) else {
-            return false;
-        };
-        if valid.iter().any(|candidate| candidate == selected) {
-            return false;
-        }
-        for slot in self.selected.iter_mut().skip(index) {
-            *slot = None;
-        }
-        if Self::index(self.current) >= index {
-            self.current = stage;
-        }
-        self.status = OpFlowStatus::Ready;
-        true
     }
 
     /// Begin a deterministic loading state for one stage.
@@ -296,16 +263,5 @@ mod tests {
             Some(OpFlowAction::Retry(OpFlowStage::Account))
         );
         assert!(matches!(state.status(), OpFlowStatus::Loading { .. }));
-    }
-
-    #[test]
-    fn selected_keys_are_cleared_when_a_provider_collection_changes() {
-        let mut state = OpFlowState::default();
-        let _ = state.choose("acct");
-        let _ = state.choose("vault");
-        assert!(state.reconcile_selection(OpFlowStage::Account, &["other".into()]));
-        assert_eq!(state.current(), OpFlowStage::Account);
-        assert_eq!(state.selected(OpFlowStage::Account), None);
-        assert_eq!(state.selected(OpFlowStage::Vault), None);
     }
 }

@@ -1,700 +1,267 @@
-//! Deterministic fixture worlds, one per scenario, and the account
-//! precedence resolver that every surface shares.
+//! Small, deterministic Jackin fixture data.
+//!
+//! Fixture constructors keep display metadata separate from credential
+//! material. The only material-bearing values live inside
+//! `sim::onepassword` and are exposed to provider code through its
+//! secret-free closure.
 
-use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 
-use crate::arbiter::{Arbiter, DiscoveryError};
-use crate::clock::Clock;
 use crate::domain::account::{
     Account, AccountId, AccountIdentity, AccountRegistry, Confidence, CredentialSource,
-    DetectedKind, IdentitySubject, IssueCode, Lifecycle, Recoverability, RecoverableIssue,
-    ValidationLevel, ValidationState,
+    DetectedKind, IdentitySubject, IssueCode, Lifecycle, Provenance, Recoverability,
+    RecoverableIssue, ValidationLevel, ValidationState,
 };
-use crate::domain::agent::{Agent, AuthMode, Provider};
+use crate::domain::agent::{Agent, Provider};
 use crate::domain::instance::{
-    DaemonSnapshot, Instance, InstanceStatus, ManifestError, SessionRecord, SessionStatus,
+    AgentState, DaemonSnapshot, Instance, InstanceId, InstanceStatus, PaneSnapshot, RunId,
+    SessionRecord, SessionStatus, TabSnapshot,
 };
 use crate::domain::onepassword::OpReference;
-use crate::domain::usage::{
-    AccountUsage, FreshnessInfo, QuotaStatus, QuotaWindow, WindowCategory, WindowUnit,
-};
+use crate::domain::usage::{AccountUsage, FreshnessInfo};
 use crate::domain::workspace::{
-    AllowedRoles, EnvVar, Isolation, Mount, MountScope, RoleEntry, RolePolicy, RoleSource,
-    Workspace,
+    AllowedRoles, DirtyExitPolicy, EnvVar, Mount, MountScope, RoleEntry, RolePolicy, RoleSource,
+    Workspace, WorkspaceId,
 };
-use crate::scenario::Scenario;
-use crate::sim::onepassword::{OpSession, SimOnePassword};
-use crate::sim::pty::Daemon;
-use crate::sim::world::{DaemonHealth, FsEntry, GithubRepo, GlobalConfig, TrustRow, World};
-use junie_tui::ui::layout::SplitDir;
+use crate::sim::onepassword::SimOnePassword;
+use crate::sim::provider;
 
 pub const HOME: &str = "/Users/alexey";
+pub const PAYMENTS_WORKSPACE: WorkspaceId = 1;
+pub const PAYMENTS_WORKSPACE_NAME: &str = "payments-platform";
+pub const PAYMENTS_WORKDIR: &str = "/Users/alexey/src/payments-platform";
 
-// ------------------------------------------------------------ precedence
-
+/// Precedence used when selecting the account for one agent session.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PrecedenceLevel {
     Session,
     Role,
     Workspace,
-    ProviderDefault,
+    Global,
     Discovered,
-    None,
 }
 
-impl PrecedenceLevel {
-    pub fn label(self) -> &'static str {
-        match self {
-            PrecedenceLevel::Session => "session choice",
-            PrecedenceLevel::Role => "Role choice",
-            PrecedenceLevel::Workspace => "Workspace choice",
-            PrecedenceLevel::ProviderDefault => "provider default",
-            PrecedenceLevel::Discovered => "discovered on host",
-            PrecedenceLevel::None => "no account",
-        }
-    }
-}
-
+/// A resolved account plus the source of the decision.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ResolvedAccount {
     pub account: Option<AccountId>,
-    pub level: PrecedenceLevel,
-    pub why: String,
-    /// Lower levels that would have applied.
-    pub shadowed: Vec<(PrecedenceLevel, AccountId)>,
+    pub level: Option<PrecedenceLevel>,
+    pub reason: String,
 }
 
-impl ResolvedAccount {
-    pub fn label(&self, registry: &AccountRegistry) -> String {
-        match &self.account {
-            Some(id) => registry
-                .get(id)
-                .map(|a| a.title())
-                .unwrap_or_else(|| id.clone()),
-            None => "no account".into(),
-        }
+/// Build an id-only 1Password reference. It names metadata; it never embeds
+/// or derives a credential value.
+pub fn op_reference(
+    vault_id: &str,
+    vault_name: &str,
+    item_id: &str,
+    item_title: &str,
+) -> OpReference {
+    OpReference {
+        account: "chainargos.1password.com".into(),
+        vault_id: vault_id.into(),
+        vault_name: vault_name.into(),
+        item_id: item_id.into(),
+        item_title: item_title.into(),
+        section: None,
+        field_id: "credential".into(),
+        field_label: "credential".into(),
     }
 }
 
-/// session choice › Role preference › Workspace preference › provider
-/// default › discovered current source. With a Workspace every candidate
-/// must be in its effective set; an account the Workspace enabled without
-/// preferring it is the final fallback. Disabled hits are skipped and
-/// recorded.
+/// Resolve the account with explicit session > role > workspace > global >
+/// discovered precedence. Invalid or disabled choices are not silently
+/// treated as usable selections.
 pub fn resolve_account(
     provider: Provider,
-    ws: Option<&Workspace>,
+    workspace: Option<&Workspace>,
     role: Option<&str>,
     session: Option<&AccountId>,
     registry: &AccountRegistry,
 ) -> ResolvedAccount {
-    let effective = ws.map(|w| w.effective_accounts(registry));
-    let in_set = |id: &AccountId| -> bool {
-        effective
-            .as_ref()
-            .is_none_or(|e| e.iter().any(|x| &x.id == id && x.provider == provider))
-    };
-    let mut candidates: Vec<(PrecedenceLevel, AccountId, String)> = vec![];
-    if let Some(s) = session
-        && in_set(s)
+    if let Some(id) = session
+        && ready_for(id, provider, registry)
     {
-        candidates.push((
-            PrecedenceLevel::Session,
-            s.clone(),
-            "Session choice · picked for this session in Capsule".into(),
-        ));
+        return ResolvedAccount {
+            account: Some(id.clone()),
+            level: Some(PrecedenceLevel::Session),
+            reason: "session choice".into(),
+        };
     }
-    if let (Some(w), Some(r)) = (ws, role)
-        && let Some(id) = w.role_preference(r, provider, registry)
+
+    if let (Some(workspace), Some(role)) = (workspace, role)
+        && let Some(id) = workspace.role_preference(role, provider, registry)
+        && ready_for(&id, provider, registry)
     {
-        candidates.push((
-            PrecedenceLevel::Role,
-            id,
-            format!("Role preference · set on Role {r} in {}", w.name),
-        ));
+        return ResolvedAccount {
+            account: Some(id),
+            level: Some(PrecedenceLevel::Role),
+            reason: format!("role preference · {role}"),
+        };
     }
-    if let Some(w) = ws
-        && let Some(id) = w.accounts.preferred.get(&provider)
-        && in_set(id)
+
+    if let Some(workspace) = workspace
+        && let Some(id) = workspace
+            .accounts
+            .preferred
+            .get(&provider)
+            .filter(|id| ready_for(id, provider, registry))
     {
-        candidates.push((
-            PrecedenceLevel::Workspace,
-            id.clone(),
-            format!("Workspace preference · set in {} › Accounts", w.name),
-        ));
+        return ResolvedAccount {
+            account: Some(id.clone()),
+            level: Some(PrecedenceLevel::Workspace),
+            reason: format!("Workspace preference · {}", workspace.name),
+        };
     }
-    if let Some(a) = registry.default_for(provider)
-        && in_set(&a.id)
-    {
-        candidates.push((
-            PrecedenceLevel::ProviderDefault,
-            a.id.clone(),
-            "Provider default · set in Account & Usage Center".into(),
-        ));
+
+    if let Some(account) = registry.default_for(provider) {
+        return ResolvedAccount {
+            account: Some(account.id.clone()),
+            level: Some(PrecedenceLevel::Global),
+            reason: "global provider default".into(),
+        };
     }
-    if let Some(a) = registry.discovered_current(provider)
-        && in_set(&a.id)
-    {
-        candidates.push((
-            PrecedenceLevel::Discovered,
-            a.id.clone(),
-            format!(
-                "Discovered on host · no explicit choice for {}",
-                provider.short()
-            ),
-        ));
+
+    if let Some(account) = registry.discovered_current(provider) {
+        return ResolvedAccount {
+            account: Some(account.id.clone()),
+            level: Some(PrecedenceLevel::Discovered),
+            reason: "discovered host login".into(),
+        };
     }
-    if let (Some(w), Some(set)) = (ws, effective.as_ref()) {
-        let extra: Vec<AccountId> = set
-            .iter()
-            .filter(|e| e.provider == provider && !candidates.iter().any(|(_, id, _)| id == &e.id))
-            .map(|e| e.id.clone())
-            .collect();
-        for id in extra {
-            candidates.push((
-                PrecedenceLevel::Workspace,
-                id,
-                format!("Enabled in {} › Accounts", w.name),
-            ));
-        }
-    }
-    let mut shadowed = vec![];
-    let mut chosen: Option<(PrecedenceLevel, AccountId, String)> = None;
-    for (level, id, why) in candidates {
-        let usable = registry.get(&id).is_some_and(|a| a.enabled);
-        if chosen.is_none() {
-            if usable {
-                chosen = Some((level, id, why));
-            } else {
-                shadowed.push((level, format!("{id} (disabled)")));
-            }
-        } else {
-            shadowed.push((level, id));
-        }
-    }
-    match chosen {
-        Some((level, id, mut why)) => {
-            if let Some((l, other)) = shadowed.first() {
-                let other_label = registry
-                    .get(other.trim_end_matches(" (disabled)"))
-                    .map(|a| a.display_name.clone())
-                    .unwrap_or_else(|| other.clone());
-                if other.ends_with("(disabled)") {
-                    why.push_str(&format!(" · {} {other_label} skipped: disabled", l.label()));
-                } else {
-                    why.push_str(&format!(" · overrides {} {other_label}", l.label()));
-                }
-            }
-            ResolvedAccount {
-                account: Some(id),
-                level,
-                why,
-                shadowed,
-            }
-        }
-        None => ResolvedAccount {
-            account: None,
-            level: PrecedenceLevel::None,
-            why: match ws {
-                Some(w) => format!(
-                    "No account: enable one in {} › Accounts or register one in Account & Usage Center",
-                    w.name
-                ),
-                None => "No account: register one in Account & Usage Center".into(),
-            },
-            shadowed,
-        },
+
+    ResolvedAccount {
+        account: None,
+        level: None,
+        reason: "no ready account".into(),
     }
 }
 
-// --------------------------------------------------------------- helpers
-
-fn op_ref(account: &str, vault: (&str, &str), item: (&str, &str), field: &str) -> OpReference {
-    OpReference {
-        account: account.into(),
-        vault_id: vault.0.into(),
-        vault_name: vault.1.into(),
-        item_id: item.0.into(),
-        item_title: item.1.into(),
-        section: None,
-        field_id: field.into(),
-        field_label: field.into(),
-    }
+fn ready_for(id: &str, provider: Provider, registry: &AccountRegistry) -> bool {
+    registry.get(id).is_some_and(|account| {
+        account.provider == provider && account.enabled && account.lifecycle == Lifecycle::Available
+    })
 }
 
-fn handle(s: &str) -> Option<IdentitySubject> {
-    Some(IdentitySubject::Handle(s.into()))
-}
-
-fn roles() -> Vec<RoleEntry> {
-    let git = |name: &str, desc: &str, trusted: bool| RoleEntry {
-        namespace: "chainargos".into(),
-        name: name.into(),
-        source: RoleSource::Git {
-            url: "github.com/chainargos/roles".into(),
-            branch: "main".into(),
-        },
-        trusted,
-        in_registry: true,
-        description: desc.into(),
-        load_error: None,
-    };
-    vec![
-        git(
-            "the-architect",
-            "Full-stack design and refactoring; Claude Code default",
-            true,
-        ),
-        git("backend", "Rust and Postgres services", true),
-        git(
-            "reviewer",
-            "Read-mostly code review with limited write scope",
-            true,
-        ),
-        git("sre", "Infrastructure, Terraform, Kubernetes", true),
-        RoleEntry {
-            namespace: "acme-labs".into(),
-            name: "data-eng".into(),
-            source: RoleSource::Git {
-                url: "github.com/acme-labs/roles-experimental".into(),
-                branch: "next".into(),
-            },
-            trusted: false,
-            in_registry: true,
-            description: "Notebook and pipeline tooling (untrusted source)".into(),
-            load_error: Some("trust required".into()),
-        },
-        RoleEntry {
-            namespace: "local".into(),
-            name: "writer".into(),
-            source: RoleSource::Local {
-                path: "~/roles/writer".into(),
-            },
-            trusted: true,
-            in_registry: false,
-            description: "Docs and release notes".into(),
-            load_error: None,
-        },
-    ]
-}
-
-/// A large, deterministic Role registry (`svc-001` …) so the scoped-config
-/// screens prove they scale: every Role is trusted, in the registry, and
-/// carries no configuration until an operator adds some.
-fn generated_roles(n: usize) -> Vec<RoleEntry> {
-    const AREAS: [&str; 6] = ["billing", "ledger", "search", "notify", "ingest", "auth"];
-    (1..=n)
-        .map(|i| RoleEntry {
-            namespace: "chainargos".into(),
-            name: format!("svc-{i:03}"),
-            source: RoleSource::Git {
-                url: "github.com/chainargos/roles".into(),
-                branch: "main".into(),
-            },
-            trusted: true,
-            in_registry: true,
-            description: format!("{} service agent #{i}", AREAS[i % AREAS.len()]),
-            load_error: None,
-        })
-        .collect()
-}
-
-fn workspaces(rich: bool) -> Vec<Workspace> {
-    let mut v = vec![];
-    let mut w = Workspace::new(1, "payments-platform", "/workspace/payments-platform");
-    w.mounts = vec![
-        Mount::host("~/src/payments-platform", "/workspace/payments-platform")
-            .repository()
-            .isolation(Isolation::Worktree),
-        Mount::host("~/src/shared-libs", "/workspace/libs").readonly(true),
-    ];
-    w.roles = RolePolicy {
-        allowed: AllowedRoles::Custom(vec![
-            "the-architect".into(),
-            "backend".into(),
-            "reviewer".into(),
-        ]),
-        default: Some("the-architect".into()),
-        last: Some("the-architect".into()),
-    };
-    w.env = vec![
-        EnvVar::plain(
-            "DATABASE_URL",
-            "postgres://payments:pw-fixture-only@db.internal:5432/payments",
-        ),
-        EnvVar::op(
-            "STRIPE_KEY",
-            op_ref(
-                "chainargos.1password.com",
-                ("v_eng01", "Engineering"),
-                ("it_str01", "Stripe · sandbox"),
-                "credential",
-            ),
-        ),
-        EnvVar::plain("LOG_LEVEL", "debug"),
-        EnvVar::host("GH_TOKEN", "GH_TOKEN"),
-    ];
-    w.role_env.insert(
-        "backend".into(),
-        vec![EnvVar::op(
-            "OPENAI_API_KEY",
-            op_ref(
-                "chainargos.1password.com",
-                ("v_eng01", "Engineering"),
-                ("it_cdx01", "OpenAI · Codex Primary"),
-                "credential",
-            ),
-        )],
-    );
-    // two Anthropic accounts at once: Personal is the inherited registry
-    // default, Work is switched on here; Codex Primary is inherited
-    w.accounts.enabled.insert("acct-claude-work".into());
-    w.accounts.role_preferred.insert(
-        ("reviewer".into(), Provider::Anthropic),
-        "acct-claude-work".into(),
-    );
-    w.keep_awake = true;
-    v.push(w);
-
-    let mut w = Workspace::new(2, "infra-control-plane", "/workspace/infra-control-plane");
-    w.mounts = vec![
-        Mount::host(
-            "~/src/infra-control-plane",
-            "/workspace/infra-control-plane",
-        )
-        .repository(),
-    ];
-    w.roles = RolePolicy {
-        allowed: AllowedRoles::All,
-        default: Some("sre".into()),
-        last: Some("sre".into()),
-    };
-    w.env = vec![
-        EnvVar::op(
-            "CLOUDFLARE_API_TOKEN",
-            op_ref(
-                "chainargos.1password.com",
-                ("v_eng01", "Engineering"),
-                ("it_cf01", "Cloudflare · infra"),
-                "credential",
-            ),
-        ),
-        EnvVar::plain("TF_LOG", "WARN"),
-    ];
-    // the inherited Codex default is switched off here; Experiments is
-    // enabled and therefore the only (and preferred) Codex account
-    w.accounts
-        .disabled_defaults
-        .insert("acct-codex-primary".into());
-    w.accounts.enabled.insert("acct-codex-experiments".into());
-    w.accounts
-        .preferred
-        .insert(Provider::OpenAi, "acct-codex-experiments".into());
-    v.push(w);
-
-    let mut w = Workspace::new(3, "release-automation", "/workspace/release-automation");
-    w.mounts = vec![Mount::git(
-        "github.com/chainargos/release-automation",
-        "/workspace/release-automation",
-    )];
-    w.roles = RolePolicy {
-        allowed: AllowedRoles::Custom(vec!["backend".into()]),
-        default: Some("backend".into()),
-        last: None,
-    };
-    w.git_pull = false;
-    v.push(w);
-
-    let mut w = Workspace::new(4, "customer-portal", "/workspace/customer-portal");
-    w.mounts = vec![
-        Mount::host("~/src/customer-portal", "/workspace/customer-portal").repository(),
-        Mount::host("~/design/portal-assets", "/workspace/assets").readonly(true),
-    ];
-    w.roles = RolePolicy {
-        allowed: AllowedRoles::All,
-        default: None,
-        last: Some("writer".into()),
-    };
-    w.env = vec![EnvVar::plain("NEXT_PUBLIC_API", "https://api.portal.local")];
-    v.push(w);
-
-    if rich {
-        let names = [
-            "data-pipeline",
-            "docs-site",
-            "auth-service",
-            "gateway",
-            "mobile-app",
-            "ml-notebooks",
-            "search-indexer",
-            "staging-env",
-            "billing-reconciliation-service-with-a-very-long-name-for-truncation",
-            "legacy-monolith",
-        ];
-        for (i, n) in names.iter().enumerate() {
-            let mut w = Workspace::new(10 + i as u32, n, &format!("/workspace/{n}"));
-            let src = if i == 8 {
-                "~/src/enterprise/platform/services/billing/reconciliation/billing-reconciliation-service-with-a-very-long-name-for-truncation".to_owned()
-            } else {
-                format!("~/src/{n}")
-            };
-            w.mounts = vec![Mount::host(&src, &format!("/workspace/{n}")).repository()];
-            v.push(w);
-        }
-    }
-    v
-}
-
-#[allow(clippy::too_many_arguments)]
-fn instance(
+fn validated(
     id: &str,
-    ws: Option<u32>,
-    wsname: &str,
-    role: &str,
-    agent: Agent,
-    status: InstanceStatus,
-    created: i64,
-    last_seen: i64,
-) -> Instance {
-    Instance {
-        id: id.into(),
-        container: format!("jackin-{wsname}"),
-        workspace: ws,
-        workdir: format!("/workspace/{wsname}"),
-        role: role.into(),
-        agent,
-        status,
-        created_secs: created,
-        last_seen_secs: last_seen,
-        run_id: format!("run-{}", &id[3..]),
-        sessions: Ok(vec![]),
-        daemon: DaemonSnapshot::Unavailable,
-        branch: None,
-        pr: None,
-        default_branch: "main".into(),
-        uncommitted: 0,
-        unpushed: 0,
-        accounts: vec![],
+    name: &str,
+    provider: Provider,
+    source: CredentialSource,
+    op: &SimOnePassword,
+    now: i64,
+) -> Account {
+    let mut account = Account::registered(id, name, provider, source);
+    let outcome = provider::validate(provider, &account.source, None, op, now);
+    provider::apply_validation(&mut account, &outcome, now);
+    account
+}
+
+/// Accounts shared by the populated scenarios.
+pub fn fixture_accounts(op: &SimOnePassword, now: i64) -> AccountRegistry {
+    let mut registry = AccountRegistry::default();
+
+    let mut anthropic = validated(
+        "anthropic-work",
+        "Work",
+        Provider::Anthropic,
+        CredentialSource::OnePassword(op_reference(
+            "v_eng01",
+            "Engineering",
+            "it_ant01",
+            "Anthropic · Work",
+        )),
+        op,
+        now,
+    );
+    anthropic.default_for_provider = true;
+    registry.insert(anthropic);
+
+    let mut openai = validated(
+        "openai-primary",
+        "Primary",
+        Provider::OpenAi,
+        CredentialSource::OnePassword(op_reference(
+            "v_eng01",
+            "Engineering",
+            "it_cdx01",
+            "OpenAI · Codex Primary",
+        )),
+        op,
+        now,
+    );
+    openai.default_for_provider = true;
+    registry.insert(openai);
+
+    let mut grok = validated(
+        "grok-team",
+        "Team",
+        Provider::XAi,
+        CredentialSource::OnePassword(op_reference(
+            "v_eng01",
+            "Engineering",
+            "it_grk01",
+            "xAI · Grok Team",
+        )),
+        op,
+        now,
+    )
+    .with_endpoint("xAI production", "https://api.x.ai/v1");
+    grok.default_for_provider = true;
+    registry.insert(grok);
+
+    registry.insert(Account::registered(
+        "anthropic-personal",
+        "Personal",
+        Provider::Anthropic,
+        CredentialSource::OnePassword(op_reference(
+            "v_per01",
+            "Personal",
+            "it_ant02",
+            "Anthropic · Personal API key",
+        )),
+    ));
+
+    let mut discovered = Account::discovered(
+        "grok-host",
+        "Host profile",
+        Provider::XAi,
+        CredentialSource::HostEnv {
+            var: "XAI_API_KEY".into(),
+            detected: DetectedKind::GrokAuthJson,
+        },
+    );
+    discovered.identity = AccountIdentity {
+        subject: Some(IdentitySubject::Handle("team_chainargos".into())),
+        plan: Some("Team · prepaid".into()),
+    };
+    discovered.provenance = vec![Provenance::LiveHost];
+    discovered.confidence = Confidence::PresenceOnly;
+    discovered.lifecycle = Lifecycle::Available;
+    discovered.validation = ValidationState::Valid(ValidationLevel::MaterialDiscovered);
+    discovered.last_refresh_secs = Some(now);
+    discovered.usage = AccountUsage {
+        freshness: FreshnessInfo::current(now),
+        windows: provider::windows_for(Provider::XAi, now, false),
+    };
+    registry.insert(discovered);
+
+    // Keep the original Jackin fixture ids in addition to the compact ids
+    // above.  They are referenced by saved Workspace policies and by the
+    // migration journey; aliases are metadata-only and do not duplicate any
+    // credential material.  Every source remains either a reference, a
+    // synthetic tail/fingerprint, or a host path.
+    for account in legacy_fixture_accounts(op, now) {
+        registry.insert(account);
     }
+
+    registry
 }
 
-fn global(rich: bool) -> GlobalConfig {
-    GlobalConfig {
-        coauthor_trailer: true,
-        dco_signoff: true,
-        mounts: if rich {
-            vec![
-                Mount::host("~/.gitconfig", "/home/agent/.gitconfig")
-                    .readonly(true)
-                    .scope(MountScope::Global),
-                Mount::host("~/.cache/cargo-registry", "/home/agent/.cargo/registry")
-                    .scope(MountScope::Global),
-                Mount::host("~/roles/sre-kube", "/home/agent/.kube")
-                    .readonly(true)
-                    .scope(MountScope::Role("sre".into())),
-            ]
-        } else {
-            vec![]
-        },
-        env: if rich {
-            vec![
-                EnvVar::op(
-                    "GH_TOKEN",
-                    op_ref(
-                        "chainargos.1password.com",
-                        ("v_eng01", "Engineering"),
-                        ("it_gh01", "GitHub · CLI token"),
-                        "credential",
-                    ),
-                ),
-                EnvVar::plain("EDITOR", "nvim"),
-                EnvVar::plain("CARGO_NET_GIT_FETCH_WITH_CLI", "true"),
-            ]
-        } else {
-            vec![]
-        },
-        role_env: if rich {
-            let mut m = BTreeMap::new();
-            m.insert(
-                "sre".to_owned(),
-                vec![EnvVar::plain("KUBECONFIG", "/home/agent/.kube/config")],
-            );
-            m
-        } else {
-            BTreeMap::new()
-        },
-        agent_modes: if rich {
-            [
-                (Agent::ClaudeCode, AuthMode::Sync),
-                (Agent::Codex, AuthMode::ApiKey),
-                (Agent::GrokBuild, AuthMode::ApiKey),
-                (Agent::OpenCode, AuthMode::Sync),
-                (Agent::Amp, AuthMode::Sync),
-                (Agent::KimiCode, AuthMode::Ignore),
-            ]
-            .into_iter()
-            .collect()
-        } else {
-            BTreeMap::new()
-        },
-        trust: vec![
-            TrustRow {
-                source: "github.com/chainargos/roles".into(),
-                kind: "git",
-                trusted: true,
-                roles: 4,
-            },
-            TrustRow {
-                source: "github.com/acme-labs/roles-experimental".into(),
-                kind: "git",
-                trusted: false,
-                roles: 1,
-            },
-            TrustRow {
-                source: "~/roles".into(),
-                kind: "path",
-                trusted: true,
-                roles: 1,
-            },
-            TrustRow {
-                source: "git@corp:infra/roles".into(),
-                kind: "git",
-                trusted: true,
-                roles: 2,
-            },
-        ],
-    }
-}
+fn legacy_fixture_accounts(_op: &SimOnePassword, now: i64) -> Vec<Account> {
+    let mut out = Vec::new();
 
-fn fs() -> Vec<FsEntry> {
-    let d = |p: &str, git: Option<&str>, meta: &str| FsEntry {
-        path: p.into(),
-        dir: true,
-        git: git.map(str::to_owned),
-        meta: meta.into(),
-    };
-    let f = |p: &str, meta: &str| FsEntry {
-        path: p.into(),
-        dir: false,
-        git: None,
-        meta: meta.into(),
-    };
-    vec![
-        d("/Users/alexey", None, ""),
-        d("/Users/alexey/src", None, "12 items"),
-        d("/Users/alexey/design", None, "2 items"),
-        d("/Users/alexey/roles", None, "1 item"),
-        d("/Users/alexey/notes", None, "9 items"),
-        d("/Users/alexey/.claude", None, "profile"),
-        d("/Users/alexey/.codex", None, "profile"),
-        d("/Users/alexey/.local/share/opencode", None, "profile"),
-        d("/Users/alexey/.grok", None, "empty"),
-        d("/Users/alexey/.codex-locked", None, "no access"),
-        d("/Users/alexey/.opencode-broken", None, "profile"),
-        f("/Users/alexey/notes.md", "2 d"),
-        d(
-            "/Users/alexey/src/payments-platform",
-            Some("feature/settlement-backoff"),
-            "git",
-        ),
-        d(
-            "/Users/alexey/src/payments-platform/crates",
-            None,
-            "6 items",
-        ),
-        d(
-            "/Users/alexey/src/payments-platform/crates/settlement",
-            None,
-            "rust",
-        ),
-        d(
-            "/Users/alexey/src/payments-platform/crates/ledger",
-            None,
-            "rust",
-        ),
-        d("/Users/alexey/src/payments-platform/docs", None, "adr"),
-        d(
-            "/Users/alexey/src/payments-platform/scripts",
-            None,
-            "3 items",
-        ),
-        f("/Users/alexey/src/payments-platform/Cargo.toml", "1 h"),
-        f("/Users/alexey/src/payments-platform/README.md", "3 d"),
-        d("/Users/alexey/src/infra-control-plane", Some("main"), "git"),
-        d(
-            "/Users/alexey/src/infra-control-plane/modules",
-            None,
-            "terraform",
-        ),
-        d("/Users/alexey/src/infra-control-plane/kube", None, "go"),
-        d("/Users/alexey/src/release-automation", Some("main"), "git"),
-        d("/Users/alexey/src/customer-portal", Some("develop"), "git"),
-        d("/Users/alexey/src/customer-portal/web", None, "next.js"),
-        d(
-            "/Users/alexey/src/customer-portal/services",
-            None,
-            "5 items",
-        ),
-        d("/Users/alexey/src/shared-libs", Some("main"), "git"),
-        d("/Users/alexey/src/data-pipeline", Some("main"), "git"),
-        d("/Users/alexey/src/docs-site", Some("gh-pages"), "git"),
-        d("/Users/alexey/src/scratch", None, "4 items"),
-        d("/Users/alexey/src/enterprise", None, "1 item"),
-        d("/Users/alexey/design/portal-assets", None, "assets"),
-        d("/Users/alexey/design/brand", None, "assets"),
-        d("/Users/alexey/roles/writer", None, "manifest"),
-    ]
-}
-
-fn github() -> Vec<GithubRepo> {
-    let r = |n: &str, b: &str, extra: &[&str], upd: &str| GithubRepo {
-        full_name: n.into(),
-        default_branch: b.into(),
-        branches: std::iter::once(b.to_owned())
-            .chain(extra.iter().map(|s| (*s).to_owned()))
-            .collect(),
-        updated: upd.into(),
-        url: format!("https://github.com/{n}"),
-    };
-    vec![
-        r(
-            "chainargos/payments-platform",
-            "main",
-            &["feature/settlement-backoff", "release/2026.09"],
-            "1 h ago",
-        ),
-        r(
-            "chainargos/infra-control-plane",
-            "main",
-            &["sre/node-pools"],
-            "3 h ago",
-        ),
-        r(
-            "chainargos/release-automation",
-            "main",
-            &["node-22"],
-            "2 d ago",
-        ),
-        r(
-            "chainargos/customer-portal",
-            "develop",
-            &["main", "feature/skeletons"],
-            "5 h ago",
-        ),
-        r("chainargos/roles", "main", &[], "6 d ago"),
-        r("chainargos/docs", "main", &["gh-pages"], "3 d ago"),
-        r("acme-labs/roles-experimental", "next", &[], "2 mo ago"),
-    ]
-}
-
-// --------------------------------------------------------------- accounts
-
-fn accounts_mixed(now: i64) -> AccountRegistry {
-    let h = 3600;
-    let d = 86_400;
-    let mut r = AccountRegistry::default();
-
-    let mut a = Account::registered(
+    let mut personal = account_with_source(
         "acct-claude-personal",
         "Personal",
         Provider::Anthropic,
@@ -702,63 +269,28 @@ fn accounts_mixed(now: i64) -> AccountRegistry {
             path: "~/.claude".into(),
             detected: DetectedKind::ClaudeOAuthProfile,
         },
+        now,
     );
-    a.identity = AccountIdentity {
-        subject: handle("alexey@donbeave.dev"),
-        plan: Some("Max 5x".into()),
-    };
-    a.confidence = Confidence::Authoritative;
-    a.lifecycle = Lifecycle::Available;
-    a.purpose = Some("personal".into());
-    a.default_for_provider = true;
-    a.validation = ValidationState::Valid(ValidationLevel::QuotaReadable);
-    a.last_refresh_secs = Some(now - 4 * 60);
-    a.usage = AccountUsage {
-        freshness: FreshnessInfo::current(now - 4 * 60),
-        windows: vec![
-            QuotaWindow::pct("session", "Session · 5-hour", WindowCategory::Session, 38)
-                .reset(now + 3 * h + 12 * 60),
-            QuotaWindow::pct(
-                "weekly",
-                "Weekly · all models",
-                WindowCategory::LongRange,
-                33,
-            )
-            .reset(now + 3 * d + 10 * h),
-            QuotaWindow::pct(
-                "weekly_sonnet",
-                "Weekly · Sonnet",
-                WindowCategory::Model,
-                21,
-            )
-            .reset(now + 3 * d + 10 * h),
-            QuotaWindow::pct("weekly_opus", "Weekly · Opus", WindowCategory::Model, 54)
-                .reset(now + 3 * d + 10 * h),
-        ],
-    };
-    r.insert(a);
+    personal.identity = handle("alexey@donbeave.dev");
+    personal.identity.plan = Some("Max 5x".into());
+    personal.default_for_provider = true;
+    out.push(personal);
 
-    let mut a = Account::registered(
+    let mut work = account_with_source(
         "acct-claude-work",
         "Work",
         Provider::Anthropic,
-        CredentialSource::OnePassword(op_ref(
-            "chainargos.1password.com",
-            ("v_eng01", "Engineering"),
-            ("it_ant01", "Anthropic · Work"),
-            "credential",
+        CredentialSource::OnePassword(op_reference(
+            "v_eng01",
+            "Engineering",
+            "it_ant01",
+            "Anthropic · Work",
         )),
+        now,
     );
-    a.identity = AccountIdentity {
-        subject: handle("alexey@chainargos.com"),
-        plan: Some("Team".into()),
-    };
-    a.confidence = Confidence::Authoritative;
-    a.lifecycle = Lifecycle::Available;
-    a.purpose = Some("work".into());
-    a.validation = ValidationState::Valid(ValidationLevel::QuotaReadable);
-    a.last_refresh_secs = Some(now - 47 * 60);
-    a.issue = Some(
+    work.identity = handle("alexey@chainargos.com");
+    work.identity.plan = Some("Team".into());
+    work.issue = Some(
         RecoverableIssue::new(
             IssueCode::Stale,
             "Usage stale · last good 47 min ago",
@@ -766,75 +298,27 @@ fn accounts_mixed(now: i64) -> AccountRegistry {
         )
         .retry(now + 13 * 60),
     );
-    a.usage = AccountUsage {
-        freshness: FreshnessInfo::stale(now - 47 * 60, now + 13 * 60),
-        windows: vec![
-            QuotaWindow::pct("session", "Session · 5-hour", WindowCategory::Session, 76)
-                .reset(now + h + 5 * 60),
-            QuotaWindow::pct(
-                "weekly",
-                "Weekly · all models",
-                WindowCategory::LongRange,
-                88,
-            )
-            .reset(now + 3 * d + 10 * h),
-            QuotaWindow::pct("weekly_opus", "Weekly · Opus", WindowCategory::Model, 100)
-                .reset(now + 3 * d + 10 * h),
-            QuotaWindow::counted(
-                "credits",
-                "Extra usage credits",
-                WindowCategory::Other,
-                WindowUnit::Usd,
-                1_420,
-                5_000,
-            )
-            .spend("$14.20 of $50.00"),
-        ],
-    };
-    r.insert(a);
+    work.usage.freshness = FreshnessInfo::stale(now - 47 * 60, now + 13 * 60);
+    out.push(work);
 
-    let mut a = Account::registered(
+    let mut primary = account_with_source(
         "acct-codex-primary",
         "Primary",
         Provider::OpenAi,
-        CredentialSource::OnePassword(op_ref(
-            "chainargos.1password.com",
-            ("v_eng01", "Engineering"),
-            ("it_cdx01", "OpenAI · Codex Primary"),
-            "credential",
+        CredentialSource::OnePassword(op_reference(
+            "v_eng01",
+            "Engineering",
+            "it_cdx01",
+            "OpenAI · Codex Primary",
         )),
+        now,
     );
-    a.identity = AccountIdentity {
-        subject: handle("ChatGPT account org_7Hq2"),
-        plan: Some("Pro 20x".into()),
-    };
-    a.confidence = Confidence::Authoritative;
-    a.lifecycle = Lifecycle::Available;
-    a.purpose = Some("work".into());
-    a.default_for_provider = true;
-    a.validation = ValidationState::Valid(ValidationLevel::QuotaReadable);
-    a.last_refresh_secs = Some(now - 2 * 60);
-    a.usage = AccountUsage {
-        freshness: FreshnessInfo::current(now - 2 * 60),
-        windows: vec![
-            QuotaWindow::pct("session", "Session · 5-hour", WindowCategory::Session, 12)
-                .reset(now + 4 * h + 40 * 60),
-            QuotaWindow::pct("weekly", "Weekly · 7-day", WindowCategory::LongRange, 59)
-                .reset(now + 2 * d + 19 * h),
-            QuotaWindow::not_started("spark", "Codex Spark · 5-hour", WindowCategory::Model),
-            QuotaWindow::counted(
-                "credits",
-                "Credits",
-                WindowCategory::Other,
-                WindowUnit::Credits,
-                1_240,
-                5_000,
-            ),
-        ],
-    };
-    r.insert(a);
+    primary.identity = handle("ChatGPT account org_7Hq2");
+    primary.identity.plan = Some("Pro 20x".into());
+    primary.default_for_provider = true;
+    out.push(primary);
 
-    let mut a = Account::registered(
+    let mut experiments = account_with_source(
         "acct-codex-experiments",
         "Experiments",
         Provider::OpenAi,
@@ -842,99 +326,37 @@ fn accounts_mixed(now: i64) -> AccountRegistry {
             fingerprint: "7f3a91c2".into(),
             tail: "k7Qz".into(),
         },
+        now,
     );
-    a.identity = AccountIdentity {
-        subject: handle("ChatGPT account org_7Hq2"),
-        plan: Some("Plus".into()),
-    };
-    a.confidence = Confidence::Estimated;
-    a.lifecycle = Lifecycle::Available;
-    a.purpose = Some("experiments".into());
-    a.validation = ValidationState::Valid(ValidationLevel::IdentityAuthenticated);
-    a.last_refresh_secs = Some(now - 20 * 60);
-    a.issue = Some(RecoverableIssue::new(
+    experiments.identity = handle("ChatGPT account org_7Hq2");
+    experiments.identity.plan = Some("Plus".into());
+    experiments.confidence = Confidence::Estimated;
+    experiments.issue = Some(RecoverableIssue::new(
         IssueCode::QuotaUnsupported,
         "Quota not visible: OpenAI does not expose usage for API keys",
         Recoverability::Unsupported,
     ));
-    a.usage = AccountUsage {
-        freshness: FreshnessInfo::refreshing(Some(now - 20 * 60)),
-        windows: vec![
-            QuotaWindow::pct("session", "Session · 5-hour", WindowCategory::Session, 4)
-                .reset(now + 4 * h),
-            QuotaWindow::pct("weekly", "Weekly · 7-day", WindowCategory::LongRange, 12)
-                .reset(now + 2 * d + 19 * h),
-            QuotaWindow::counted(
-                "credits",
-                "Credits",
-                WindowCategory::Other,
-                WindowUnit::Credits,
-                90,
-                500,
-            ),
-            QuotaWindow::sentinel(
-                "quota",
-                "Quota",
-                QuotaStatus::Unsupported,
-                "Quota not visible for API keys",
-            ),
-        ],
-    };
-    r.insert(a);
+    out.push(experiments);
 
-    let mut a = Account::registered(
+    let mut grok = account_with_source(
         "acct-grok-team",
         "Team",
         Provider::XAi,
-        CredentialSource::OnePassword(op_ref(
-            "chainargos.1password.com",
-            ("v_eng01", "Engineering"),
-            ("it_grk01", "xAI · Grok Team"),
-            "credential",
+        CredentialSource::OnePassword(op_reference(
+            "v_eng01",
+            "Engineering",
+            "it_grk01",
+            "xAI · Grok Team",
         )),
+        now,
     )
     .with_endpoint("Grok Build (default)", "api.x.ai");
-    a.identity = AccountIdentity {
-        subject: handle("team_chainargos"),
-        plan: Some("Team · prepaid".into()),
-    };
-    a.confidence = Confidence::Authoritative;
-    a.lifecycle = Lifecycle::Available;
-    a.purpose = Some("shared".into());
-    a.default_for_provider = true;
-    a.validation = ValidationState::Valid(ValidationLevel::QuotaReadable);
-    a.last_refresh_secs = Some(now - 9 * 60);
-    a.usage = AccountUsage {
-        freshness: FreshnessInfo::current(now - 9 * 60),
-        windows: vec![
-            QuotaWindow::pct("monthly", "Monthly", WindowCategory::LongRange, 31)
-                .reset(now + 27 * d + 10 * h),
-            QuotaWindow::pct("weekly", "Weekly", WindowCategory::LongRange, 68)
-                .reset(now + 3 * d + 10 * h),
-            QuotaWindow::counted(
-                "credits",
-                "Credits",
-                WindowCategory::Other,
-                WindowUnit::Usd,
-                3_140,
-                10_000,
-            )
-            .spend("$68.60 remaining of $100.00"),
-            QuotaWindow::counted(
-                "ondemand",
-                "On-demand usage",
-                WindowCategory::Other,
-                WindowUnit::Usd,
-                315,
-                315,
-            )
-            .status(QuotaStatus::Available)
-            .spend("$3.15 this month"),
-        ],
-    };
-    r.insert(a);
+    grok.identity = handle("team_chainargos");
+    grok.identity.plan = Some("Team · prepaid".into());
+    grok.default_for_provider = true;
+    out.push(grok);
 
-    let mut a = Account::registered(
+    let mut opencode = account_with_source(
         "acct-opencode-go",
         "Go subscription",
         Provider::OpenCode,
@@ -942,17 +364,12 @@ fn accounts_mixed(now: i64) -> AccountRegistry {
             fingerprint: "c41d0be9".into(),
             tail: "m2Xa".into(),
         },
+        now,
     );
-    a.identity = AccountIdentity {
-        subject: handle("donbeave"),
-        plan: Some("OpenCode Go".into()),
-    };
-    a.confidence = Confidence::Authoritative;
-    a.lifecycle = Lifecycle::Available;
-    a.default_for_provider = true;
-    a.validation = ValidationState::Valid(ValidationLevel::IdentityAuthenticated);
-    a.last_refresh_secs = Some(now - 3 * h - 2 * 60);
-    a.issue = Some(
+    opencode.identity = handle("donbeave");
+    opencode.identity.plan = Some("OpenCode Go".into());
+    opencode.default_for_provider = true;
+    opencode.issue = Some(
         RecoverableIssue::new(
             IssueCode::RateLimited,
             "Rate limited: retry after 25 min",
@@ -961,19 +378,10 @@ fn accounts_mixed(now: i64) -> AccountRegistry {
         .detail("Last-good data kept from 3 h ago")
         .retry(now + 25 * 60),
     );
-    a.usage = AccountUsage {
-        freshness: FreshnessInfo::failed(Some(now - 3 * h - 2 * 60), Some(now + 25 * 60)),
-        windows: vec![
-            QuotaWindow::pct("rolling", "Rolling", WindowCategory::Session, 57)
-                .reset(now + h + 50 * 60),
-            QuotaWindow::pct("weekly", "Weekly", WindowCategory::LongRange, 45).reset(now + 3 * d),
-            QuotaWindow::pct("monthly", "Monthly", WindowCategory::LongRange, 22)
-                .reset(now + 27 * d),
-        ],
-    };
-    r.insert(a);
+    opencode.usage.freshness = FreshnessInfo::failed(Some(now - 3 * 3600), Some(now + 25 * 60));
+    out.push(opencode);
 
-    let mut a = Account::registered(
+    let mut archive = account_with_source(
         "acct-claude-archive",
         "Archived contractor laptop profile — do not use for production launches",
         Provider::Anthropic,
@@ -982,680 +390,394 @@ fn accounts_mixed(now: i64) -> AccountRegistry {
                 .into(),
             detected: DetectedKind::ClaudeApiKeyEnv,
         },
+        now,
     );
-    a.confidence = Confidence::PresenceOnly;
-    a.lifecycle = Lifecycle::NeedsLogin;
-    a.enabled = false;
-    a.validation = ValidationState::Valid(ValidationLevel::MaterialDiscovered);
-    a.last_refresh_secs = Some(now - 30 * d);
-    a.issue = Some(RecoverableIssue::new(
+    archive.enabled = false;
+    archive.confidence = Confidence::PresenceOnly;
+    archive.lifecycle = Lifecycle::NeedsLogin;
+    archive.issue = Some(RecoverableIssue::new(
         IssueCode::IdentityUnresolved,
         "Identity unresolved · showing usage without a public handle",
         Recoverability::Unsupported,
     ));
-    a.usage = AccountUsage {
-        freshness: FreshnessInfo::current(now - 30 * d),
-        windows: vec![],
-    };
-    r.insert(a);
+    out.push(archive);
 
-    // discovered, read-only
-    let mut a = Account::discovered(
-        "disc-amp",
-        "discovered",
-        Provider::Amp,
-        CredentialSource::LocalFolder {
-            path: "~/.config/amp/secrets.json".into(),
-            detected: DetectedKind::AmpSecrets,
-        },
-    );
-    a.identity = AccountIdentity {
-        subject: None,
-        plan: Some("Free".into()),
-    };
-    a.confidence = Confidence::PresenceOnly;
-    a.lifecycle = Lifecycle::Available;
-    a.validation = ValidationState::Valid(ValidationLevel::QuotaReadable);
-    a.last_refresh_secs = Some(now - 60);
-    a.usage = AccountUsage {
-        freshness: FreshnessInfo::current(now - 60),
-        windows: vec![
-            QuotaWindow::pct(
-                "daily_free",
-                "Amp Free · daily",
-                WindowCategory::Session,
-                91,
-            )
-            .reset(now + 10 * h),
-            QuotaWindow::counted(
-                "credits",
-                "Individual credits",
-                WindowCategory::Other,
-                WindowUnit::Usd,
-                0,
-                0,
-            )
-            .spend("$0.00"),
-        ],
-    };
-    r.insert(a);
+    out.extend([
+        discovered_account(
+            "disc-amp",
+            "discovered",
+            Provider::Amp,
+            CredentialSource::LocalFolder {
+                path: "~/.config/amp/secrets.json".into(),
+                detected: DetectedKind::AmpSecrets,
+            },
+            now,
+        ),
+        discovered_account(
+            "disc-zai",
+            "discovered",
+            Provider::Zai,
+            CredentialSource::HostEnv {
+                var: "ZAI_API_KEY".into(),
+                detected: DetectedKind::ZaiApiKeyEnv,
+            },
+            now,
+        ),
+        discovered_account(
+            "disc-kimi",
+            "discovered",
+            Provider::Moonshot,
+            CredentialSource::LocalFolder {
+                path: "~/.kimi".into(),
+                detected: DetectedKind::KimiApiKeyEnv,
+            },
+            now,
+        ),
+        discovered_account(
+            "disc-minimax",
+            "discovered",
+            Provider::MiniMax,
+            CredentialSource::HostEnv {
+                var: "MINIMAX_API_TOKEN".into(),
+                detected: DetectedKind::MinimaxTokenEnv,
+            },
+            now,
+        ),
+        discovered_account(
+            "disc-opencode-ci",
+            "ci-bot",
+            Provider::OpenCode,
+            CredentialSource::LocalFolder {
+                path: "~/.local/share/opencode/auth.json".into(),
+                detected: DetectedKind::OpenCodeGoAuthJson,
+            },
+            now,
+        ),
+    ]);
 
-    let mut a = Account::discovered(
-        "disc-zai",
-        "discovered",
-        Provider::Zai,
-        CredentialSource::HostEnv {
-            var: "ZAI_API_KEY".into(),
-            detected: DetectedKind::ZaiApiKeyEnv,
-        },
-    );
-    a.identity = AccountIdentity {
-        subject: handle("zai_9f1c"),
-        plan: Some("GLM Coding Plan Pro".into()),
-    };
-    a.confidence = Confidence::Authoritative;
-    a.lifecycle = Lifecycle::Available;
-    a.validation = ValidationState::Valid(ValidationLevel::QuotaReadable);
-    a.last_refresh_secs = Some(now - 2 * h - 15 * 60);
-    a.issue = Some(RecoverableIssue::new(
-        IssueCode::Stale,
-        "Usage stale · last good 2 h ago",
-        Recoverability::Retryable,
-    ));
-    a.usage = AccountUsage {
-        freshness: FreshnessInfo::stale(now - 2 * h - 15 * 60, now + 10 * 60),
-        windows: vec![
-            QuotaWindow::counted(
-                "session",
-                "Session",
-                WindowCategory::Session,
-                WindowUnit::Tokens,
-                4_200_000,
-                10_000_000,
-            )
-            .reset(now + 2 * h),
-            QuotaWindow::counted(
-                "weekly",
-                "Weekly",
-                WindowCategory::LongRange,
-                WindowUnit::Tokens,
-                61_000_000,
-                80_000_000,
-            )
-            .reset(now + 4 * d),
-            QuotaWindow::counted(
-                "credits",
-                "Credits",
-                WindowCategory::Other,
-                WindowUnit::Credits,
-                310,
-                1_000,
-            ),
-        ],
-    };
-    r.insert(a);
-
-    let mut a = Account::discovered(
-        "disc-kimi",
-        "discovered",
-        Provider::Moonshot,
-        CredentialSource::LocalFolder {
-            path: "~/.kimi".into(),
-            detected: DetectedKind::KimiApiKeyEnv,
-        },
-    );
-    a.identity = AccountIdentity {
-        subject: None,
-        plan: Some("Kimi Code".into()),
-    };
-    a.confidence = Confidence::PresenceOnly;
-    a.lifecycle = Lifecycle::NeedsSecret;
-    a.validation = ValidationState::Valid(ValidationLevel::MaterialDiscovered);
-    a.issue = Some(RecoverableIssue::new(
-        IssueCode::CredentialFileMissing,
-        "No credential found: ~/.kimi has no api key",
-        Recoverability::ActionRequired,
-    ));
-    a.usage = AccountUsage {
-        freshness: FreshnessInfo::failed(None, None),
-        windows: vec![QuotaWindow::sentinel(
-            "quota",
-            "Quota",
-            QuotaStatus::Unavailable,
-            "Quota unavailable until a key is present",
-        )],
-    };
-    r.insert(a);
-
-    let mut a = Account::discovered(
-        "disc-minimax",
-        "discovered",
-        Provider::MiniMax,
-        CredentialSource::HostEnv {
-            var: "MINIMAX_API_TOKEN".into(),
-            detected: DetectedKind::MinimaxTokenEnv,
-        },
-    );
-    a.identity = AccountIdentity {
-        subject: handle("mm_4471"),
-        plan: Some("Coding Plan".into()),
-    };
-    a.confidence = Confidence::Estimated;
-    a.lifecycle = Lifecycle::Unavailable;
-    a.validation = ValidationState::Valid(ValidationLevel::IdentityAuthenticated);
-    a.last_refresh_secs = Some(now - 6 * h);
-    a.issue = Some(
-        RecoverableIssue::new(
-            IssueCode::ProviderUnavailable,
-            "Provider unavailable: MiniMax did not respond",
-            Recoverability::Retryable,
-        )
-        .detail("Timed out after 8 s"),
-    );
-    a.usage = AccountUsage {
-        freshness: FreshnessInfo::failed(Some(now - 6 * h), Some(now + 15 * 60)),
-        windows: vec![
-            QuotaWindow::pct(
-                "general_session",
-                "General · Session",
-                WindowCategory::Session,
-                8,
-            )
-            .reset(now + 3 * h),
-            QuotaWindow::pct(
-                "general_weekly",
-                "General · Weekly",
-                WindowCategory::LongRange,
-                34,
-            )
-            .reset(now + 5 * d),
-            QuotaWindow::pct(
-                "m2_weekly",
-                "MiniMax-M2 · Weekly",
-                WindowCategory::Model,
-                47,
-            )
-            .reset(now + 5 * d),
-        ],
-    };
-    r.insert(a);
-
-    let mut a = Account::discovered(
-        "disc-opencode-ci",
-        "ci-bot",
-        Provider::OpenCode,
-        CredentialSource::LocalFolder {
-            path: "~/.local/share/opencode/auth.json".into(),
-            detected: DetectedKind::OpenCodeGoAuthJson,
-        },
-    );
-    a.identity = AccountIdentity {
-        subject: handle("ci-bot"),
-        plan: None,
-    };
-    a.confidence = Confidence::Authoritative;
-    a.lifecycle = Lifecycle::Unsupported;
-    a.validation = ValidationState::Valid(ValidationLevel::IdentityAuthenticated);
-    a.last_refresh_secs = Some(now - 5 * 60);
-    a.issue = Some(RecoverableIssue::new(
-        IssueCode::QuotaUnsupported,
-        "Quota not visible: OpenCode returned 403",
-        Recoverability::Unsupported,
-    ));
-    a.usage = AccountUsage {
-        freshness: FreshnessInfo::current(now - 5 * 60),
-        windows: vec![QuotaWindow::sentinel(
-            "quota",
-            "Quota",
-            QuotaStatus::Unsupported,
-            "Quota not visible: OpenCode returned 403",
-        )],
-    };
-    r.insert(a);
-    r
+    out
 }
 
-fn accounts_hard(now: i64) -> AccountRegistry {
-    let mut r = accounts_mixed(now);
-    let mut a = Account::registered(
+fn account_with_source(
+    id: &str,
+    name: &str,
+    provider: Provider,
+    source: CredentialSource,
+    now: i64,
+) -> Account {
+    let mut account = Account::registered(id, name, provider, source);
+    account.lifecycle = Lifecycle::Available;
+    account.confidence = Confidence::Authoritative;
+    account.validation = ValidationState::Valid(ValidationLevel::QuotaReadable);
+    account.last_refresh_secs = Some(now);
+    account.usage = AccountUsage {
+        freshness: FreshnessInfo::current(now),
+        windows: provider::windows_for(provider, now, false),
+    };
+    account
+}
+
+fn discovered_account(
+    id: &str,
+    name: &str,
+    provider: Provider,
+    source: CredentialSource,
+    now: i64,
+) -> Account {
+    let mut account = Account::discovered(id, name, provider, source);
+    account.lifecycle = match provider {
+        Provider::Moonshot => Lifecycle::NeedsSecret,
+        Provider::MiniMax => Lifecycle::Unavailable,
+        Provider::OpenCode if id == "disc-opencode-ci" => Lifecycle::Unsupported,
+        _ => Lifecycle::Available,
+    };
+    account.confidence = Confidence::PresenceOnly;
+    account.validation = ValidationState::Valid(ValidationLevel::MaterialDiscovered);
+    account.last_refresh_secs = Some(now);
+    account.usage = AccountUsage {
+        freshness: if account.lifecycle == Lifecycle::Available {
+            FreshnessInfo::current(now)
+        } else {
+            FreshnessInfo::failed(Some(now), None)
+        },
+        windows: provider::windows_for(provider, now, false),
+    };
+    account
+}
+
+fn handle(subject: &str) -> AccountIdentity {
+    AccountIdentity {
+        subject: Some(IdentitySubject::Handle(subject.into())),
+        plan: None,
+    }
+}
+
+/// Roles visible in the role picker.
+pub fn fixture_roles() -> Vec<RoleEntry> {
+    vec![
+        RoleEntry {
+            namespace: "chainargos".into(),
+            name: "the-architect".into(),
+            source: RoleSource::Git {
+                url: "https://github.com/chainargos/roles".into(),
+                branch: "main".into(),
+            },
+            trusted: true,
+            in_registry: true,
+            description: "Plan and review repository-scale changes".into(),
+            load_error: None,
+        },
+        RoleEntry {
+            namespace: "chainargos".into(),
+            name: "reviewer".into(),
+            source: RoleSource::Git {
+                url: "https://github.com/chainargos/roles".into(),
+                branch: "main".into(),
+            },
+            trusted: true,
+            in_registry: true,
+            description: "Review diffs and preserve invariants".into(),
+            load_error: None,
+        },
+        RoleEntry {
+            namespace: "chainargos".into(),
+            name: "incident".into(),
+            source: RoleSource::Local {
+                path: "~/.jackin/roles/incident".into(),
+            },
+            trusted: false,
+            in_registry: false,
+            description: "Triage a production incident with restricted mounts".into(),
+            load_error: None,
+        },
+    ]
+}
+
+/// Scenario-specific Role registry.  Hard-case fixtures intentionally carry
+/// a large registry so keyed pickers and scoped configuration do not regress
+/// to positional selection when more than one screenful is present.
+pub fn fixture_roles_for(scenario: crate::scenario::Scenario) -> Vec<RoleEntry> {
+    let mut roles = fixture_roles();
+    if scenario == crate::scenario::Scenario::HardCases {
+        roles.extend((1..=128).map(|index| RoleEntry {
+            namespace: "chainargos".into(),
+            name: format!("svc-{index:03}"),
+            source: RoleSource::Git {
+                url: "https://github.com/chainargos/roles".into(),
+                branch: "main".into(),
+            },
+            trusted: true,
+            in_registry: true,
+            description: format!("Generated service role #{index}"),
+            load_error: None,
+        }));
+    }
+    roles
+}
+
+/// Scenario-specific Workspace registry.  The extra records are durable
+/// fixture data; they are not inferred from live daemon snapshots.
+pub fn fixture_workspaces_for(scenario: crate::scenario::Scenario) -> Vec<Workspace> {
+    let mut workspaces = vec![fixture_workspace()];
+    if scenario == crate::scenario::Scenario::HardCases {
+        for (id, name) in [
+            (2, "infra-control-plane"),
+            (3, "release-automation"),
+            (4, "customer-portal"),
+            (5, "data-pipeline"),
+            (6, "docs-site"),
+            (7, "shared-libraries"),
+            (8, "mobile-shell"),
+            (9, "observability"),
+            (10, "sandbox"),
+        ] {
+            let mut workspace = Workspace::new(id, name, &format!("/workspace/{name}"));
+            workspace.roles = RolePolicy {
+                allowed: AllowedRoles::All,
+                default: Some("chainargos/the-architect".into()),
+                last: Some("chainargos/the-architect".into()),
+            };
+            workspaces.push(workspace);
+        }
+    }
+    workspaces
+}
+
+/// Hard-case account registry with the revoked xAI record added to the
+/// complete mixed-provider fixture.
+pub fn fixture_hard_accounts(op: &SimOnePassword, now: i64) -> AccountRegistry {
+    let mut registry = fixture_accounts(op, now);
+    let mut revoked = account_with_source(
         "acct-grok-revoked",
         "Revoked key",
         Provider::XAi,
-        CredentialSource::OnePassword(op_ref(
-            "chainargos.1password.com",
-            ("v_eng01", "Engineering"),
-            ("it_leg01", "Legacy · Rotated key"),
-            "credential",
+        CredentialSource::OnePassword(op_reference(
+            "v_eng01",
+            "Engineering",
+            "it_leg01",
+            "Legacy · Rotated key",
         )),
+        now,
     );
-    a.lifecycle = Lifecycle::NeedsLogin;
-    a.validation = ValidationState::Invalid(RecoverableIssue::new(
+    revoked.lifecycle = Lifecycle::NeedsLogin;
+    let issue = RecoverableIssue::new(
         IssueCode::Unauthorized,
         "Not authorized: xAI rejected the credential",
         Recoverability::ActionRequired,
-    ));
-    a.issue = Some(
-        RecoverableIssue::new(
-            IssueCode::Unauthorized,
-            "Not authorized: xAI rejected the credential",
-            Recoverability::ActionRequired,
+    );
+    revoked.validation = ValidationState::Invalid(issue.clone());
+    revoked.issue = Some(issue);
+    revoked.usage.freshness = FreshnessInfo::failed(None, None);
+    registry.insert(revoked);
+    registry
+}
+
+/// The saved Workspace used by the manager and launch fixtures.
+pub fn fixture_workspace() -> Workspace {
+    let mut workspace = Workspace::new(
+        PAYMENTS_WORKSPACE,
+        PAYMENTS_WORKSPACE_NAME,
+        PAYMENTS_WORKDIR,
+    );
+    workspace.mounts = vec![
+        Mount::host(PAYMENTS_WORKDIR, "/workspace").scope(MountScope::Workspace),
+        Mount::git(
+            "git@github.com:chainargos/payments-platform.git",
+            "/workspace",
         )
-        .detail("HTTP 401 · re-login required"),
-    );
-    a.last_refresh_secs = Some(now - 40 * 60);
-    a.usage = AccountUsage {
-        freshness: FreshnessInfo::failed(None, None),
-        windows: vec![],
+        .scope(MountScope::Workspace),
+    ];
+    workspace.roles = RolePolicy {
+        allowed: AllowedRoles::Custom(vec![
+            "chainargos/the-architect".into(),
+            "chainargos/reviewer".into(),
+            "chainargos/incident".into(),
+        ]),
+        default: Some("chainargos/the-architect".into()),
+        last: Some("chainargos/reviewer".into()),
     };
-    r.insert(a);
-    // long labels
-    if let Some(w) = r.get_mut("acct-claude-work")
-        && let Some(win) = w.usage.windows.iter_mut().find(|w| w.id == "weekly")
-    {
-        win.label =
-            "Weekly · all models · includes Claude Code, desktop and API usage on the Team plan"
-                .into();
-    }
-    r
+    workspace.env = vec![
+        EnvVar::plain("APP_ENV", "staging"),
+        EnvVar::host("TERM_PROGRAM", "TERM_PROGRAM"),
+        EnvVar::op(
+            "DEPLOY_TOKEN",
+            op_reference("v_eng01", "Engineering", "it_dep01", "Prod · Deploy token"),
+        ),
+    ];
+    workspace.keep_awake = true;
+    workspace.git_pull = true;
+    workspace.accounts.enabled = BTreeSet::from(["grok-host".into()]);
+    workspace
+        .accounts
+        .preferred
+        .insert(Provider::Anthropic, "anthropic-work".into());
+    workspace
+        .accounts
+        .preferred
+        .insert(Provider::OpenAi, "openai-primary".into());
+    workspace.accounts.role_preferred.insert(
+        ("chainargos/reviewer".into(), Provider::Anthropic),
+        "anthropic-work".into(),
+    );
+    workspace.dirty_policy = DirtyExitPolicy::Keep;
+    workspace
 }
 
-// -------------------------------------------------------------- worlds
-
-fn base_world(scenario: Scenario) -> World {
-    let clock = Clock::new();
-    let now = clock.now_secs();
-    let mut w = World {
-        scenario,
-        clock,
-        arbiter: Arbiter::new(0),
-        home: HOME.into(),
-        cwd: format!("{HOME}/src/payments-platform"),
-        workspaces: vec![],
-        next_workspace_id: 100,
-        roles: roles(),
-        instances: vec![],
-        daemons: BTreeMap::new(),
-        global: global(false),
-        accounts: AccountRegistry::default(),
-        op: SimOnePassword::fixture(now),
-        fs: fs(),
-        github: github(),
-        clipboard: None,
-        jobs: vec![],
-        daemon_health: DaemonHealth::Healthy,
-        last_refresh_secs: now - 3,
-        refresh_fails: false,
-        save_fails_once: false,
-        takeover_at_ms: None,
-        session_accounts: BTreeMap::new(),
-        discovery_pending: false,
-    };
-    w.sync_arbiter();
-    w
-}
-
-/// Populated world shared by returning / accounts / launch / capsule.
-fn populated(scenario: Scenario, rich: bool) -> World {
-    let mut w = base_world(scenario);
-    let now = w.now_secs();
-    let h = 3600;
-    let d = 86_400;
-    w.workspaces = workspaces(rich);
-    w.global = global(true);
-    w.accounts = if rich {
-        accounts_hard(now)
-    } else {
-        accounts_mixed(now)
-    };
-    // instances
-    let mut i1 = instance(
-        "jk-7f3a",
-        Some(1),
-        "payments-platform",
-        "the-architect",
-        Agent::ClaudeCode,
-        InstanceStatus::Running,
-        now - 2 * h - 14 * 60,
-        now - 3,
-    );
-    i1.branch = Some("feature/settlement-backoff".into());
-    i1.pr = Some((482, "Settlement retry backoff".into()));
-    i1.uncommitted = 2;
-    i1.unpushed = 1;
-    i1.sessions = Ok(vec![
-        SessionRecord {
-            id: "s-01".into(),
+/// A live instance with independent persisted manifest and daemon snapshot.
+pub fn fixture_instance(
+    status: InstanceStatus,
+    run_id: RunId,
+    now: i64,
+    daemon: DaemonSnapshot,
+) -> Instance {
+    Instance {
+        id: instance_id_for(status),
+        container: "jackin-payments-platform".into(),
+        workspace: Some(PAYMENTS_WORKSPACE),
+        workdir: PAYMENTS_WORKDIR.into(),
+        role: "chainargos/the-architect".into(),
+        agent: Agent::ClaudeCode,
+        status,
+        created_secs: now - 12 * 60,
+        last_seen_secs: now,
+        run_id,
+        sessions: Ok(vec![SessionRecord {
+            id: "sess-01".into(),
             agent: Some(Agent::ClaudeCode),
-            label: "claude · the-architect".into(),
-            status: SessionStatus::Active,
-            started_secs: now - 2 * h - 14 * 60,
-        },
-        SessionRecord {
-            id: "s-02".into(),
-            agent: Some(Agent::Codex),
-            label: "codex · ledger tests".into(),
-            status: SessionStatus::Exited(0),
-            started_secs: now - d,
-        },
-    ]);
-    let mut i2 = instance(
-        "jk-c41e",
-        Some(1),
-        "payments-platform",
-        "reviewer",
-        Agent::Codex,
-        InstanceStatus::PreservedDirty,
-        now - d - 3 * h,
-        now - d,
-    );
-    i2.uncommitted = 3;
-    i2.sessions = Ok(vec![SessionRecord {
-        id: "s-03".into(),
-        agent: Some(Agent::Codex),
-        label: "codex · review".into(),
-        status: SessionStatus::Exited(0),
-        started_secs: now - d - 3 * h,
-    }]);
-    let mut i3 = instance(
-        "jk-9b02",
-        Some(2),
-        "infra-control-plane",
-        "sre",
-        Agent::Codex,
-        InstanceStatus::Running,
-        now - 40 * 60,
-        now - 2,
-    );
-    i3.branch = Some("sre/node-pools".into());
-    i3.sessions = Ok(vec![SessionRecord {
-        id: "s-04".into(),
-        agent: Some(Agent::Codex),
-        label: "codex · sre".into(),
-        status: SessionStatus::Active,
-        started_secs: now - 40 * 60,
-    }]);
-    let mut i4 = instance(
-        "jk-12ee",
-        Some(4),
-        "customer-portal",
-        "writer",
-        Agent::Amp,
-        InstanceStatus::Crashed,
-        now - 5 * h,
-        now - 4 * h,
-    );
-    i4.sessions = Ok(vec![SessionRecord {
-        id: "s-05".into(),
-        agent: Some(Agent::Amp),
-        label: "amp · docs".into(),
-        status: SessionStatus::Crashed,
-        started_secs: now - 5 * h,
-    }]);
-    let i5 = instance(
-        "jk-a1c0",
-        Some(3),
-        "release-automation",
-        "backend",
-        Agent::OpenCode,
-        InstanceStatus::RestoreAvailable,
-        now - 3 * d,
-        now - 3 * d,
-    );
-    let mut i6 = instance(
-        "jk-04d7",
-        Some(2),
-        "infra-control-plane",
-        "sre",
-        Agent::GrokBuild,
-        InstanceStatus::PreservedUnpushed,
-        now - 2 * d,
-        now - 2 * d,
-    );
-    i6.unpushed = 2;
-    let i7 = instance(
-        "jk-77aa",
-        Some(1),
-        "payments-platform",
-        "backend",
-        Agent::Codex,
-        InstanceStatus::Superseded,
-        now - 6 * d,
-        now - 6 * d,
-    );
-    let i8 = instance(
-        "jk-88bb",
-        Some(4),
-        "customer-portal",
-        "writer",
-        Agent::KimiCode,
-        InstanceStatus::Purged,
-        now - 9 * d,
-        now - 9 * d,
-    );
-    let mut i9 = instance(
-        "jk-5e5e",
-        Some(3),
-        "release-automation",
-        "backend",
-        Agent::Codex,
-        InstanceStatus::FailedSetup,
-        now - 30 * 60,
-        now - 30 * 60,
-    );
-    i9.sessions = Ok(vec![]);
-    w.instances = vec![i1, i2, i3, i4, i5, i6, i7, i8, i9];
-    if rich {
-        // many instances, missing daemon data, manifest error
-        let mut i10 = instance(
-            "jk-e0e0",
-            Some(10),
-            "data-pipeline",
-            "backend",
-            Agent::ClaudeCode,
-            InstanceStatus::Running,
-            now - 10 * 60,
-            now - 90,
-        );
-        i10.sessions = Err(ManifestError::ReadError);
-        w.instances.push(i10);
-        let i11 = instance(
-            "jk-f1f1",
-            Some(11),
-            "docs-site",
-            "writer",
-            Agent::KimiCode,
-            InstanceStatus::CleanExited,
-            now - 4 * d,
-            now - 4 * d,
-        );
-        w.instances.push(i11);
-        for k in 0..6 {
-            let id = format!("jk-b{k}{k}{k}");
-            let st = if k % 2 == 0 {
-                InstanceStatus::CleanExited
+            label: "Architecture review".into(),
+            status: if status == InstanceStatus::Running {
+                SessionStatus::Active
             } else {
-                InstanceStatus::RestoreAvailable
-            };
-            w.instances.push(instance(
-                &id,
-                Some(1),
-                "payments-platform",
-                "reviewer",
-                Agent::Codex,
-                st,
-                now - (k + 2) * d,
-                now - (k + 2) * d,
-            ));
-        }
-    }
-    // daemons for running instances
-    let now_ms = w.now_ms();
-    let mut d1 = Daemon::new("payments-platform");
-    d1.new_tab(
-        Some(Agent::ClaudeCode),
-        Some("acct-claude-work".into()),
-        now_ms - 60_000,
-        true,
-    );
-    d1.split(
-        SplitDir::Horizontal,
-        false,
-        Some(Agent::Codex),
-        Some("acct-codex-primary".into()),
-        now_ms - 50_000,
-        true,
-    );
-    d1.split(SplitDir::Vertical, false, None, None, now_ms - 40_000, true);
-    if let Some(t) = d1.active_tab_mut() {
-        t.focused = 1;
-    }
-    d1.new_tab(None, None, now_ms - 30_000, true);
-    d1.new_tab(Some(Agent::Amp), None, now_ms - 20_000, true);
-    if let Some(t) = d1.tabs.get_mut(2) {
-        t.custom_label = Some("docs".into());
-    }
-    d1.active = 0;
-    // long shell log for scrollback
-    if let Some(p) = d1.pane_mut(3) {
-        for n in 0..1_960u32 {
-            let status = match n % 7 {
-                0 => "retrying attempt=2",
-                3 => "retrying attempt=1",
-                _ => "settled",
-            };
-            let items = 9 + (n * 37) % 50;
-            let l = if n % 60 == 0 {
-                vec![junie_tui::widgets::viewport::Span::muted(format!(
-                    "==== settlement.batch.2026-09-03T{:02}:{:02}Z ====",
-                    9 + n / 360,
-                    (n / 6) % 60
-                ))]
-            } else if n % 23 == 0 {
-                vec![junie_tui::widgets::viewport::Span::new(
-                    format!("warn: batch {} backoff 500 ms", 4000 + n),
-                    junie_tui::theme::Tone::Warning,
-                )]
-            } else if n % 97 == 0 {
-                vec![junie_tui::widgets::viewport::Span::new(
-                    format!("error: batch {} gave up after 3 attempts", 4000 + n),
-                    junie_tui::theme::Tone::Error,
-                )]
-            } else {
-                vec![junie_tui::widgets::viewport::Span::plain(format!(
-                    "batch {}  {:>2} items   status={status}",
-                    4000 + n,
-                    items
-                ))]
-            };
-            p.term.lines.insert(0, l);
-        }
-        p.term.set_lines(p.term.lines.clone());
-    }
-    w.daemons.insert("jk-7f3a".into(), d1);
-    let mut d3 = Daemon::new("infra-control-plane");
-    d3.new_tab(
-        Some(Agent::Codex),
-        Some("acct-codex-experiments".into()),
-        now_ms - 30_000,
-        true,
-    );
-    w.daemons.insert("jk-9b02".into(), d3);
-    if rich {
-        let d10 = Daemon::new("data-pipeline");
-        w.daemons.insert("jk-e0e0".into(), d10);
-        // its daemon never answers
-        if let Some(i) = w.instance_mut("jk-e0e0") {
-            i.daemon = DaemonSnapshot::Unavailable;
-        }
-        w.daemons.remove("jk-e0e0");
-    }
-    // a larger Role registry: the scoped-config screens must stay readable
-    w.roles.extend(generated_roles(if rich { 120 } else { 40 }));
-    // every instance carries the effective account set of its Workspace
-    let registry = w.accounts.clone();
-    let sets: Vec<(u32, Vec<AccountId>)> = w
-        .workspaces
-        .iter()
-        .map(|ws| {
-            (
-                ws.id,
-                ws.effective_accounts(&registry)
-                    .into_iter()
-                    .map(|e| e.id)
-                    .collect(),
-            )
-        })
-        .collect();
-    for i in w.instances.iter_mut() {
-        if let Some((_, set)) = i
-            .workspace
-            .and_then(|id| sets.iter().find(|(w, _)| *w == id))
-        {
-            i.accounts = set.clone();
-        }
-    }
-    refresh_snapshots(&mut w);
-    w.sync_arbiter();
-    w
-}
-
-/// Copy live daemon topology into the instance records' snapshots.
-pub fn refresh_snapshots(w: &mut World) {
-    let snaps: Vec<(String, DaemonSnapshot)> = w
-        .daemons
-        .iter()
-        .map(|(id, d)| (id.clone(), d.snapshot()))
-        .collect();
-    for (id, s) in snaps {
-        if let Some(i) = w.instance_mut(&id) {
-            i.daemon = s;
-        }
-    }
-    for i in w.instances.iter_mut() {
-        if i.status != InstanceStatus::Running {
-            i.daemon = DaemonSnapshot::Unavailable;
-        }
+                SessionStatus::Exited(0)
+            },
+            started_secs: now - 10 * 60,
+        }]),
+        daemon,
+        branch: Some("feat/settlement-retry".into()),
+        pr: Some((184, "Retry settlement after a provider timeout".into())),
+        default_branch: "main".into(),
+        uncommitted: usize::from(status == InstanceStatus::PreservedDirty),
+        unpushed: usize::from(status == InstanceStatus::PreservedUnpushed),
+        accounts: vec!["anthropic-work".into(), "openai-primary".into()],
     }
 }
 
-pub fn world_for(scenario: Scenario) -> World {
-    match scenario {
-        Scenario::FirstUse => {
-            let mut w = base_world(scenario);
-            w.discovery_pending = true;
-            w
-        }
-        Scenario::Returning
-        | Scenario::AccountsMixed
-        | Scenario::LaunchRunning
-        | Scenario::LaunchFailure
-        | Scenario::CapsuleMulti => populated(scenario, false),
-        Scenario::OutroLast => {
-            let mut w = populated(scenario, false);
-            // only one instance runs; entered 2 h 14 min ago
-            for i in w.instances.iter_mut() {
-                if i.id == "jk-9b02" {
-                    i.status = InstanceStatus::CleanExited;
-                }
-            }
-            w.daemons.remove("jk-9b02");
-            refresh_snapshots(&mut w);
-            w.sync_arbiter();
-            w.arbiter.entered_at_ms = Some(-8_040_000);
-            w
-        }
-        Scenario::HardCases => {
-            let mut w = populated(scenario, true);
-            w.op.session = OpSession::Locked;
-            w.daemon_health = DaemonHealth::Stale;
-            w.refresh_fails = true;
-            w.save_fails_once = true;
-            w.arbiter.discovery = Err(DiscoveryError::IndexUnreadable);
-            w.arbiter.entered_at_ms = None;
-            w.takeover_at_ms = Some(45_000);
-            w
-        }
+fn instance_id_for(status: InstanceStatus) -> InstanceId {
+    match status {
+        InstanceStatus::Running => "jk-7f3a".into(),
+        InstanceStatus::Crashed => "jk-crash".into(),
+        InstanceStatus::PreservedDirty => "jk-dirty".into(),
+        InstanceStatus::PreservedUnpushed => "jk-unpushed".into(),
+        _ => "jk-history".into(),
     }
+}
+
+/// Daemon state for the primary Capsule fixture.
+pub fn live_capsule() -> DaemonSnapshot {
+    DaemonSnapshot::Tabs(vec![
+        TabSnapshot {
+            label: "payments review".into(),
+            active: true,
+            panes: vec![
+                PaneSnapshot {
+                    label: "Claude Code".into(),
+                    agent: Some(Agent::ClaudeCode),
+                    state: AgentState::Working,
+                    focused: true,
+                },
+                PaneSnapshot {
+                    label: "Codex".into(),
+                    agent: Some(Agent::Codex),
+                    state: AgentState::Idle,
+                    focused: false,
+                },
+            ],
+        },
+        TabSnapshot {
+            label: "shell".into(),
+            active: false,
+            panes: vec![PaneSnapshot {
+                label: "terminal".into(),
+                agent: None,
+                state: AgentState::Idle,
+                focused: false,
+            }],
+        },
+    ])
+}
+
+/// Useful only for tests and diagnostics: all populated fixture records are
+/// deterministic and contain no resolved credential material.
+pub fn fixture_metadata(op: &SimOnePassword) -> (usize, usize) {
+    let accounts = op.accounts.len();
+    let fields = op
+        .accounts
+        .iter()
+        .flat_map(|account| account.vaults.iter())
+        .flat_map(|vault| vault.items.iter())
+        .map(|item| item.fields.len())
+        .sum();
+    (accounts, fields)
 }
 
 #[cfg(test)]
@@ -1663,152 +785,59 @@ mod tests {
     use super::*;
 
     #[test]
-    fn precedence_order_and_why() {
-        let w = populated(Scenario::Returning, false);
-        let ws = w.workspace(1).unwrap();
-        // Personal is the inherited registry default; Work is enabled here too
-        let r = resolve_account(Provider::Anthropic, Some(ws), None, None, &w.accounts);
-        assert_eq!(r.account.as_deref(), Some("acct-claude-personal"));
-        assert_eq!(r.level, PrecedenceLevel::ProviderDefault);
-        assert!(r.why.contains("overrides Workspace choice"), "{}", r.why);
-        let s = "acct-claude-work".to_owned();
-        let r2 = resolve_account(Provider::Anthropic, Some(ws), None, Some(&s), &w.accounts);
-        assert_eq!(r2.level, PrecedenceLevel::Session);
-        // the reviewer Role prefers Work
-        let rr = resolve_account(
+    fn account_precedence_is_explicit_and_deterministic() {
+        let op = SimOnePassword::fixture(0);
+        let registry = fixture_accounts(&op, 0);
+        let workspace = fixture_workspace();
+
+        let session = "openai-primary".to_owned();
+        let resolved = resolve_account(
+            Provider::OpenAi,
+            Some(&workspace),
+            Some("chainargos/the-architect"),
+            Some(&session),
+            &registry,
+        );
+        assert_eq!(resolved.account.as_deref(), Some("openai-primary"));
+        assert_eq!(resolved.level, Some(PrecedenceLevel::Session));
+
+        let resolved = resolve_account(
             Provider::Anthropic,
-            Some(ws),
-            Some("reviewer"),
+            Some(&workspace),
+            Some("chainargos/reviewer"),
             None,
-            &w.accounts,
+            &registry,
         );
-        assert_eq!(rr.account.as_deref(), Some("acct-claude-work"));
-        assert_eq!(rr.level, PrecedenceLevel::Role);
-        // a session choice outside the effective set is ignored
-        let foreign = "acct-codex-primary".to_owned();
-        let r2b = resolve_account(
-            Provider::Anthropic,
-            Some(ws),
-            None,
-            Some(&foreign),
-            &w.accounts,
-        );
-        assert_eq!(r2b.level, PrecedenceLevel::ProviderDefault);
-        // infra-control-plane switched the Codex default off and enabled Experiments
-        let ws2 = w.workspace(2).unwrap();
-        let rc = resolve_account(Provider::OpenAi, Some(ws2), None, None, &w.accounts);
-        assert_eq!(rc.account.as_deref(), Some("acct-codex-experiments"));
-        assert_eq!(rc.level, PrecedenceLevel::Workspace);
-        let r3 = resolve_account(Provider::OpenAi, None, None, None, &w.accounts);
-        assert_eq!(r3.level, PrecedenceLevel::ProviderDefault);
-        let r4 = resolve_account(Provider::Amp, None, None, None, &w.accounts);
-        assert_eq!(r4.level, PrecedenceLevel::Discovered);
-        let r5 = resolve_account(Provider::Moonshot, None, None, None, &w.accounts);
-        assert_eq!(r5.level, PrecedenceLevel::None);
+        assert_eq!(resolved.account.as_deref(), Some("anthropic-work"));
+        assert_eq!(resolved.level, Some(PrecedenceLevel::Role));
     }
 
     #[test]
-    fn workspace_policy_builds_a_deterministic_effective_set() {
-        use crate::domain::workspace::{Effective, Usability};
-        let w = populated(Scenario::Returning, false);
-        let ws = w.workspace(1).unwrap();
-        let set = ws.effective_accounts(&w.accounts);
-        let anthropic: Vec<_> = set
-            .iter()
-            .filter(|e| e.provider == Provider::Anthropic)
-            .collect();
-        // two accounts of one provider coexist: the inherited default and an enabled one
-        assert_eq!(anthropic.len(), 2);
-        assert_eq!(anthropic[0].id, "acct-claude-personal");
-        assert_eq!(anthropic[0].origin, Effective::InheritedDefault);
-        assert!(anthropic[0].preferred);
-        assert_eq!(anthropic[1].id, "acct-claude-work");
-        assert_eq!(anthropic[1].origin, Effective::Enabled);
-        assert_eq!(anthropic[1].usable, Usability::Ready);
-        // the same input always yields the same order
-        assert_eq!(set, ws.effective_accounts(&w.accounts));
-        // disabling the inherited default drops it; the enabled one becomes preferred
-        let mut ws2 = ws.clone();
-        ws2.accounts
-            .disabled_defaults
-            .insert("acct-claude-personal".into());
-        let set2 = ws2.effective_accounts(&w.accounts);
-        assert!(set2.iter().all(|e| e.id != "acct-claude-personal"));
-        assert!(
-            set2.iter()
-                .any(|e| e.id == "acct-claude-work" && e.preferred)
+    fn references_and_debug_never_contain_fixture_material() {
+        let op = SimOnePassword::fixture(0);
+        let reference = op_reference(
+            "v_eng01",
+            "Engineering",
+            "it_cdx01",
+            "OpenAI · Codex Primary",
         );
-        // enabling a second Codex account keeps the inherited Primary
-        let mut ws3 = ws.clone();
-        ws3.accounts.enabled.insert("acct-codex-experiments".into());
-        let codex: Vec<_> = ws3
-            .effective_accounts(&w.accounts)
-            .into_iter()
-            .filter(|e| e.provider == Provider::OpenAi)
-            .collect();
-        assert_eq!(codex.len(), 2);
-        assert_eq!(ws3.change_count(ws), 1);
-        // every instance of the Workspace carries the set
-        let i = w.instance("jk-7f3a").unwrap();
-        assert!(i.accounts.contains(&"acct-claude-work".to_owned()));
-        assert!(i.accounts.contains(&"acct-claude-personal".to_owned()));
+        assert_eq!(reference.canonical(), "op://v_eng01/it_cdx01/credential");
+        assert!(!format!("{reference:?}").contains("openai:valid-cdx01"));
+        assert!(!format!("{op:?}").contains("openai:valid-cdx01"));
+
+        let account = Account::registered(
+            "safe",
+            "Safe",
+            Provider::OpenAi,
+            CredentialSource::OnePassword(reference),
+        );
+        assert!(!format!("{account:?}").contains("valid-cdx01"));
     }
 
     #[test]
-    fn offered_agents_skip_the_unconfigured_and_block_the_unusable() {
-        let w = populated(Scenario::Returning, false);
-        let ws = w.workspace(1);
-        let offers = w.offered_agents(ws, Some("the-architect"));
-        let claude = offers
-            .iter()
-            .find(|(a, _)| *a == Agent::ClaudeCode)
-            .map(|(_, o)| o.clone())
-            .expect("Claude Code is offered");
-        assert_eq!(claude.accounts.len(), 2);
-        assert_eq!(claude.preselected.as_deref(), Some("acct-claude-personal"));
-        assert_eq!(claude.accounts[0], "acct-claude-personal");
-        // Kimi Code runs in ignore mode in the rich global config: configured but blocked
-        let kimi = offers.iter().find(|(a, _)| *a == Agent::KimiCode);
-        assert!(kimi.is_none_or(|(_, o)| o.blocked.is_some() && o.accounts.is_empty()));
-        for (_, o) in &offers {
-            assert!(o.configured);
-            assert!(!o.accounts.is_empty() || o.blocked.is_some());
-        }
-        // a registry with a single Claude account offers exactly one agent
-        let mut fresh = world_for(Scenario::FirstUse);
-        let mut a = Account::registered(
-            "acct-only",
-            "Only",
-            Provider::Anthropic,
-            CredentialSource::LocalFolder {
-                path: "~/.claude".into(),
-                detected: DetectedKind::ClaudeOAuthProfile,
-            },
-        );
-        a.default_for_provider = true;
-        fresh.accounts.insert(a);
-        let offers = fresh.offered_agents(None, None);
-        assert_eq!(offers.len(), 1);
-        assert_eq!(offers[0].0, Agent::ClaudeCode);
-        assert_eq!(
-            fresh.eligible_accounts(Agent::Codex, None, None),
-            Vec::<AccountId>::new()
-        );
-    }
-
-    #[test]
-    fn every_scenario_builds() {
-        for s in Scenario::ALL {
-            let w = world_for(s);
-            assert!(w.instances.iter().all(|i| !i.id.is_empty()));
-        }
-        let w = world_for(Scenario::CapsuleMulti);
-        let d = &w.daemons["jk-7f3a"];
-        assert_eq!(d.tabs.len(), 3);
-        assert_eq!(d.tabs[0].leaves().len(), 3);
-        assert!(d.pane(3).unwrap().term.len() >= 1_900);
-        assert_eq!(w.running_count(), 2);
-        let o = world_for(Scenario::OutroLast);
-        assert_eq!(o.running_count(), 1);
+    fn run_id_is_not_an_arbitrary_display_string() {
+        let id = RunId::new(0x9c41_e2f0);
+        assert_eq!(id.value(), 0x9c41_e2f0);
+        assert_eq!(id.short(), "9c41e2f0");
     }
 }

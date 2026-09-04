@@ -1,97 +1,42 @@
-//! Jackin Preview application package.
-//!
-//! Product screens and deterministic fixtures stay in this package; generic
-//! terminal primitives come from the single public compatibility facade.
-#![forbid(unsafe_code)]
-#![allow(
-    elided_lifetimes_in_paths,
-    missing_debug_implementations,
-    unused_qualifications,
-    clippy::indexing_slicing,
-    clippy::unwrap_used,
-    clippy::expect_used,
-    clippy::module_name_repetitions,
-    clippy::missing_errors_doc,
-    reason = "the compatibility facade mirrors the legacy app surface"
+//! Jackin Preview: a deterministic terminal app built on `tui-next`.
+#![deny(unsafe_code)]
+#![cfg_attr(
+    test,
+    allow(
+        clippy::arithmetic_side_effects,
+        clippy::expect_used,
+        clippy::indexing_slicing,
+        clippy::panic,
+        clippy::unwrap_used
+    )
 )]
-#![expect(
-    missing_docs,
-    reason = "the preview's public fixture model is intentionally data-shaped"
-)]
-#![expect(
-    unreachable_pub,
-    reason = "fixture modules are public to integration tests"
-)]
-#![expect(
-    clippy::pedantic,
-    reason = "fixture and rendering code favors explicit deterministic data"
-)]
-#![expect(
-    clippy::arithmetic_side_effects,
-    reason = "all arithmetic is over bounded deterministic fixture values"
-)]
-pub extern crate tui_next as legacy_facade;
-pub extern crate tui_next_public as public_tui;
-
-extern crate self as junie_tui;
-
-pub use legacy_facade::core;
-pub use legacy_facade::ratatui;
-pub use legacy_facade::runtime;
-pub use legacy_facade::theme;
-pub use legacy_facade::ui;
-pub use legacy_facade::widgets;
 
 mod app;
 mod arbiter;
 mod clock;
 pub mod domain;
-mod public_shell;
 pub mod rain;
 mod scenario;
 pub mod screens;
 pub mod sim;
 
-pub use app::{App, MIN_HEIGHT, MIN_WIDTH, Route};
+pub use app::{
+    ACCOUNT_ADD, ACCOUNT_PICKER, ACCOUNTS, ACCOUNTS_LIST, APP, App, CAPSULE, CAPSULE_PANES,
+    CAPSULE_TABS, ENTER, LAUNCH, LAUNCH_CANCEL, LAUNCH_DIALOG, LAUNCH_RETRY, MANAGER, MANAGER_LIST,
+    ROLE_CHOOSE, ROLE_PICKER, Route, SETTINGS, SETTINGS_TRUST, USAGE,
+};
+pub use domain::instance::RunId;
 pub use scenario::{Motion, Scenario};
 
-/// Run the interactive preview through the legacy facade.
+/// Run the interactive preview through the public `tui-next` entry point.
 pub fn run() -> std::io::Result<()> {
-    run_scenario(Scenario::FirstUse, Motion::Full, 0)
+    run_scenario(Scenario::Returning, Motion::Full, 0)
 }
 
-/// Run a pinned scenario through the legacy facade.
+/// Run a pinned scenario through the public `tui-next` entry point.
 pub fn run_scenario(scenario: Scenario, motion: Motion, frame: u64) -> std::io::Result<()> {
-    let theme = theme::Theme::for_theme(theme::ThemeKind::Junie, theme::ColorLevel::detect());
-    let mut app = App::for_scenario_with_theme(scenario, motion, frame, theme);
-    let _ = runtime::drain_pending_input();
-    runtime::run(&mut app)
-}
-
-/// Run the preview through the public two-phase `tui-next` runtime.
-///
-/// The legacy entry point remains available for the deterministic compatibility
-/// harness; new product launches can opt into this boundary while screens move
-/// from the adapter one route at a time.
-pub fn run_public() -> std::io::Result<()> {
-    let app = App::for_scenario(Scenario::FirstUse, Motion::Full);
-    public_tui::run(app, public_tui::Theme::junie())
-}
-
-impl runtime::Application for App {
-    fn handle(&mut self, input: core::event::Input) -> core::event::Outcome {
-        App::handle(self, input)
-    }
-
-    fn render(&mut self, frame: &mut crate::ratatui::Frame<'_>) {
-        App::render(self, frame);
-    }
-
-    fn should_quit(&self) -> bool {
-        self.quit
-    }
-
-    fn tick_interval(&self) -> std::time::Duration {
-        App::tick_interval(self)
-    }
+    tui_next::run(
+        App::for_scenario_at(scenario, motion, frame),
+        tui_next::Theme::junie(),
+    )
 }
