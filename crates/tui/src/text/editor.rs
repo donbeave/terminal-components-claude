@@ -99,7 +99,7 @@ impl EditOutcome {
 }
 
 /// Buffer, cursor, selection, horizontal scroll and the multi-line flag.
-#[derive(Clone, Default, PartialEq, Eq)]
+#[derive(Default, PartialEq, Eq)]
 pub struct TextEditorCore {
     buf: TextBuffer,
     hscroll: u16,
@@ -207,6 +207,13 @@ impl TextEditorCore {
     pub fn zeroize(&mut self) {
         self.buf.zeroize();
         self.hscroll = 0;
+    }
+
+    pub(crate) fn clone_plain(&self) -> Self {
+        TextEditorCore {
+            buf: self.buf.clone_plain(),
+            hscroll: self.hscroll,
+        }
     }
 
     /// The only mutation entry point.

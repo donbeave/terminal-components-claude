@@ -20,7 +20,7 @@ pub struct CursorPos {
 }
 
 /// Text, cursor, selection anchor and the single/multi-line flag.
-#[derive(Clone, Default, PartialEq, Eq)]
+#[derive(Default, PartialEq, Eq)]
 pub struct TextBuffer {
     text: String,
     cursor: usize,
@@ -91,15 +91,18 @@ impl TextBuffer {
 
     /// Overwrite every byte with zero, then clear (§15 `zeroize`).
     pub fn zeroize(&mut self) {
-        let mut bytes = core::mem::take(&mut self.text).into_bytes();
-        bytes.fill(0);
-        core::hint::black_box(&bytes);
-        core::sync::atomic::compiler_fence(core::sync::atomic::Ordering::SeqCst);
-        bytes.clear();
-        drop(bytes);
-        self.text = String::new();
+        crate::secret::zeroize_string(&mut self.text);
         self.cursor = 0;
         self.anchor = None;
+    }
+
+    pub(crate) fn clone_plain(&self) -> Self {
+        TextBuffer {
+            text: self.text.clone(),
+            cursor: self.cursor,
+            anchor: self.anchor,
+            multiline: self.multiline,
+        }
     }
 
     /// Replace the text; cursor at the end, no selection.
