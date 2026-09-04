@@ -34,6 +34,7 @@ pub struct RowUi<'u> {
     key: ItemKey,
     row: Rect,
     label_patch: Option<StylePatch>,
+    meta_patch: Option<StylePatch>,
     /// Next free column from the left.
     left: u16,
     /// Columns reserved from the right (already consumed).
@@ -64,7 +65,9 @@ impl<'u> RowUi<'u> {
         key: ItemKey,
         row: Rect,
     ) -> RowUi<'u> {
-        Self::new_with_patches(ui, owner, family, variant, flags, key, row, None, None)
+        Self::new_with_column_patches(
+            ui, owner, family, variant, flags, key, row, None, None, None,
+        )
     }
 
     /// Begin a row with component-owned patches forwarded only to the
@@ -84,6 +87,39 @@ impl<'u> RowUi<'u> {
         container_patch: Option<StylePatch>,
         label_patch: Option<StylePatch>,
     ) -> RowUi<'u> {
+        Self::new_with_column_patches(
+            ui,
+            owner,
+            family,
+            variant,
+            flags,
+            key,
+            row,
+            container_patch,
+            label_patch,
+            None,
+        )
+    }
+
+    /// Begin a row with component-owned patches forwarded to both text
+    /// columns. Props is the only built-in whose `META` column is primary
+    /// content rather than optional decoration.
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the crate-private constructor extends RowUi's phase context with three scoped patches"
+    )]
+    pub(crate) fn new_with_column_patches<'a: 'u>(
+        ui: &'u mut Ui<'a>,
+        owner: Id,
+        family: Family,
+        variant: Variant,
+        flags: StateFlags,
+        key: ItemKey,
+        row: Rect,
+        container_patch: Option<StylePatch>,
+        label_patch: Option<StylePatch>,
+        meta_patch: Option<StylePatch>,
+    ) -> RowUi<'u> {
         let mut ui = ui.reborrow();
         let container = match container_patch {
             Some(patch) => {
@@ -102,6 +138,7 @@ impl<'u> RowUi<'u> {
             key,
             row,
             label_patch,
+            meta_patch,
             left: 0,
             right: 0,
         }
@@ -138,8 +175,13 @@ impl<'u> RowUi<'u> {
     }
 
     fn style_of(&mut self, part: Part) -> Style {
-        let r = match (part, self.label_patch) {
-            (Part::LABEL, Some(patch)) => {
+        let patch = match part {
+            Part::LABEL => self.label_patch,
+            Part::META => self.meta_patch,
+            _ => None,
+        };
+        let r = match patch {
+            Some(patch) => {
                 self.ui
                     .style_patched(self.family, self.variant, part, self.flags, &patch)
             }
