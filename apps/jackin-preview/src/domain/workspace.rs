@@ -250,17 +250,24 @@ impl Workspace {
 /// Added + modified + removed rows by identity (an edit counts once).
 fn keyed<T: PartialEq>(a: &[T], b: &[T], key: impl Fn(&T) -> String) -> usize {
     let mut n = 0;
+    let mut matched = vec![false; b.len()];
     for x in a {
-        match b.iter().find(|y| key(y) == key(x)) {
+        let x_key = key(x);
+        let matching = b
+            .iter()
+            .enumerate()
+            .find(|(index, y)| !matched[*index] && key(y) == x_key);
+        match matching {
             None => n += 1,
-            Some(y) if y != x => n += 1,
-            _ => {}
+            Some((index, y)) => {
+                matched[index] = true;
+                if y != x {
+                    n += 1;
+                }
+            }
         }
     }
-    n += b
-        .iter()
-        .filter(|y| !a.iter().any(|x| key(x) == key(y)))
-        .count();
+    n += matched.iter().filter(|matched| !**matched).count();
     n
 }
 

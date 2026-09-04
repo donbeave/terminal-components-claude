@@ -7,9 +7,9 @@ use std::time::Duration;
 
 use tui_next::{
     ActionKey, App as TuiApp, AsItem, Button, Chord, Cx, Dialog, DialogAction, DialogState, Id,
-    Item, ItemKey, KeyCode, KeyMap, KeyPhase, List, ListAction, ListState, Panel, Picker,
-    PickerAction, PickerState, Rect, Response, StepState, Steps, StepsState, Tabs, TabsState, Ui,
-    UpdateCause, Variant,
+    FrameRead, Item, ItemKey, KeyCode, KeyMap, KeyPhase, List, ListAction, ListState, Panel, Picker,
+    PickerAction, PickerState, Rect, Response, StepState, Steps, StepsState, Tabs, TabsState,
+    TooSmall, Ui, UpdateCause, Variant,
 };
 
 use crate::domain::account::Account;
@@ -752,7 +752,11 @@ impl App {
                 Some(Response::changed())
             }
             CMD_MANAGER => {
-                self.route = Route::Manager;
+                self.route = if self.route == Route::Usage {
+                    Route::Accounts
+                } else {
+                    Route::Manager
+                };
                 Some(Response::changed())
             }
             CMD_ACCOUNTS => {
@@ -1246,6 +1250,11 @@ impl TuiApp for App {
 
     fn draw(&self, ui: &mut Ui<'_>) {
         let full = ui.full();
+        let too_small = TooSmall::new(APP, "Jackin Preview");
+        if !too_small.fits(ui.design(), full) {
+            too_small.draw(ui, full);
+            return;
+        }
         let meta = format!("scenario · {}", self.world.scenario.name());
         Self::shell_panel(&meta).draw(ui, full, |ui, inner| {
             let header_height = inner.height.min(3);
