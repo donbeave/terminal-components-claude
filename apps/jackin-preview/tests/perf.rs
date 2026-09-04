@@ -152,6 +152,25 @@ fn key(code: KeyCode) -> Input {
     })
 }
 
+/// The application baseline carries the three live Slice 7 measurements.
+/// The old per-frame viewport clone is intentionally absent: its deletion is
+/// an acceptance condition, not another benchmark row.
+#[test]
+fn jackin_perf_baseline_has_required_rows_and_no_deleted_clone() {
+    const ROWS: [&str; 3] = [
+        "frame_jackin_capsule_4panes_120x40",
+        "frame_jackin_manager_100rows_120x40",
+        "key_jackin_manager_move",
+    ];
+    let names: Vec<_> = include_str!("perf_baseline.txt")
+        .lines()
+        .filter_map(|line| line.split_whitespace().next())
+        .filter(|name| !name.starts_with('#'))
+        .collect();
+    assert_eq!(names, ROWS);
+    assert!(!names.contains(&"capsule_pane_clone_4x2000"));
+}
+
 // ------------------------------------------------------------ A. frames
 
 /// Manager render with every Workspace expanded: exercises the cached row
@@ -171,7 +190,7 @@ fn frame_jackin_manager_100rows_120x40() {
         "frame_jackin_manager_100rows_120x40",
         &s.with_regions(hits, ring),
     );
-    if perf_common::env_flag("PERF_TARGET") {
+    if perf_common::env_flag("PERF_STRICT") {
         assert!(s.allocs < 60, "manager frame allocates {} times", s.allocs);
     }
 }
@@ -188,7 +207,7 @@ fn frame_jackin_capsule_4panes_120x40() {
         "frame_jackin_capsule_4panes_120x40",
         &s.with_regions(hits, ring),
     );
-    if perf_common::env_flag("PERF_TARGET") {
+    if perf_common::env_flag("PERF_STRICT") {
         assert!(s.allocs < 200, "capsule frame allocates {} times", s.allocs);
     }
 }
@@ -208,7 +227,7 @@ fn key_jackin_manager_move() {
         black_box(h.app.handle(key(code)));
     });
     report("key_jackin_manager_move", &s);
-    if perf_common::env_flag("PERF_TARGET") {
+    if perf_common::env_flag("PERF_STRICT") {
         assert_eq!(s.allocs, 0, "manager key path allocates {} times", s.allocs);
     }
 }
