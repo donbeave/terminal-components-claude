@@ -16,7 +16,7 @@
 #          COLORTERM=truecolor set, so a mono capture also proves NO_COLOR
 #          outranks COLORTERM rather than hiding a regression behind an
 #          unset variable. See COMPONENT_ARCHITECTURE.md §20.10 item 1.
-#   THEME  theme name to record (optional; inferred from ARGS --theme)
+#   THEME  theme name to record (default junie; inferred from ARGS --theme)
 #   CAPTURE_DIR  artifact directory (shots)
 #   CAPTURE_MANIFEST  provenance manifest (shots/capture-provenance.json)
 #   PY     the python used for the PNG step (python3)
@@ -78,7 +78,7 @@ capture_theme() {
     printf '%s\n' "${BASH_REMATCH[3]}"
     return
   fi
-  printf '%s\n' unspecified
+  printf '%s\n' junie
 }
 
 record_provenance() {
@@ -388,7 +388,7 @@ case "$cmd" in
     requested_rows=$(state_value "$RUN_REQUESTED_ROWS_FILE" "$rows")
     run_id=$(state_value "$RUN_ID_FILE" unknown)
     revision=$(state_value "$RUN_REVISION_FILE" unknown)
-    theme=$(state_value "$RUN_THEME_FILE" unspecified)
+    theme=$(state_value "$RUN_THEME_FILE" junie)
     color=$(state_value "$RUN_COLOR_FILE" "$COLOR")
     capture_status=ok
     if (( conversion_failed != 0 || app_failed != 0 || artifact_failed != 0 )); then
