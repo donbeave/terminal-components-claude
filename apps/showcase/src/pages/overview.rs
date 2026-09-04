@@ -2,8 +2,8 @@
 
 use tui_next::{
     Brand, Chord, DerivedHintBar, Empty, EmptyState, HelpOverlay, HelpOverlayState, HelpSection,
-    Hint, HintBar, HintLayer, Id, ItemKey, KeyCode, KeyHint, PropsList, PropsState, Rect, Response,
-    RowUi, TooSmall, Ui, id, layout,
+    Hint, HintBar, HintLayer, Id, ItemKey, KeyCode, KeyHint, Props, PropsList, PropsState, Rect,
+    Response, RowUi, TooSmall, Ui, id, layout,
 };
 
 use super::{Page, author::AuthorBadge, frame, lines};
@@ -25,6 +25,7 @@ const PROPS: [(&str, &str); 6] = [
     ("Binary", "showcase"),
     ("Tokens", "surface · accent · focus"),
 ];
+const PROPS_SUMMARY: [(&str, &str); 1] = [("Mode", "interactive")];
 
 type OverviewPropsList = PropsList<
     'static,
@@ -148,6 +149,8 @@ impl Page for OverviewPage {
             let copy_width = rest.width.saturating_sub(props_width).saturating_sub(2);
             let (copy, after_copy) = layout::split_h(rest, copy_width);
             let (_, props) = layout::split_h(after_copy, 2);
+            let (props_list_area, props_summary_area) =
+                layout::split_v(props, props.height.saturating_sub(1));
             let (copy_text, author_area) = layout::split_v(copy, copy.height.saturating_sub(2));
             let (copy_text, inventory) =
                 layout::split_v(copy_text, copy_text.height.saturating_sub(7));
@@ -158,7 +161,8 @@ impl Page for OverviewPage {
             };
             lines(ui, copy_text, copy_lines);
             self.author.draw(ui, author_area);
-            props_list().draw(ui, props, &self.props_state, &PROPS);
+            props_list().draw(ui, props_list_area, &self.props_state, &PROPS);
+            Props::new(&PROPS_SUMMARY).draw(ui, props_summary_area);
 
             let hints = inventory_hints();
             let sections = [HelpSection::new("Overview", &hints)];
