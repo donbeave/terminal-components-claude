@@ -640,6 +640,24 @@ impl FormState {
     }
 
     fn reconcile_fields(&mut self, fields: &[FieldSpec<'_>]) {
+        self.reconcile_fields_with_sensitivity(fields, field_is_secret);
+    }
+
+    fn reconcile_fields_with_data<D: FormData + ?Sized>(
+        &mut self,
+        fields: &[FieldSpec<'_>],
+        data: &D,
+    ) {
+        self.reconcile_fields_with_sensitivity(fields, |field| {
+            field_is_secret(field) || matches!(data.value(field.id), FieldRef::Secret(_))
+        });
+    }
+
+    fn reconcile_fields_with_sensitivity(
+        &mut self,
+        fields: &[FieldSpec<'_>],
+        is_sensitive: impl Fn(&FieldSpec<'_>) -> bool,
+    ) {
         if self.slots.len() == fields.len()
             && self
                 .slots
@@ -648,11 +666,11 @@ impl FormState {
                 .all(|(slot, field)| slot.id == field.id && slot.shape == field_shape(&field.kind))
         {
             for (slot, field) in self.slots.iter_mut().zip(fields) {
-                let sensitive = field_is_secret(field);
+                let sensitive = is_sensitive(field);
                 slot.set_sensitive(sensitive);
             }
             for field in fields {
-                self.reconcile_error(field.id, field_is_secret(field));
+                self.reconcile_error(field.id, is_sensitive(field));
             }
             return;
         }
@@ -666,7 +684,7 @@ impl FormState {
                 error.discard();
                 continue;
             }
-            let error = if field_is_secret(field) {
+            let error = if is_sensitive(field) {
                 error.redact()
             } else {
                 error.resolve_plain()
@@ -677,7 +695,7 @@ impl FormState {
         self.slots.reserve(fields.len());
         for field in fields {
             let shape = field_shape(&field.kind);
-            let declared_sensitive = field_is_secret(field);
+            let declared_sensitive = is_sensitive(field);
             if let Some(index) = old.iter().position(|slot| slot.id == field.id) {
                 let mut slot = old.remove(index);
                 slot.set_shape(shape);
@@ -1177,7 +1195,7 @@ impl<'a> Form<'a> {
         st: &mut FormState,
         data: &mut D,
     ) -> Response<FormAction> {
-        st.reconcile_fields(self.fields);
+        st.reconcile_fields_with_data(self.fields, data);
         let width = cx.area(self.id).map_or(0, |area| area.width);
         let content_rows = Self::content_rows(self.placements(cx.design(), width), data);
         let scroll = ScrollRegion::new(self.id).patch_part(self.parts);
@@ -1662,6 +1680,8 @@ mod tests {
     struct Data {
         name: String,
         hidden: String,
+        hidden_secret: Secret,
+        hidden_secret_mode: bool,
         flag: bool,
         choice: usize,
         secret: Secret,
@@ -1676,6 +1696,8 @@ mod tests {
             Data {
                 name: String::new(),
                 hidden: String::new(),
+                hidden_secret: Secret::default(),
+                hidden_secret_mode: false,
                 flag: false,
                 choice: 0,
                 secret: Secret::default(),
@@ -1691,6 +1713,7 @@ mod tests {
         fn value(&self, id: Id) -> FieldRef<'_> {
             match id {
                 NAME => FieldRef::Text(&self.name),
+                HIDDEN if self.hidden_secret_mode => FieldRef::Secret(&self.hidden_secret),
                 HIDDEN => FieldRef::Text(&self.hidden),
                 FLAG => FieldRef::Flag(self.flag),
                 CHOICE => FieldRef::Choice(self.choice),
@@ -1708,6 +1731,7 @@ mod tests {
         fn value_mut(&mut self, id: Id) -> FieldMut<'_> {
             match id {
                 NAME => FieldMut::Text(&mut self.name),
+                HIDDEN if self.hidden_secret_mode => FieldMut::Secret(&mut self.hidden_secret),
                 HIDDEN => FieldMut::Text(&mut self.hidden),
                 FLAG => FieldMut::Flag(&mut self.flag),
                 CHOICE => FieldMut::Choice(&mut self.choice),
@@ -1773,6 +1797,20 @@ mod tests {
                 FieldKind::Chooser(Button::new(CHOOSER, "Choose")),
             ),
         ]
+    }
+
+    fn fields_for_app(
+        plain_secret_control: bool,
+        inactive_secret: bool,
+    ) -> ([FieldSpec<'static>; 7], GroupKey) {
+        let mut fields = fields_with_secret_policy(!plain_secret_control);
+        if inactive_secret {
+            fields[1] = FieldSpec::new(HIDDEN, "Hidden", FieldKind::Text(TextInput::new(HIDDEN)))
+                .group(GroupKey::custom("inactive-dynamic-secret"));
+            (fields, GroupKey::custom("active-dynamic-secret"))
+        } else {
+            (fields, GroupKey::ALL)
+        }
     }
 
     fn draw(data: &Data, state: &mut FormState) -> (Runtime<Stub>, Buffer) {
@@ -2028,6 +2066,7 @@ mod tests {
         last: Option<FormAction>,
         area: Rect,
         plain_secret_control: bool,
+        inactive_secret: bool,
     }
 
     impl Default for FieldsApp {
@@ -2038,21 +2077,27 @@ mod tests {
                 last: None,
                 area: SCREEN,
                 plain_secret_control: false,
+                inactive_secret: false,
             }
         }
     }
 
     impl App for FieldsApp {
         fn update(&mut self, cx: &mut Cx<'_>) -> Response<()> {
-            let fields = fields_with_secret_policy(!self.plain_secret_control);
-            let response = Form::new(FORM, &fields).update(cx, &mut self.state, &mut self.data);
+            let (fields, group) = fields_for_app(self.plain_secret_control, self.inactive_secret);
+            let response =
+                Form::new(FORM, &fields)
+                    .group(group)
+                    .update(cx, &mut self.state, &mut self.data);
             self.last = response.action_ref().copied();
             response.erase()
         }
 
         fn draw(&self, ui: &mut Ui<'_>) {
-            let fields = fields_with_secret_policy(!self.plain_secret_control);
-            Form::new(FORM, &fields).draw(ui, self.area, &self.state, &self.data);
+            let (fields, group) = fields_for_app(self.plain_secret_control, self.inactive_secret);
+            Form::new(FORM, &fields)
+                .group(group)
+                .draw(ui, self.area, &self.state, &self.data);
         }
     }
 
@@ -2625,6 +2670,91 @@ mod tests {
                 .map(|error| error.message.as_ref()),
             Some("Invalid value")
         );
+    }
+
+    fn assert_public_error_is_redacted(state: &FormState, id: Id, detail: &str) {
+        assert_eq!(
+            state.error(id).map(|error| error.message.as_ref()),
+            Some("Invalid value")
+        );
+        assert!(!format!("{state:?}").contains(detail));
+
+        let copy = state.clone();
+        assert_eq!(
+            copy.error(id).map(|error| error.message.as_ref()),
+            Some("Invalid value")
+        );
+        assert!(!format!("{copy:?}").contains(detail));
+    }
+
+    #[test]
+    fn hidden_dynamic_secret_transition_redacts_form_error_before_public_reads() {
+        const DETAIL: &str = "hidden dynamic secret detail";
+
+        let mut app = FieldsApp::default();
+        app.data.hidden_secret_mode = false;
+        let mut runtime = Runtime::new(app, Theme::junie());
+        let mut buffer = Buffer::empty(SCREEN);
+        runtime.draw_buffer(SCREEN, &mut buffer);
+
+        runtime
+            .app_mut()
+            .state
+            .set_error(HIDDEN, Some(FieldError::new(DETAIL)));
+        runtime.app_mut().data.hidden_secret_mode = true;
+
+        assert!(!runtime.app().data.flags.show_hidden);
+        let _ = runtime.handle(Input::Tick);
+        assert_public_error_is_redacted(&runtime.app().state, HIDDEN, DETAIL);
+    }
+
+    #[test]
+    fn inactive_dynamic_secret_transition_redacts_form_error_before_public_reads() {
+        const DETAIL: &str = "inactive dynamic secret detail";
+
+        let mut app = FieldsApp::default();
+        app.inactive_secret = true;
+        app.data.flags.show_hidden = true;
+        app.data.hidden_secret_mode = false;
+        let mut runtime = Runtime::new(app, Theme::junie());
+        let mut buffer = Buffer::empty(SCREEN);
+        runtime.draw_buffer(SCREEN, &mut buffer);
+
+        assert!(runtime.app().data.flags.show_hidden);
+        assert!(!runtime.ring().is_registered(HIDDEN));
+        runtime
+            .app_mut()
+            .state
+            .set_error(HIDDEN, Some(FieldError::new(DETAIL)));
+        runtime.app_mut().data.hidden_secret_mode = true;
+
+        let _ = runtime.handle(Input::Tick);
+        assert_public_error_is_redacted(&runtime.app().state, HIDDEN, DETAIL);
+    }
+
+    #[test]
+    fn dynamic_plain_value_still_preserves_known_error_detail() {
+        const DETAIL: &str = "known plain validation detail";
+
+        let fields = fields_with_secret_policy(false);
+        let mut data = Data::default();
+        data.secret_mode = false;
+        let mut state = FormState::default();
+        state.reconcile_fields_with_data(&fields, &data);
+        state.set_error(SECRET, Some(FieldError::new(DETAIL)));
+
+        state.reconcile_fields_with_data(&fields, &data);
+        assert_eq!(
+            state.error(SECRET).map(|error| error.message.as_ref()),
+            Some(DETAIL)
+        );
+        let copy = state.clone();
+        assert_eq!(
+            copy.error(SECRET).map(|error| error.message.as_ref()),
+            Some(DETAIL)
+        );
+        assert!(!format!("{state:?}").contains(DETAIL));
+        assert!(!format!("{copy:?}").contains(DETAIL));
     }
 
     #[test]
