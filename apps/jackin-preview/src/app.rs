@@ -82,8 +82,10 @@ const CMD_MANAGER_EXPAND: ActionKey = ActionKey::custom("jackin.manager.expand")
 const CMD_EDITOR_OPEN: ActionKey = ActionKey::custom("jackin.editor.open");
 const CMD_CAPSULE_PREFIX: ActionKey = ActionKey::custom("jackin.capsule.prefix");
 const CMD_EXIT_DIALOG: ActionKey = ActionKey::custom("jackin.exit.dialog");
-const CMD_EXIT_NEXT: ActionKey = ActionKey::custom("jackin.exit.next");
 const CMD_EXIT_CONFIRM: ActionKey = ActionKey::custom("jackin.exit.confirm");
+const CMD_PRELUDE_BACKSPACE: ActionKey = ActionKey::custom("jackin.prelude.backspace");
+const CMD_PRELUDE_DOWN: ActionKey = ActionKey::custom("jackin.prelude.down");
+const CMD_PRELUDE_SPACE: ActionKey = ActionKey::custom("jackin.prelude.space");
 const TICK_MS: u64 = crate::rain::TICK_MS;
 
 /// The visible product route.
@@ -715,10 +717,24 @@ impl App {
         let chosen = continue_button.activated();
         let mut result = continue_button.erase();
         if chosen {
-            self.prelude.advance();
+            self.prelude.advance_flow();
             if self.prelude.step() >= 5 {
-                self.route = Route::Editor;
-                self.editor = EditorState::default();
+                if self.prelude.duplicate() {
+                    self.status = Some(format!(
+                        "A workspace named {} already exists",
+                        self.prelude.name()
+                    ));
+                } else {
+                    self.route = Route::Editor;
+                    self.editor = EditorState::default();
+                    self.editor.pending.name = self.prelude.name().into();
+                    self.editor.pending.workdir =
+                        self.prelude.source().replace("~/", "/Users/alexey/");
+                    self.editor.pending.mounts = vec![crate::domain::workspace::Mount::host(
+                        &self.editor.pending.workdir,
+                        &self.editor.pending.workdir,
+                    )];
+                }
             }
             result |= Response::changed();
         }
@@ -930,7 +946,7 @@ impl App {
                 self.status = Some("Unsaved work · Stay inside · Exit & keep · Cancel".into());
                 Some(Response::changed())
             }
-            CMD_EXIT_NEXT if self.route == Route::Capsule => {
+            CMD_PRELUDE_DOWN if self.route == Route::Capsule => {
                 if let Some(choice) = &mut self.exit_choice {
                     *choice = (*choice + 1).min(2);
                     self.status = Some(match *choice {
@@ -984,6 +1000,20 @@ impl App {
                         self.route = Route::Manager;
                         self.world.arbiter.complete_entry(self.world.now_ms());
                     }
+                }
+                Some(Response::changed())
+            }
+            CMD_PRELUDE_BACKSPACE if self.route == Route::Prelude => {
+                self.prelude.source_back();
+                Some(Response::changed())
+            }
+            CMD_PRELUDE_DOWN if self.route == Route::Prelude => {
+                self.prelude.move_selection(true);
+                Some(Response::changed())
+            }
+            CMD_PRELUDE_SPACE if self.route == Route::Prelude => {
+                if self.prelude.step() == 1 {
+                    self.prelude.choose_source();
                 }
                 Some(Response::changed())
             }
@@ -1184,19 +1214,44 @@ impl App {
     }
 
     fn draw_prelude(&self, ui: &mut Ui<'_>, area: Rect) {
-        let workspace = self
-            .world
-            .workspaces
-            .first()
-            .map(|workspace| workspace.name.as_str())
-            .unwrap_or("new workspace");
-        let lines = [
-            format!("Create workspace · step {} of 5", self.prelude.step()),
-            format!("Source · {}", self.prelude.source()),
-            "Destination · choose a Workspace name".to_owned(),
-            "Mounts and environment · review before save".to_owned(),
-            workspace.to_owned(),
-        ];
+        let step = self.prelude.step();
+        let source = self.prelude.source();
+        let name = self.prelude.name();
+        let lines = match step {
+            1 => vec![
+                format!("Create workspace · step 1 of 5 · Source"),
+                format!("Source · {source}"),
+                "customer-portal/".to_owned(),
+                "data-pipeline/".to_owned(),
+                "payments-platform/".to_owned(),
+                format!("Selected source · {}", self.prelude.selection()),
+            ],
+            2 => vec![
+                "Create workspace · step 2 of 5 · Destination".to_owned(),
+                format!("Same path   {}", source.replace("~/", "/Users/alexey/")),
+                "✓ Source".to_owned(),
+                "Destination · choose a Workspace name".to_owned(),
+            ],
+            4 => vec![
+                "Create workspace · step 4 of 5 · Working directory".to_owned(),
+                format!("Source · {source}"),
+                "destination · inherited from source".to_owned(),
+                "Mounts and environment · review before save".to_owned(),
+            ],
+            5 => vec![
+                "Create workspace · step 5 of 5 · Name".to_owned(),
+                format!("Workspace · {name}"),
+                format!("Source · {source}"),
+                "Review and save when ready".to_owned(),
+            ],
+            _ => vec![
+                format!("Create workspace · step {step} of 5"),
+                format!("Source · {source}"),
+                "Destination · choose a Workspace name".to_owned(),
+                "Mounts and environment · review before save".to_owned(),
+                name.to_owned(),
+            ],
+        };
         paint_lines(ui, area, &lines);
         Button::new(crate::screens::prelude::CONTINUE, "Continue")
             .variant(Variant::PRIMARY)
@@ -1564,7 +1619,10 @@ impl TuiApp for App {
         if cx.is_open(ROLE_PICKER) || cx.is_open(ACCOUNT_PICKER) || cx.is_open(LAUNCH_DIALOG) {
             return result;
         }
-        if self.route != Route::Intro {
+        if matches!(
+            self.route,
+            Route::Manager | Route::Accounts | Route::Usage | Route::Settings | Route::Capsule
+        ) {
             result |= self.update_navigation(cx);
         }
         result |= self.update_route(cx);
@@ -1652,8 +1710,20 @@ impl TuiApp for App {
             self.route = Route::Manager;
             return Response::changed();
         }
+        if self.route == Route::Capsule && self.capsule_usage {
+            self.capsule_usage = false;
+            self.status = None;
+            return Response::changed();
+        }
+        if self.route == Route::Capsule && self.capsule_prefix {
+            self.capsule_prefix = false;
+            self.status = None;
+            return Response::changed();
+        }
         if self.route == Route::Prelude {
-            if self.prelude.step() > 1 {
+            if self.prelude.step() == 2 {
+                self.prelude.source_back();
+            } else if self.prelude.step() > 1 {
                 self.prelude.back();
             } else {
                 self.status = Some("Cancelled · nothing created".into());
@@ -1728,7 +1798,26 @@ fn app_keymap() -> KeyMap {
             Chord::with(KeyCode::Char('q'), KeyModifiers::CONTROL),
             CMD_EXIT_DIALOG,
         )
-        .bind(KeyPhase::Bubble, Chord::key(KeyCode::Down), CMD_EXIT_NEXT)
+        .bind(
+            KeyPhase::Bubble,
+            Chord::key(KeyCode::Backspace),
+            CMD_PRELUDE_BACKSPACE,
+        )
+        .bind(
+            KeyPhase::Bubble,
+            Chord::key(KeyCode::Char(' ')),
+            CMD_PRELUDE_SPACE,
+        )
+        .bind(
+            KeyPhase::Capture,
+            Chord::key(KeyCode::Char(' ')),
+            CMD_PRELUDE_SPACE,
+        )
+        .bind(
+            KeyPhase::Bubble,
+            Chord::key(KeyCode::Down),
+            CMD_PRELUDE_DOWN,
+        )
         .bind(
             KeyPhase::Bubble,
             Chord::key(KeyCode::Enter),
@@ -1736,6 +1825,11 @@ fn app_keymap() -> KeyMap {
         )
         .bind(
             KeyPhase::Bubble,
+            Chord::key(KeyCode::End),
+            CMD_NEW_WORKSPACE,
+        )
+        .bind(
+            KeyPhase::Capture,
             Chord::key(KeyCode::End),
             CMD_NEW_WORKSPACE,
         )
@@ -1821,5 +1915,17 @@ mod tests {
         assert_eq!(format!("{a:?}"), format!("{b:?}"));
         assert_eq!(a.route(), Route::Accounts);
         assert_eq!(a.motion(), Motion::Paused);
+    }
+
+    #[test]
+    fn end_is_a_capture_command_for_workspace_creation() {
+        let key = tui_next::Key {
+            code: KeyCode::End,
+            mods: KeyModifiers::NONE,
+        };
+        assert_eq!(
+            app_keymap().lookup(KeyPhase::Capture, &key, false),
+            Some(CMD_NEW_WORKSPACE)
+        );
     }
 }
