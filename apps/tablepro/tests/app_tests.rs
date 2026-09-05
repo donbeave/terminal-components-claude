@@ -339,7 +339,7 @@ fn narrow_terminals_turn_the_explorer_into_a_drawer() {
 }
 
 #[test]
-fn acceptance_flow_keyboard_only() {
+fn keyboard_flow_full_journey() {
     let mut h = connected();
     assert!(h.app_mut().open_table("orders"));
     assert!(h.app_mut().toggle_structure());
@@ -354,7 +354,7 @@ fn acceptance_flow_keyboard_only() {
 }
 
 #[test]
-fn acceptance_flow_mouse() {
+fn mouse_flow_full_journey() {
     let mut h = fresh();
     let (x, y) = h.find("Local PostgreSQL").expect("connection row");
     let _ = h.double_click(x, y);
