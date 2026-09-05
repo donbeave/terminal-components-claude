@@ -30,76 +30,57 @@
     clippy::undocumented_unsafe_blocks
 )]
 
-#[path = "../../../tests/perf_common.rs"]
-#[allow(
-    clippy::format_push_string,
-    clippy::manual_assert,
-    clippy::print_stdout,
-    clippy::redundant_closure_for_method_calls
-)]
-mod perf_common;
-
 use std::hint::black_box;
 
-use ratatui::Terminal;
-use ratatui::backend::TestBackend;
-use ratatui::crossterm::event::{KeyCode, KeyModifiers};
-
-use jackin_app::core::event::{Input, Key};
-use jackin_app::theme::{Theme, Tone};
-use jackin_app::ui::layout::SplitDir;
-use jackin_app::widgets::viewport::Span;
-
-use jackin_app::sim::pty::SCROLLBACK;
-use jackin_app::{App, Route};
+use jackin_app::Route;
+use jackin_app::sim::pty::{Line, SCROLLBACK, Span, SplitDir, Tone};
 use jackin_app::{Motion, Scenario};
-use perf_common::{Counting, bench, iters, lock, report};
+use tui_next::KeyCode;
+use tui_next_testing::perf::{Counting, Stats, bench, env_flag, iters, lock, report_to};
+
+mod support;
+use support::H;
 
 #[global_allocator]
 static GLOBAL: Counting = Counting;
 
-struct H {
-    app: App,
-    term: Terminal<TestBackend>,
+const PERF_BASELINE: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/perf_baseline.txt");
+
+fn report(name: &str, stats: &Stats) {
+    report_to(PERF_BASELINE, name, stats);
 }
 
 impl H {
-    fn new(scenario: Scenario, motion: Motion, w: u16, h: u16) -> Self {
-        let app = App::for_scenario_with_theme(scenario, motion, 0, Theme::junie());
-        let term = Terminal::new(TestBackend::new(w, h)).unwrap();
-        let mut hh = Self { app, term };
-        hh.draw();
-        hh
-    }
-
     /// `hard-cases` manager with every Workspace expanded.
     fn manager(w: u16, h: u16) -> Self {
-        let mut hh = Self::new(Scenario::HardCases, Motion::Reduced, w, h);
-        for _ in 0..8 {
-            hh.ticks(3);
-            if hh.app.route == Route::Manager {
-                break;
-            }
-            hh.key(KeyCode::Enter);
-        }
-        assert_eq!(hh.app.route, Route::Manager);
-        let ids: Vec<_> = hh.app.world.workspaces.iter().map(|ws| ws.id).collect();
+        let mut hh = H::new(Scenario::HardCases, Motion::Reduced, 0, w, h);
+        assert_eq!(hh.app().route(), Route::Manager);
+        let ids: Vec<_> = hh.app().world.workspaces.iter().map(|ws| ws.id).collect();
         for id in ids {
-            hh.app.screens.manager.expanded.insert(id);
+            hh.app_mut().manager.toggle(id);
         }
-        // Reconcile the fixture's expansion set through the real manager key
-        // path; rendering itself is allocation-free with stable rows.
-        hh.key(KeyCode::Char('*'));
+        hh.draw();
         hh
     }
 
     /// `capsule-multi` Capsule with four panes of 2 000 scrollback lines.
     fn capsule(w: u16, h: u16) -> Self {
-        let mut hh = Self::new(Scenario::CapsuleMulti, Motion::Full, w, h);
-        assert_eq!(hh.app.route, Route::Capsule);
-        let instance = hh.app.screens.capsule.as_ref().unwrap().instance.clone();
-        let now = hh.app.world.now_ms();
-        let d = hh.app.world.daemons.get_mut(&instance).expect("daemon");
+        let mut hh = H::new(Scenario::CapsuleMulti, Motion::Full, 0, w, h);
+        assert_eq!(hh.app().route(), Route::Capsule);
+        let instance = hh
+            .app()
+            .world
+            .running()
+            .first()
+            .map(|instance| instance.id.clone())
+            .expect("running instance");
+        let now = hh.app().world.now_ms();
+        let d = hh
+            .app_mut()
+            .world
+            .daemons
+            .get_mut(&instance)
+            .expect("daemon");
         if d.active_tab().map(|t| t.leaves().len()) == Some(3) {
             d.split(SplitDir::Vertical, false, None, None, now, false)
                 .expect("split the focused pane");
@@ -108,48 +89,30 @@ impl H {
         assert_eq!(leaves.len(), 4, "four panes on the active tab");
         for id in leaves {
             let pane = d.pane_mut(id).unwrap();
-            let mut i = pane.term.len();
-            while pane.term.len() < SCROLLBACK {
-                pane.term.push(vec![
+            let mut i = pane.term.lines.len();
+            while pane.term.lines.len() < SCROLLBACK {
+                let line: Line = vec![
                     Span::new(format!("[{i:05}] "), Tone::Secondary),
-                    Span::plain(format!(
-                        "lorem ipsum dolor sit amet, consectetur adipiscing elit {i}"
-                    )),
-                ]);
+                    Span::new(
+                        format!("lorem ipsum dolor sit amet, consectetur adipiscing elit {i}"),
+                        Tone::Normal,
+                    ),
+                ];
+                pane.term.push(line);
                 i += 1;
             }
-            assert_eq!(pane.term.len(), SCROLLBACK);
+            assert_eq!(pane.term.lines.len(), SCROLLBACK);
         }
         hh.draw();
         hh
     }
 
-    fn draw(&mut self) {
-        self.term.draw(|f| self.app.render(f)).unwrap();
-    }
-
-    fn key(&mut self, code: KeyCode) {
-        self.app.handle(key(code));
-        self.draw();
-    }
-
-    fn ticks(&mut self, n: usize) {
-        for _ in 0..n {
-            self.app.handle(Input::Tick);
-        }
-        self.draw();
-    }
-
     fn regions(&self) -> (usize, usize) {
-        (self.app.hits.len(), self.app.ring.reachable().len())
+        (
+            self.harness.runtime().region_count(),
+            self.harness.ring().reachable().count(),
+        )
     }
-}
-
-fn key(code: KeyCode) -> Input {
-    Input::Key(Key {
-        code,
-        mods: KeyModifiers::NONE,
-    })
 }
 
 /// The application baseline carries the three live Slice 7 measurements.
@@ -181,8 +144,8 @@ fn frame_jackin_manager_100rows_120x40() {
     let mut h = H::manager(120, 40);
     println!(
         "PERF-NOTE frame_jackin_manager_100rows_120x40 workspaces={} instances={}",
-        h.app.world.workspaces.len(),
-        h.app.world.instances.len()
+        h.app().world.workspaces.len(),
+        h.app().world.instances.len()
     );
     let s = bench(1, iters(200), &mut || h.draw());
     let (hits, ring) = h.regions();
@@ -190,7 +153,7 @@ fn frame_jackin_manager_100rows_120x40() {
         "frame_jackin_manager_100rows_120x40",
         &s.with_regions(hits, ring),
     );
-    if perf_common::env_flag("PERF_STRICT") {
+    if env_flag("PERF_STRICT") {
         assert!(s.allocs < 60, "manager frame allocates {} times", s.allocs);
     }
 }
@@ -207,7 +170,7 @@ fn frame_jackin_capsule_4panes_120x40() {
         "frame_jackin_capsule_4panes_120x40",
         &s.with_regions(hits, ring),
     );
-    if perf_common::env_flag("PERF_STRICT") {
+    if env_flag("PERF_STRICT") {
         assert!(s.allocs < 200, "capsule frame allocates {} times", s.allocs);
     }
 }
@@ -224,10 +187,10 @@ fn key_jackin_manager_move() {
     let s = bench(10, iters(1000), &mut || {
         let code = if down { KeyCode::Down } else { KeyCode::Up };
         down = !down;
-        black_box(h.app.handle(key(code)));
+        black_box(h.key(code));
     });
     report("key_jackin_manager_move", &s);
-    if perf_common::env_flag("PERF_STRICT") {
+    if env_flag("PERF_STRICT") {
         assert_eq!(s.allocs, 0, "manager key path allocates {} times", s.allocs);
     }
 }
