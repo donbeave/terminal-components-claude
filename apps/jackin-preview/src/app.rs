@@ -7,8 +7,8 @@ use std::time::Duration;
 
 use tui_next::{
     ActionKey, App as TuiApp, AsItem, Button, Chord, Cx, Dialog, DialogAction, DialogState, Id,
-    Item, ItemKey, KeyCode, KeyMap, KeyPhase, List, ListAction, ListState, Panel, Picker,
-    PickerAction, PickerState, Rect, Response, Tabs, TabsState, Ui, UpdateCause, Variant,
+    Item, ItemKey, KeyCode, KeyMap, KeyModifiers, KeyPhase, List, ListAction, ListState, Panel,
+    Picker, PickerAction, PickerState, Rect, Response, Tabs, TabsState, Ui, UpdateCause, Variant,
 };
 
 use crate::domain::account::Account;
@@ -18,6 +18,11 @@ use crate::rain::{
     HANDOFF_LEN, INTRO_END, IntroPhase, IntroState, OutroPhase, OutroState, P1_LEN, PHRASES,
 };
 use crate::scenario::{Motion, Scenario};
+use crate::screens::{
+    accounts::AccountsState, capsule::CapsuleState, cockpit::CockpitState, editor::EditorState,
+    inspect::InspectState, manager::ManagerState, prelude::PreludeState, settings::SettingsState,
+    usage::UsageState,
+};
 use crate::sim::launch::{LaunchEvent, LaunchPlan, LaunchRun, Stage};
 use crate::sim::world::{World, world_for};
 
@@ -68,6 +73,10 @@ const CMD_ACCOUNTS: ActionKey = ActionKey::custom("jackin.accounts");
 const CMD_USAGE: ActionKey = ActionKey::custom("jackin.usage");
 const CMD_SETTINGS: ActionKey = ActionKey::custom("jackin.settings");
 const CMD_CAPSULE: ActionKey = ActionKey::custom("jackin.capsule");
+const CMD_NEW_WORKSPACE: ActionKey = ActionKey::custom("jackin.new-workspace");
+const CMD_EDITOR_NEXT: ActionKey = ActionKey::custom("jackin.editor.next-tab");
+const CMD_EDITOR_PREVIOUS: ActionKey = ActionKey::custom("jackin.editor.previous-tab");
+const CMD_SAVE: ActionKey = ActionKey::custom("jackin.save");
 const TICK_MS: u64 = crate::rain::TICK_MS;
 
 /// The visible product route.
@@ -167,12 +176,28 @@ impl AsItem for AccountOption {
 pub struct App {
     /// Deterministic services and durable state exposed for focused tests.
     pub world: World,
+    /// Manager route state and public list ownership.
+    pub manager: ManagerState,
+    /// Accounts route state and account-form ownership.
+    pub accounts: AccountsState,
+    /// Workspace creation route state.
+    pub prelude: PreludeState,
+    /// Workspace editor route state.
+    pub editor: EditorState,
+    /// Settings route state.
+    pub settings: SettingsState,
+    /// Read-only usage route state.
+    pub usage: UsageState,
+    /// Launch cockpit state.
+    pub cockpit: CockpitState,
+    /// Capsule interaction state.
+    pub capsule: CapsuleState,
+    /// Read-only instance inspection state.
+    pub inspect: InspectState,
     route: Route,
     motion: Motion,
     quit: bool,
     keymap: KeyMap,
-    manager_state: ListState,
-    accounts_state: ListState,
     tabs_state: TabsState,
     launch_dialog: DialogState,
     role_state: PickerState,
@@ -267,12 +292,19 @@ impl App {
         }
         Self {
             world,
+            manager: ManagerState::default(),
+            accounts: AccountsState::default(),
+            prelude: PreludeState::default(),
+            editor: EditorState::default(),
+            settings: SettingsState::default(),
+            usage: UsageState::default(),
+            cockpit: CockpitState::default(),
+            capsule: CapsuleState::default(),
+            inspect: InspectState::default(),
             route,
             motion,
             quit: false,
             keymap: app_keymap(),
-            manager_state: ListState::default(),
-            accounts_state: ListState::default(),
             tabs_state: TabsState::default(),
             launch_dialog: DialogState::default(),
             role_state: PickerState::default(),
@@ -348,6 +380,11 @@ impl App {
 
     fn launch_retry_button() -> Button<'static> {
         Button::new(LAUNCH_RETRY, "Retry").variant(Variant::PRIMARY)
+    }
+
+    fn new_workspace_button() -> Button<'static> {
+        Button::new(crate::screens::manager::NEW_WORKSPACE, "+ New workspace")
+            .variant(Variant::PRIMARY)
     }
 
     fn role_picker() -> Picker<'static, RoleOption> {
@@ -552,7 +589,7 @@ impl App {
 
     fn update_manager(&mut self, cx: &mut Cx<'_>) -> Response<()> {
         let rows = self.manager_rows();
-        let list = List::new(MANAGER_LIST).update(cx, &mut self.manager_state, &rows);
+        let list = List::new(MANAGER_LIST).update(cx, &mut self.manager.list, &rows);
         let list_action = list.action_ref().copied();
         let mut result = list.erase();
         if matches!(
@@ -562,6 +599,14 @@ impl App {
             if self.world.running_count() == 1 {
                 self.route = Route::Capsule;
             }
+            result |= Response::changed();
+        }
+        let new_workspace = Self::new_workspace_button().update(cx);
+        let new_workspace_chosen = new_workspace.activated();
+        result |= new_workspace.erase();
+        if new_workspace_chosen {
+            self.route = Route::Prelude;
+            self.prelude = crate::screens::prelude::PreludeState::default();
             result |= Response::changed();
         }
         let button = Self::launch_button(self.world.workspaces.is_empty()).update(cx);
@@ -575,7 +620,7 @@ impl App {
 
     fn update_accounts(&mut self, cx: &mut Cx<'_>) -> Response<()> {
         let rows = self.account_rows();
-        let list = List::new(ACCOUNTS_LIST).update(cx, &mut self.accounts_state, &rows);
+        let list = List::new(ACCOUNTS_LIST).update(cx, &mut self.accounts.list, &rows);
         let mut result = list.erase();
         let add = Self::account_add_button().update(cx);
         let chosen = add.activated();
@@ -592,6 +637,45 @@ impl App {
         let result = button.erase();
         if chosen {
             self.trusted = !self.trusted;
+        }
+        result
+    }
+
+    fn update_prelude(&mut self, cx: &mut Cx<'_>) -> Response<()> {
+        let continue_button = Button::new(crate::screens::prelude::CONTINUE, "Continue")
+            .variant(Variant::PRIMARY)
+            .update(cx);
+        let chosen = continue_button.activated();
+        let mut result = continue_button.erase();
+        if chosen {
+            self.prelude.advance();
+            if self.prelude.step() >= 5 {
+                self.route = Route::Editor;
+                self.editor = EditorState::default();
+            }
+            result |= Response::changed();
+        }
+        result
+    }
+
+    fn update_editor(&mut self, cx: &mut Cx<'_>) -> Response<()> {
+        let save = Button::new(crate::screens::editor::SAVE, "Save workspace")
+            .variant(Variant::PRIMARY)
+            .update(cx);
+        let chosen = save.activated();
+        let mut result = save.erase();
+        if chosen {
+            self.editor.dirty = false;
+            self.world.saved = true;
+            let id = self
+                .world
+                .workspaces
+                .first()
+                .map_or(1, |workspace| workspace.id);
+            self.world
+                .schedule(200, crate::sim::world::Msg::WorkspaceSaved { id, ok: true });
+            self.status = Some("Saving workspace…".into());
+            result |= Response::changed();
         }
         result
     }
@@ -692,7 +776,8 @@ impl App {
         match self.route {
             Route::Intro => self.update_intro(cx),
             Route::Manager => self.update_manager(cx),
-            Route::Prelude | Route::Editor => Response::ignored(),
+            Route::Prelude => self.update_prelude(cx),
+            Route::Editor => self.update_editor(cx),
             Route::Accounts => self.update_accounts(cx),
             Route::Usage => Response::ignored(),
             Route::Settings => self.update_settings(cx),
@@ -729,6 +814,30 @@ impl App {
                 self.route = Route::Capsule;
                 Some(Response::changed())
             }
+            CMD_NEW_WORKSPACE if self.route == Route::Manager => {
+                self.route = Route::Prelude;
+                self.prelude = PreludeState::default();
+                Some(Response::changed())
+            }
+            CMD_EDITOR_NEXT if self.route == Route::Editor => {
+                self.editor.select_index(match self.editor.tab {
+                    crate::screens::editor::Tab::General => 1,
+                    crate::screens::editor::Tab::Mounts => 2,
+                    crate::screens::editor::Tab::Roles => 3,
+                    crate::screens::editor::Tab::Environments => 4,
+                    crate::screens::editor::Tab::Accounts => 1,
+                });
+                Some(Response::changed())
+            }
+            CMD_EDITOR_PREVIOUS if self.route == Route::Editor => {
+                self.editor.tab = crate::screens::editor::Tab::General;
+                Some(Response::changed())
+            }
+            CMD_SAVE if self.route == Route::Editor => {
+                self.editor.dirty = true;
+                self.status = Some("Save workspace · preview changes before commit".into());
+                Some(Response::changed())
+            }
             _ => None,
         }
     }
@@ -753,6 +862,18 @@ impl App {
                     } else {
                         format!("Workspace {id} save failed")
                     });
+                    if ok && self.route == Route::Editor {
+                        if self.world.workspaces.is_empty() {
+                            self.world
+                                .workspaces
+                                .push(crate::domain::workspace::Workspace::new(
+                                    id,
+                                    self.prelude.name(),
+                                    "/Users/alexey/src/new-workspace",
+                                ));
+                        }
+                        self.route = Route::Manager;
+                    }
                 }
                 crate::sim::world::Msg::Refreshed { ok } => {
                     self.status = Some(if ok {
@@ -884,13 +1005,19 @@ impl App {
             .map(|workspace| workspace.name.as_str())
             .unwrap_or("new workspace");
         let lines = [
-            "Create workspace · step 1 of 5",
-            "Source · choose a local repository",
-            "Destination · choose a Workspace name",
-            "Mounts and environment · review before save",
-            workspace,
+            format!("Create workspace · step {} of 5", self.prelude.step()),
+            format!("Source · {}", self.prelude.source()),
+            "Destination · choose a Workspace name".to_owned(),
+            "Mounts and environment · review before save".to_owned(),
+            workspace.to_owned(),
         ];
         paint_lines(ui, area, &lines);
+        Button::new(crate::screens::prelude::CONTINUE, "Continue")
+            .variant(Variant::PRIMARY)
+            .draw(
+                ui,
+                Rect::new(area.x, area.bottom().saturating_sub(1), 14, 1),
+            );
     }
 
     fn draw_editor(&self, ui: &mut Ui<'_>, area: Rect) {
@@ -900,14 +1027,34 @@ impl App {
             .first()
             .map(|workspace| workspace.name.as_str())
             .unwrap_or("new workspace");
+        let tab = match self.editor.tab {
+            crate::screens::editor::Tab::General => "General",
+            crate::screens::editor::Tab::Mounts => "Mounts",
+            crate::screens::editor::Tab::Roles => "Roles",
+            crate::screens::editor::Tab::Environments => "Environments",
+            crate::screens::editor::Tab::Accounts => "Accounts",
+        };
         let lines = [
-            format!("{workspace} · edit"),
+            format!("{workspace} · edit · {tab}"),
             "Mounts · inherited defaults".to_owned(),
             "Environments · references only; values stay masked".to_owned(),
             format!("Roles · {} configured", self.world.roles.len()),
-            "Save workspace · Ctrl+S".to_owned(),
+            format!(
+                "{}Save workspace · Ctrl+S",
+                if self.editor.dirty {
+                    "• 1 change · "
+                } else {
+                    ""
+                }
+            ),
         ];
         paint_lines(ui, area, &lines);
+        Button::new(crate::screens::editor::SAVE, "Save workspace")
+            .variant(Variant::PRIMARY)
+            .draw(
+                ui,
+                Rect::new(area.x, area.bottom().saturating_sub(1), 18, 1),
+            );
     }
 
     fn draw_handoff(&self, ui: &mut Ui<'_>, area: Rect) {
@@ -957,10 +1104,29 @@ impl App {
     fn draw_manager(&self, ui: &mut Ui<'_>, area: Rect) {
         let rows = self.manager_rows();
         let list_area = Rect {
-            height: area.height.saturating_sub(3),
+            y: area.y.saturating_add(2),
+            height: area.height.saturating_sub(5),
             ..area
         };
-        List::new(MANAGER_LIST).draw(ui, list_area, &self.manager_state, &rows);
+        paint_lines(
+            ui,
+            Rect { height: 2, ..area },
+            &[format!(
+                "Current directory · {} · {} running",
+                self.world.home,
+                self.world.running_count()
+            )],
+        );
+        List::new(MANAGER_LIST).draw(ui, list_area, &self.manager.list, &rows);
+        Self::new_workspace_button().draw(
+            ui,
+            Rect {
+                y: area.bottom().saturating_sub(2),
+                width: area.width.min(24),
+                height: 1,
+                ..area
+            },
+        );
         Self::launch_button(self.world.workspaces.is_empty()).draw(
             ui,
             Rect {
@@ -978,7 +1144,7 @@ impl App {
             height: area.height.saturating_sub(3),
             ..area
         };
-        List::new(ACCOUNTS_LIST).draw(ui, list_area, &self.accounts_state, &rows);
+        List::new(ACCOUNTS_LIST).draw(ui, list_area, &self.accounts.list, &rows);
         Self::account_add_button().draw(
             ui,
             Rect {
@@ -1264,6 +1430,23 @@ impl TuiApp for App {
             self.route = Route::Manager;
             return Response::changed();
         }
+        if self.route == Route::Prelude {
+            if self.prelude.step() > 1 {
+                self.prelude.back();
+            } else {
+                self.status = Some("Cancelled · nothing created".into());
+                self.route = Route::Manager;
+            }
+            return Response::changed();
+        }
+        if self.route == Route::Editor {
+            if self.editor.dirty {
+                self.status = Some("Save changes before leaving?".into());
+            } else {
+                self.route = Route::Manager;
+            }
+            return Response::changed();
+        }
         if self.route == Route::Manager {
             self.quit = true;
             Response::changed()
@@ -1297,6 +1480,26 @@ fn app_keymap() -> KeyMap {
             KeyPhase::Bubble,
             Chord::key(KeyCode::Char('c')),
             CMD_CAPSULE,
+        )
+        .bind(
+            KeyPhase::Bubble,
+            Chord::key(KeyCode::End),
+            CMD_NEW_WORKSPACE,
+        )
+        .bind(
+            KeyPhase::Bubble,
+            Chord::key(KeyCode::Char(']')),
+            CMD_EDITOR_NEXT,
+        )
+        .bind(
+            KeyPhase::Bubble,
+            Chord::key(KeyCode::Char('[')),
+            CMD_EDITOR_PREVIOUS,
+        )
+        .bind(
+            KeyPhase::Bubble,
+            Chord::with(KeyCode::Char('s'), KeyModifiers::CONTROL),
+            CMD_SAVE,
         )
 }
 
