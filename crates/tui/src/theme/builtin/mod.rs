@@ -976,14 +976,14 @@ mod tests {
                     StateFlags::DISABLED,
                     Surface::Canvas,
                 );
-                let title_fg = menu_title
+                let fg = menu_title
                     .style
                     .fg
                     .unwrap_or_else(|| panic!("{base:?}/{level:?} MENU/TITLE has no fg"));
-                let title_bg = menu_title.style.bg.unwrap_or(container_bg);
+                let bg = menu_title.style.bg.unwrap_or(container_bg);
                 assert!(
-                    contrast(title_fg, title_bg) >= 3.0,
-                    "{base:?}/{level:?} MENU/TITLE: {title_fg:?} on {title_bg:?} is below 3:1"
+                    contrast(fg, bg) >= 3.0,
+                    "{base:?}/{level:?} MENU/TITLE: {fg:?} on {bg:?} is below 3:1"
                 );
                 assert!(
                     menu_title.style.add_modifier.contains(Modifier::DIM),
