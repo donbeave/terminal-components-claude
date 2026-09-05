@@ -1029,8 +1029,17 @@ impl App for TableProApp {
         } else {
             grid.update(cx, &mut self.grid_state, &self.result)
         };
+        let sync_table = grid_response.action_ref().is_some_and(|action| {
+            !matches!(action, GridAction::Moved | GridAction::LeaveForward | GridAction::LeaveBackward)
+        });
         if let Some(action) = grid_response.action_ref() {
             self.handle_grid(action);
+        }
+        if sync_table {
+            let result = self.result.clone();
+            if let Some(crate::tabs::Tab::Table(table)) = self.workbench.active_mut() {
+                table.result = result;
+            }
         }
         response |= grid_response.erase();
         response
@@ -1123,9 +1132,12 @@ impl App for TableProApp {
                 });
         }
         let safe_token = self.safe_mode.token();
+        let pending = self.result.pending_total();
+        let pending_label = format!("• {pending} pending");
         let left = [
             StatusItem::new(&self.connection.name).strong(),
             StatusItem::new(safe_token),
+            StatusItem::new(&pending_label),
         ];
         let right = [StatusItem::new(&self.status)];
         status_bar(&left, &right).draw(ui, footer);

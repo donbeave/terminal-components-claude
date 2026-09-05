@@ -84,6 +84,7 @@ fn grid_cell_editing(w: u16, h: u16) -> H {
 fn pending_change_bar(w: u16, h: u16) -> H {
     let mut harness = grid_cell_editing(w, h);
     let _ = harness.key(KeyCode::Enter);
+    println!("pending total {}\n{}", harness.app().result().pending_total(), harness.text());
     assert!(harness.text().contains("pending"));
     mark(harness, Surface::PendingChangeBar)
 }
