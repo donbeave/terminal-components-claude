@@ -261,6 +261,7 @@ pub struct TextAreaState {
     scroll: ScrollState,
     error: Option<ErrorState>,
     redacted_snapshot: bool,
+    sensitivity: Option<bool>,
 }
 
 impl Clone for TextAreaState {
@@ -271,6 +272,7 @@ impl Clone for TextAreaState {
             scroll: self.scroll,
             error: self.error.as_ref().map(ErrorState::clone_snapshot),
             redacted_snapshot: self.is_sensitive(),
+            sensitivity: self.sensitivity,
         }
     }
 }
@@ -337,6 +339,11 @@ impl TextAreaState {
     }
 
     /// The last validation error.
+    ///
+    /// Before the first update reconciles the control's sensitivity, an
+    /// externally supplied error is exposed as `Invalid value`. A plain
+    /// control resolves that pending error during reconciliation and restores
+    /// its detail; a secret control discards the detail.
     pub const fn error(&self) -> Option<&FieldError> {
         match &self.error {
             Some(error) => Some(error.as_ref()),
@@ -346,32 +353,50 @@ impl TextAreaState {
 
     pub(crate) fn set_sensitive(&mut self, sensitive: bool) {
         let changed = self.is_sensitive() != sensitive;
+        let pending_error = self
+            .error
+            .as_ref()
+            .is_some_and(|error| matches!(error, ErrorState::Pending(_)));
         self.draft.set_sensitive(sensitive);
+        self.sensitivity = Some(sensitive);
         if changed {
             self.phase = EditPhase::Idle;
             self.redacted_snapshot = false;
-            self.clear_error();
-        } else if sensitive
-            && self
-                .error
-                .as_ref()
-                .is_some_and(|error| !error.is_sensitive())
-        {
-            self.clear_error();
-            self.error = Some(ErrorState::sensitive());
+            if sensitive && pending_error {
+                self.redact_error();
+            } else {
+                self.clear_error();
+            }
+        } else if sensitive {
+            self.redact_error();
+        } else {
+            self.resolve_pending_error();
         }
     }
 
     /// Set (or clear) the error from an external / async validation.
     pub fn set_error(&mut self, e: Option<FieldError>) {
         self.clear_error();
-        if self.is_sensitive() {
-            if let Some(error) = e {
+        self.error = match (self.sensitivity, e) {
+            (_, None) => None,
+            (Some(true), Some(error)) => {
                 discard_error(error);
-                self.error = Some(ErrorState::sensitive());
+                Some(ErrorState::sensitive())
             }
-        } else {
-            self.error = e.map(ErrorState::Plain);
+            (Some(false), Some(error)) => Some(ErrorState::Plain(error)),
+            (None, Some(error)) => Some(ErrorState::Pending(error)),
+        };
+    }
+
+    fn redact_error(&mut self) {
+        if let Some(error) = self.error.take() {
+            self.error = Some(error.redact());
+        }
+    }
+
+    fn resolve_pending_error(&mut self) {
+        if let Some(error) = self.error.take() {
+            self.error = Some(error.resolve_plain());
         }
     }
 
@@ -404,7 +429,7 @@ impl TextAreaState {
 
     fn write_target<T: TextTarget + ?Sized>(&mut self, value: &mut T) {
         if self.is_editing() && !self.redacted_snapshot {
-            value.set(self.draft.text());
+            value.set(self.draft.text(), self.is_sensitive());
         }
         self.phase = EditPhase::Idle;
         self.redacted_snapshot = false;
@@ -1495,6 +1520,56 @@ mod tests {
             .expect("a snapshot commit must not validate a redacted draft");
         assert!(value.is_empty());
         assert!(!copy.is_editing());
+    }
+
+    #[test]
+    fn sensitive_string_target_replaces_the_old_allocation() {
+        let mut st = TextAreaState::default();
+        st.set_sensitive(true);
+        st.begin("new\nsecret");
+
+        let mut value = String::with_capacity(1024);
+        value.push_str("old\nsecret");
+        let old_capacity = value.capacity();
+
+        st.commit(&mut value, &NoValidate)
+            .expect("the replacement must not fail validation");
+
+        assert_eq!(value, "new\nsecret");
+        assert!(
+            value.capacity() < old_capacity,
+            "sensitive replacement retained the old caller allocation"
+        );
+    }
+
+    #[test]
+    fn external_error_is_masked_until_control_sensitivity_is_reconciled() {
+        const DETAIL: &str = "secret validation detail";
+
+        let mut plain = TextAreaState::default();
+        plain.set_error(Some(FieldError::new(DETAIL.to_owned())));
+        assert_eq!(
+            plain.error().map(|error| error.message.as_ref()),
+            Some("Invalid value")
+        );
+        plain.set_sensitive(false);
+        assert_eq!(
+            plain.error().map(|error| error.message.as_ref()),
+            Some(DETAIL)
+        );
+
+        let mut secret = TextAreaState::default();
+        secret.set_error(Some(FieldError::new(DETAIL.to_owned())));
+        assert_eq!(
+            secret.error().map(|error| error.message.as_ref()),
+            Some("Invalid value")
+        );
+        secret.set_sensitive(true);
+        assert_eq!(
+            secret.error().map(|error| error.message.as_ref()),
+            Some("Invalid value")
+        );
+        assert!(!format!("{secret:?}").contains(DETAIL));
     }
 
     #[test]
