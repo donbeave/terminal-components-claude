@@ -8,12 +8,14 @@ use std::time::Duration;
 use tui_next::{
     ActionKey, App as TuiApp, AsItem, Button, Chord, Cx, Dialog, DialogAction, DialogState,
     FrameRead, Id, Item, ItemKey, KeyCode, KeyMap, KeyModifiers, KeyPhase, List, ListAction,
-    ListState, Panel, Picker, PickerAction, PickerState, Rect, Response, Tabs, TabsState, TooSmall,
-    Ui, UpdateCause, Variant,
+    ListState, Panel, Picker, PickerAction, PickerState, Rect, Response, SecretPolicy, Tabs,
+    TabsState, TextInput, TooSmall, Ui, UpdateCause, Variant,
 };
 
-use crate::domain::account::Account;
-use crate::domain::agent::Agent;
+use crate::domain::account::{
+    Account, AccountOrigin, CredentialSource, DetectedKind, DuplicateProbe, fingerprint, tail_of,
+};
+use crate::domain::agent::{Agent, Provider};
 use crate::domain::instance::{DaemonSnapshot, InstanceStatus};
 use crate::rain::{
     HANDOFF_LEN, INTRO_END, IntroPhase, IntroState, OutroPhase, OutroState, P1_LEN, PHRASES,
@@ -25,6 +27,7 @@ use crate::screens::{
     usage::UsageState,
 };
 use crate::sim::launch::{LaunchEvent, LaunchPlan, LaunchRun, Stage};
+use crate::sim::provider;
 use crate::sim::world::{World, world_for};
 
 /// Root id for the Jackin Preview component tree.
@@ -86,6 +89,12 @@ const CMD_EXIT_CONFIRM: ActionKey = ActionKey::custom("jackin.exit.confirm");
 const CMD_PRELUDE_BACKSPACE: ActionKey = ActionKey::custom("jackin.prelude.backspace");
 const CMD_PRELUDE_DOWN: ActionKey = ActionKey::custom("jackin.prelude.down");
 const CMD_PRELUDE_SPACE: ActionKey = ActionKey::custom("jackin.prelude.space");
+const CMD_ACCOUNT_DOWN: ActionKey = ActionKey::custom("jackin.account.down");
+const CMD_ACCOUNT_REFRESH: ActionKey = ActionKey::custom("jackin.account.refresh");
+const CMD_ACCOUNT_VALIDATE: ActionKey = ActionKey::custom("jackin.account.validate");
+const CMD_ACCOUNT_REMOVE: ActionKey = ActionKey::custom("jackin.account.remove");
+const CMD_ACCOUNT_DEFAULT: ActionKey = ActionKey::custom("jackin.account.default");
+const CMD_ACCOUNT_HELP: ActionKey = ActionKey::custom("jackin.account.help");
 const TICK_MS: u64 = crate::rain::TICK_MS;
 
 /// The visible product route.
@@ -174,6 +183,12 @@ struct AccountOption {
     detail: String,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum PickerMode {
+    Launch,
+    OnePassword,
+}
+
 impl AsItem for AccountOption {
     fn as_item(&self) -> Item<'_> {
         Item::new(ItemKey::text(&self.key), &self.label).detail(&self.detail)
@@ -213,6 +228,8 @@ pub struct App {
     account_state: PickerState,
     roles: Vec<RoleOption>,
     account_options: Vec<AccountOption>,
+    op_options: Vec<AccountOption>,
+    picker_mode: Option<PickerMode>,
     selected_role: usize,
     launch: Option<LaunchRun>,
     status: Option<String>,
@@ -323,6 +340,8 @@ impl App {
             account_state: PickerState::default(),
             roles,
             account_options,
+            op_options: Vec::new(),
+            picker_mode: None,
             selected_role,
             launch,
             status: None,
