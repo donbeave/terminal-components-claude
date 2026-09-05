@@ -1176,7 +1176,7 @@ fn capture_script_contract_hits(script: &str) -> Vec<String> {
         ("rollback publication", "backup_dir"),
         ("per-shot lock", "acquire_shot_lock"),
         ("shot lock cleanup", "cleanup_shot_lock_only"),
-        ("stale shot lock check", "shot_lock_owner_is_live"),
+        ("guarded shot lock helper", "shot-lock acquire"),
         ("no-follow shell state reader", "read-state"),
         ("trusted shell state interpreter", "STATE_PYTHON"),
         ("COLOR dispatch", "case \"$COLOR\" in"),
@@ -1288,22 +1288,21 @@ fn capture_matrix_contract() -> Result<(), String> {
 
 fn capture_exec_contract_hits(script: &str) -> Vec<String> {
     [
-        ("opaque command execution", "\"$@\" 2>\"$stderr_path\""),
-        (
-            "atomic exit status recording",
-            "printf '%s\\n' \"$rc\" > \"$exit_tmp\"",
-        ),
-        (
-            "atomic exit status publication",
-            "mv -f \"$exit_tmp\" \"$exit_path\"",
-        ),
         (
             "serialized argv execution",
-            "exec python3 \"$ROOT_DIR/tools/capture_provenance.py\" exec",
+            "exec \"$PROVENANCE_PYTHON\" \"$ROOT_DIR/tools/capture_provenance.py\" exec",
         ),
         (
             "serialized metadata argument",
             "--metadata \"$CAPTURE_METADATA_FILE\"",
+        ),
+        (
+            "fixed metadata interpreter",
+            "PROVENANCE_PYTHON=/usr/bin/python3",
+        ),
+        (
+            "legacy argv rejection",
+            "positional argv mode is unsupported",
         ),
     ]
     .into_iter()
@@ -1314,6 +1313,10 @@ fn capture_exec_contract_hits(script: &str) -> Vec<String> {
             "capture runner interpolates BIN/ARGS into shell source; use its opaque argv".to_owned()
         }),
     )
+    .chain((script.contains("\"$@\"") || script.contains("2>\"$stderr_path\"")).then(|| {
+        "capture runner still executes a caller-provided shell argv; use serialized metadata"
+            .to_owned()
+    }))
     .collect()
 }
 
@@ -1330,7 +1333,11 @@ fn capture_provenance_contract_hits(script: &str) -> Vec<String> {
             "environment = recorded_environment(metadata)",
         ),
         ("no-follow JSON reader", "read_regular_text(path"),
+        ("trusted directory walk", "open_trusted_directory"),
+        ("no-follow atomic state writer", "write_json_at"),
         ("no-follow manifest lock", "open_manifest_lock"),
+        ("guarded shot lock", "command_shot_lock"),
+        ("atomic shot lock publication", "publish_shot_lock"),
         (
             "descriptor binary hash",
             "hash_descriptor(binary_descriptor)",
@@ -9131,11 +9138,10 @@ captures / classification: `(pending — filled when the change lands)`
         // this assertion proves the unsafe-launch diagnostic itself rather
         // than merely reporting unrelated omissions.
         let unsafe_runner = r#"
-"$@" 2>"$stderr_path"
-printf '%s\n' "$rc" > "$exit_tmp"
-mv -f "$exit_tmp" "$exit_path"
-exec python3 "$ROOT_DIR/tools/capture_provenance.py" exec
+PROVENANCE_PYTHON=/usr/bin/python3
+exec "$PROVENANCE_PYTHON" "$ROOT_DIR/tools/capture_provenance.py" exec
 --metadata "$CAPTURE_METADATA_FILE"
+positional argv mode is unsupported
 "$BIN $ARGS" 2>$stderr_path
 "#;
         let errors = capture_exec_contract_hits(unsafe_runner);
