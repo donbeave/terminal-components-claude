@@ -769,7 +769,7 @@ impl App {
 
         match self.route {
             Route::Intro => {
-                if self.intro.on_tick() && self.intro.is_done() {
+                if self.intro.advance_tick() && self.intro.is_done() {
                     self.route = Route::Manager;
                     self.world.arbiter.complete_entry(self.world.now_ms());
                     result |= Response::changed();
@@ -778,7 +778,7 @@ impl App {
             }
             Route::Outro => {
                 if let Some(outro) = &mut self.outro
-                    && outro.on_tick()
+                    && outro.advance_tick()
                     && outro.is_done()
                 {
                     self.quit = true;

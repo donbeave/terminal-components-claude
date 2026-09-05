@@ -65,19 +65,21 @@ pub fn style(theme: &Theme, tone: Tone, dim: u8) -> Option<Style> {
         Tone::Accent if dim == 1 => theme.color.fg.get(3).copied().unwrap_or(Color::Reset),
         Tone::Accent => theme.color.accent,
     };
-    Some(Style::default().fg(color))
+    Some(Style::new().fg(color))
 }
 
 /// Fill a field with the theme canvas colour.
 pub fn fill_canvas(buf: &mut Buffer, area: Rect, theme: &Theme) {
-    buf.set_style(area, Style::default().bg(theme.color.surfaces[0]));
+    buf.set_style(area, Style::new().bg(theme.color.surfaces[0]));
 }
 
 /// Dim existing cells by replacing their foreground with a ladder step.
 /// Caller-owned background and glyphs remain untouched.
 pub fn dim_buffer(buf: &mut Buffer, area: Rect, steps: u8, theme: &Theme) {
-    for y in area.top()..area.bottom() {
-        for x in area.left()..area.right() {
+    for row in area.rows() {
+        for column in area.columns() {
+            let x = column.x;
+            let y = row.y;
             if let Some(cell) = buf.cell_mut((x, y)) {
                 let fg = cell.fg;
                 let level = theme
@@ -282,7 +284,7 @@ impl IntroState {
     }
 
     /// Advance one virtual frame.
-    pub fn on_tick(&mut self) -> bool {
+    pub fn advance_tick(&mut self) -> bool {
         if self.mode == Motion::Paused || self.is_done() {
             return false;
         }
@@ -369,7 +371,7 @@ impl OutroState {
     }
 
     /// Advance one virtual frame.
-    pub fn on_tick(&mut self) -> bool {
+    pub fn advance_tick(&mut self) -> bool {
         if self.mode == Motion::Paused || self.is_done() {
             return false;
         }
@@ -448,13 +450,15 @@ pub fn paint_atmosphere(
     frozen: bool,
     theme: &Theme,
 ) {
-    for x in area.left()..area.right() {
+    for column in area.columns() {
+        let x = column.x;
         if pct(mix(u64::from(x), 11, 0)) >= 18 {
             continue;
         }
         let head = (frame + (mix(u64::from(x), 12, 0) % u64::from(area.height.max(1))))
             % u64::from(area.height.max(1));
-        for y in area.top()..area.bottom() {
+        for row in area.rows() {
+            let y = row.y;
             if exclude.iter().any(|rect| rect.contains((x, y).into())) {
                 continue;
             }
