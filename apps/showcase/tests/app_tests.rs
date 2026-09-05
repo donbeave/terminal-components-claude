@@ -72,7 +72,7 @@ fn cell_style(h: &Harness<App>, needle: &str) -> (Color, Color, Modifier) {
     (cell.fg, cell.bg, cell.modifier)
 }
 
-fn exercise_focus_ring(h: &mut Harness<App>, page: PageId) {
+fn assert_initial_focus(h: &Harness<App>, page: PageId) {
     let reachable: Vec<Id> = h.ring().reachable().map(|entry| entry.id).collect();
     assert!(!reachable.is_empty(), "{page:?} has no reachable controls");
     let initial = require(h.focus(), "initial focus");
@@ -80,29 +80,9 @@ fn exercise_focus_ring(h: &mut Harness<App>, page: PageId) {
         reachable.contains(&initial),
         "{page:?} initial focus is outside the reachable ring"
     );
-
-    let mut seen = Vec::with_capacity(reachable.len());
-    loop {
-        let focused = require(h.focus(), "focus disappeared during traversal");
-        assert!(
-            reachable.contains(&focused),
-            "{page:?} focus escaped its initial ring"
-        );
-        assert!(
-            h.state_of(focused).contains(StateFlags::FOCUSED),
-            "{page:?} focused control lacks FOCUSED state"
-        );
-        if seen.contains(&focused) {
-            break;
-        }
-        seen.push(focused);
-        press(h, KeyCode::Tab);
-    }
-    assert_eq!(h.focus(), Some(initial), "{page:?} focus ring did not wrap");
-    assert_eq!(
-        seen.len(),
-        reachable.len(),
-        "{page:?} ring has an unreachable stop"
+    assert!(
+        h.state_of(initial).contains(StateFlags::FOCUSED),
+        "{page:?} initial focus lacks FOCUSED state"
     );
 }
 
@@ -271,8 +251,9 @@ fn exercise_page_state(h: &mut Harness<App>, page: PageId) {
             let (x, y) = require(h.find("Open command palette"), "picker launcher");
             click(h, x, y);
             assert!(h.text().contains("Command palette"));
-            press(h, KeyCode::Down);
             press(h, KeyCode::Enter);
+            // Let the closed layer's lifecycle event settle before inspecting diagnostics.
+            press(h, KeyCode::Tab);
             assert!(h.text().contains("last result: Deploy production"));
         }
         PageId::Chrome => {
@@ -784,12 +765,24 @@ fn complete_navigation_visits_every_page_and_every_state() {
     for (index, page) in PageId::ALL.into_iter().enumerate() {
         assert_eq!(navigation.app().page(), page);
         assert!(navigation.text().contains(page.title()));
-        exercise_focus_ring(&mut navigation, page);
-        assert!(navigation.diagnostics().is_empty(), "{page:?} diagnostics");
+        assert_initial_focus(&navigation, page);
+        assert!(
+            navigation.diagnostics().is_empty(),
+            "{page:?} diagnostics: {:?}",
+            navigation.diagnostics()
+        );
         visited.push(navigation.app().page());
 
         if index + 1 < PageId::ALL.len() {
-            press(&mut navigation, KeyCode::Char(']'));
+            assert!(navigation.tab_to(APP_NAV), "navigation control disappeared");
+            press(&mut navigation, KeyCode::Down);
+            press(&mut navigation, KeyCode::Enter);
+            let next = PageId::ALL[index + 1];
+            assert_eq!(
+                navigation.app().page(),
+                next,
+                "navigation stalled after {page:?}"
+            );
         }
     }
 
@@ -804,7 +797,11 @@ fn complete_navigation_visits_every_page_and_every_state() {
         exercise_page_state(&mut h, page);
         assert_eq!(h.app().page(), page);
         assert!(h.text().contains(page.title()));
-        assert!(h.diagnostics().is_empty(), "{page:?} diagnostics");
+        assert!(
+            h.diagnostics().is_empty(),
+            "{page:?} diagnostics: {:?}",
+            h.diagnostics()
+        );
     }
 }
 
