@@ -480,4 +480,42 @@ mod tests {
         );
         assert!(app.screens.cockpit.is_some());
     }
+
+    #[test]
+    fn public_settings_escape_does_not_drop_dirty_state() {
+        let mut app = App::for_scenario(Scenario::FirstUse, Motion::Reduced);
+        apply_request(&mut app, PublicRequest::Go(crate::screens::Go::Settings));
+        let settings = app.screens.settings.as_mut().expect("settings adapter");
+        settings.pending.coauthor_trailer = !settings.original.coauthor_trailer;
+
+        let mut runtime = public_tui::Runtime::new(app, public_tui::Theme::junie());
+        let _ = runtime.handle(public_tui::Input::Key(public_tui::Key {
+            code: public_tui::KeyCode::Esc,
+            mods: public_tui::KeyModifiers::NONE,
+        }));
+
+        assert_eq!(runtime.app().route, Route::Settings);
+        assert_eq!(
+            runtime
+                .app()
+                .status
+                .as_ref()
+                .map(|(status, _, _)| status.as_str()),
+            Some("Unsaved changes: 1 change · save or discard before leaving")
+        );
+    }
+
+    #[test]
+    fn public_settings_escape_leaves_clean_state() {
+        let mut app = App::for_scenario(Scenario::FirstUse, Motion::Reduced);
+        apply_request(&mut app, PublicRequest::Go(crate::screens::Go::Settings));
+
+        let mut runtime = public_tui::Runtime::new(app, public_tui::Theme::junie());
+        let _ = runtime.handle(public_tui::Input::Key(public_tui::Key {
+            code: public_tui::KeyCode::Esc,
+            mods: public_tui::KeyModifiers::NONE,
+        }));
+
+        assert_eq!(runtime.app().route, Route::Manager);
+    }
 }

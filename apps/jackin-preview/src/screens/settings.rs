@@ -1422,4 +1422,23 @@ impl super::Screen for SettingsScreen {
             .unwrap_or(0);
         format!("Settings › global › {}", TAB_NAMES[index])
     }
+
+    fn on_esc_top(
+        &mut self,
+        _cx: &mut crate::public_tui::Cx<'_>,
+        jx: &mut super::Jx<'_>,
+        _world: &mut World,
+    ) -> crate::public_tui::Response<()> {
+        let changes = self.change_count();
+        if changes > 0 {
+            jx.status(format!(
+                "Unsaved changes: {} · save or discard before leaving",
+                super::plural(changes, "change", "changes")
+            ));
+            crate::public_tui::Response::consumed().repaint()
+        } else {
+            jx.go(super::Go::Manager);
+            crate::public_tui::Response::consumed().repaint()
+        }
+    }
 }
