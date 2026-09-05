@@ -2,7 +2,7 @@
 
 use tui_next::Id;
 
-use crate::domain::account::{AccountRegistry, AccountId};
+use crate::domain::account::{AccountId, AccountRegistry};
 use crate::domain::workspace::{AccountPolicy, EffectiveAccount, Mount, Workspace};
 
 /// Editor root.

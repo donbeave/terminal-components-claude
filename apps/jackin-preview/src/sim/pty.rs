@@ -1205,23 +1205,14 @@ impl Daemon {
     ///
     /// Snapshot metadata is intentionally copied only into semantic pane and
     /// tab state; no terminal backend or process handle crosses the boundary.
-    pub fn from_snapshot(
-        snapshot: &DaemonSnapshot,
-        workspace: &str,
-        now_ms: i64,
-    ) -> Self {
+    pub fn from_snapshot(snapshot: &DaemonSnapshot, workspace: &str, now_ms: i64) -> Self {
         let mut daemon = Self::new(workspace);
         let DaemonSnapshot::Tabs(tabs) = snapshot else {
             return daemon;
         };
         for tab in tabs {
             let first = tab.panes.first();
-            let pane = daemon.new_pane(
-                first.and_then(|pane| pane.agent),
-                None,
-                now_ms,
-                false,
-            );
+            let pane = daemon.new_pane(first.and_then(|pane| pane.agent), None, now_ms, false);
             daemon.tabs.push(Tab {
                 custom_label: Some(tab.label.clone()),
                 root: PaneNode::Leaf(pane),

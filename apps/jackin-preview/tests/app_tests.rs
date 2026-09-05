@@ -81,10 +81,7 @@ fn manager_navigation_expand_and_detail_focus() {
     h.key(KeyCode::Tab);
     assert!(h.text().contains("Live topology"));
     h.key(KeyCode::Esc);
-    assert_eq!(
-        h.focus(),
-        Some(jackin_app::screens::manager::TREE)
-    );
+    assert_eq!(h.focus(), Some(jackin_app::screens::manager::TREE));
     // mouse: click the row of infra-control-plane
     let (x, y) = h.find("infra-control-plane").unwrap();
     h.click(x, y);
@@ -480,11 +477,7 @@ fn editor_env_plain_value_stays_masked_and_can_be_shown() {
     h.type_str("sk-live-abcdefghijklmnop1234");
     h.key(KeyCode::Tab);
     assert!(!h.text().contains("abcdefghijklmnop"), "{}", h.text());
-    h.tab_to(
-        tui_next::Id::root("editor.cfg")
-            .sub("form")
-            .sub("save"),
-    );
+    h.tab_to(tui_next::Id::root("editor.cfg").sub("form").sub("save"));
     h.key(KeyCode::Enter);
     let t = h.text();
     assert!(t.contains("NEW_SECRET"), "{t}");
@@ -684,10 +677,7 @@ fn complete_jackin_flow_keyboard_first() {
     // 13 back to the manager, focus on the tree
     h.key(KeyCode::Esc);
     assert_eq!(h.app().route(), Route::Manager);
-    assert_eq!(
-        h.focus(),
-        Some(jackin_app::screens::manager::TREE)
-    );
+    assert_eq!(h.focus(), Some(jackin_app::screens::manager::TREE));
     // 14 create a workspace through the prelude (current directory as source)
     h.key(KeyCode::End);
     h.key(KeyCode::Enter);
@@ -1107,11 +1097,7 @@ fn environments_stay_readable_with_a_hundred_roles() {
     h.key(KeyCode::Enter);
     h.type_str("on");
     h.key(KeyCode::Tab);
-    h.tab_to(
-        tui_next::Id::root("editor.cfg")
-            .sub("form")
-            .sub("save"),
-    );
+    h.tab_to(tui_next::Id::root("editor.cfg").sub("form").sub("save"));
     h.key(KeyCode::Enter);
     let t = h.text();
     assert!(t.contains("Role: svc-010"), "{t}");

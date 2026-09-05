@@ -18,7 +18,7 @@
     clippy::expect_used
 )]
 
-use tui_next::{KeyCode, MouseKind};
+use tui_next::{Axis, KeyCode, MouseKind};
 
 use jackin_app::Route;
 mod support;
@@ -180,7 +180,7 @@ fn command_palette_scrolls_with_the_wheel_and_keeps_the_selection() {
     assert!(h.text().contains("Command palette"));
     let (x, y) = h.find("New tab").unwrap();
     let before = h.text();
-    h.mouse(MouseKind::WheelDown, x, y + 2);
+    h.mouse(MouseKind::Wheel(Axis::V, 1), x, y + 2);
     let after = h.text();
     assert_ne!(before, after, "wheel did not move the rows");
     assert!(
@@ -191,7 +191,7 @@ fn command_palette_scrolls_with_the_wheel_and_keeps_the_selection() {
                 .is_some_and(|l| !l.contains("New tab")),
         "{after}"
     );
-    h.mouse(MouseKind::WheelUp, x, y + 2);
+    h.mouse(MouseKind::Wheel(Axis::V, -1), x, y + 2);
     assert_eq!(h.text(), before, "wheel up did not restore the rows");
     h.key(KeyCode::Enter);
     assert!(
