@@ -93,6 +93,16 @@ fn key(code: KeyCode) -> Input {
 }
 
 const FRAME: &str = "frame_tablepro_grid_500x12_120x40";
+const SIMPLE_FRAME_ALLOC_LIMIT: usize = 40;
+
+fn assert_release_alloc_limit(name: &str, allocs: usize, limit: usize) {
+    if !cfg!(debug_assertions) {
+        assert!(
+            allocs < limit,
+            "{name} allocates {allocs} times; semantic limit is {limit}"
+        );
+    }
+}
 
 // ------------------------------------------------------------ A. frames
 
@@ -104,9 +114,46 @@ fn frame_tablepro_grid_500x12_120x40() {
     let (hits, ring) = h.regions();
     println!("PERF-GATE frame allocations={} bytes={}", s.allocs, s.bytes);
     perf::report_alloc_to(BASELINE, FRAME, &s.with_regions(hits, ring));
-    if !cfg!(debug_assertions) {
-        assert!(s.allocs < 100, "frame allocates {} times", s.allocs);
-    }
+    assert_release_alloc_limit(FRAME, s.allocs, 100);
+}
+
+#[test]
+fn frame_tablepro_connection_form_120x40() {
+    let _g = perf::lock();
+    let mut app = TableProApp::new();
+    app.begin_connection_form();
+    let mut h = Harness::new(app, Theme::junie(), 120, 40).with_auto_draw(false);
+    let s = perf::bench(1, perf::iters(200), &mut || h.draw());
+    println!(
+        "PERF-GATE frame_tablepro_connection_form_120x40 allocations={} bytes={}",
+        s.allocs, s.bytes
+    );
+    assert_release_alloc_limit(
+        "frame_tablepro_connection_form_120x40",
+        s.allocs,
+        SIMPLE_FRAME_ALLOC_LIMIT,
+    );
+}
+
+#[test]
+fn frame_tablepro_query_editor_120x40() {
+    let _g = perf::lock();
+    let mut app = TableProApp::new();
+    assert!(app.connect(0));
+    app.new_query("");
+    let mut h = Harness::new(app, Theme::junie(), 120, 40).with_auto_draw(false);
+    let _ = h.handle(key(KeyCode::Tab));
+    h.draw();
+    let s = perf::bench(1, perf::iters(200), &mut || h.draw());
+    println!(
+        "PERF-GATE frame_tablepro_query_editor_120x40 allocations={} bytes={}",
+        s.allocs, s.bytes
+    );
+    assert_release_alloc_limit(
+        "frame_tablepro_query_editor_120x40",
+        s.allocs,
+        SIMPLE_FRAME_ALLOC_LIMIT,
+    );
 }
 
 // ------------------------------------------------------------ B. events
@@ -215,9 +262,7 @@ fn grid_500x12_load() {
     });
     assert_eq!(last.row_count(), 500);
     perf::report_alloc_to(BASELINE, "grid_500x12_load", &s);
-    if !cfg!(debug_assertions) {
-        assert!(s.allocs < 8_000, "load allocates {} times", s.allocs);
-    }
+    assert_release_alloc_limit("grid_500x12_load", s.allocs, 8_000);
 }
 
 // ------------------------------------------------------------ F. invariants
@@ -236,7 +281,5 @@ fn debug_and_release_alloc_counts_match() {
         cfg!(debug_assertions),
         s.allocs
     );
-    if !cfg!(debug_assertions) {
-        assert!(s.allocs < 100, "frame allocates {} times", s.allocs);
-    }
+    assert_release_alloc_limit(FRAME, s.allocs, 100);
 }
