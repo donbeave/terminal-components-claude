@@ -1014,6 +1014,7 @@ impl App {
             CMD_PRELUDE_SPACE if self.route == Route::Prelude => {
                 if self.prelude.step() == 1 {
                     self.prelude.choose_source();
+                    cx.focus(crate::screens::prelude::CONTINUE);
                 }
                 Some(Response::changed())
             }
