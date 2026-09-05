@@ -86,6 +86,7 @@ impl Workbench {
         let name = self
             .visible_explorer()
             .get(self.explorer_selected)
+            .filter(|(_, item)| item.openable)
             .map(|(_, item)| item.name.clone());
         name.is_some_and(|name| self.open_table(&name))
     }

@@ -376,7 +376,21 @@ impl TableProApp {
         }
         self.safe_mode = connection.safe_mode;
         self.connection = connection.clone();
-        self.workbench = Workbench::new(connection.clone(), self.catalog.clone());
+        let mut workbench = Workbench::new(connection.clone(), self.catalog.clone());
+        // Every connected workbench starts on the legacy blank query tab.  A
+        // separate app-level query buffer would otherwise make Tab land on a
+        // pre-executed fixture statement instead of the user's editor.
+        workbench.new_query("");
+        self.workbench = workbench;
+        self.query.clear();
+        self.query_state = TextInputState::default();
+        self.columns.clear();
+        self.result = ResultGrid::empty();
+        self.grid_state = GridState::default();
+        if let Some(item) = self.workbench.explorer.get(1) {
+            self.explorer_list_state
+                .set_cursor(1, tui_next::ItemKey::text(&item.name));
+        }
         self.connection_list_state
             .choose(Some(tui_next::ItemKey::index(index)));
         self.screen = Screen::Workbench;
@@ -395,6 +409,9 @@ impl TableProApp {
     }
     /// Create and activate a query tab.
     pub fn new_query(&mut self, query: impl Into<String>) -> usize {
+        let query = query.into();
+        self.query = query.clone();
+        self.query_state = TextInputState::default();
         let index = self.workbench.new_query(query);
         self.surface = Surface::QueryEditing;
         index
@@ -570,8 +587,15 @@ impl TableProApp {
         List::<crate::tabs::ExplorerItem>::new(EXPLORER)
             .key(|item: &crate::tabs::ExplorerItem| tui_next::ItemKey::text(&item.name))
             .row(|item, row| {
-                row.label_fmt(format_args!("{} › {}", item.schema, item.name));
-                row.meta(&item.rows.to_string());
+                if item.openable {
+                    row.label_fmt(format_args!("{} › {}", item.schema, item.name));
+                    row.meta(&item.rows.to_string());
+                } else if item.schema.is_empty() {
+                    row.label(&item.name);
+                } else {
+                    row.label_fmt(format_args!("▾ {}", item.name));
+                    row.meta(&item.rows.to_string());
+                }
             })
     }
 
@@ -736,7 +760,11 @@ impl App for TableProApp {
                     self.surface = Surface::QuickSwitcher;
                     response |= Response::changed();
                 }
-                c if c == NEW_QUERY => {
+            c if c == NEW_QUERY => {
+                    self.query.clear();
+                    self.query_state = TextInputState::default();
+                    self.result = ResultGrid::empty();
+                    self.columns.clear();
                     self.workbench.new_query("");
                     self.surface = Surface::QueryEditing;
                     response |= Response::changed();
@@ -837,6 +865,7 @@ impl App for TableProApp {
                     .position(|connection| tui_next::ItemKey::text(&connection.name) == key)
             {
                 let _ = self.connect(index);
+                cx.focus(EXPLORER);
             }
             response |= list_response.erase();
             return response;
@@ -856,6 +885,7 @@ impl App for TableProApp {
             if self.workbench.open_selected() {
                 self.sync_result_from_active_tab();
                 self.surface = Surface::TableGrid;
+                cx.focus(RESULTS);
             }
         }
         response |= explorer_response.erase();
@@ -898,9 +928,13 @@ impl App for TableProApp {
             }
             None => {}
         }
-        response |= query_input(None)
+        let query_response = query_input(None)
             .update(cx, &mut self.query_state, &mut self.query)
             .erase();
+        if let Some(crate::tabs::Tab::Query(query)) = self.workbench.active_mut() {
+            query.query.clone_from(&self.query);
+        }
+        response |= query_response;
         let editable = self.result.is_editable();
         let (columns, column_count) = Self::column_specs(&self.columns, editable);
         let grid = result_grid(columns.get(..column_count).unwrap_or(&[]));
@@ -941,8 +975,7 @@ impl App for TableProApp {
                     }
                 });
         } else if self.screen == Screen::Connections {
-            let title = format!("TablePro · connections · {}", self.surface.label());
-            ui.paint_str(header, &title, ui.surface_style());
+            ui.paint_str(header, "TablePro · Connections", ui.surface_style());
             connections_panel().draw(ui, body, |ui, area| {
                 Self::connection_list().draw(
                     ui,
@@ -952,11 +985,7 @@ impl App for TableProApp {
                 );
             });
         } else {
-            let title = format!(
-                "TablePro · {} · {}",
-                self.surface.label(),
-                self.connection.environment.label()
-            );
+            let title = format!("TablePro · {}", self.connection.environment.label());
             ui.paint_str(header, &title, ui.surface_style());
             let workbench_rows = tui_next::layout::rows(
                 body,
@@ -976,9 +1005,6 @@ impl App for TableProApp {
             );
             let explorer_area = panes.first().copied().unwrap_or(grid_area);
             let result_area = panes.get(1).copied().unwrap_or(grid_area);
-            Field::new("SQL query", query_input(Some(&self.query)))
-                .plain(true)
-                .draw(ui, query_area, &self.query_state);
             explorer_panel().draw(ui, explorer_area, |ui, area| {
                 Self::explorer_list().draw(
                     ui,
@@ -987,6 +1013,12 @@ impl App for TableProApp {
                     &self.workbench.explorer,
                 );
             });
+            // Keep the explorer as the first workbench stop.  The legacy
+            // route enters the explorer after connect and tabs into the query
+            // editor; draw order is the public runtime's focus-ring order.
+            Field::new("SQL query", query_input(Some(&self.query)))
+                .plain(true)
+                .draw(ui, query_area, &self.query_state);
             let (labels, label_count) = Self::tab_labels(&self.workbench.tabs);
             let labels = labels.get(..label_count).unwrap_or(&[]);
             Self::tab_strip().draw(ui, tabs_area, &self.tab_state, labels);
@@ -1003,10 +1035,6 @@ impl App for TableProApp {
                 .draw(ui, result_area, |ui, area| {
                     grid.draw(ui, area, &self.grid_state, &self.result);
                 });
-            if self.surface != Surface::TableGrid {
-                let marker = format!("[{}]", self.surface.label());
-                ui.paint_str(result_area, &marker, ui.surface_style());
-            }
         }
         let safe_token = self.safe_mode.token();
         let left = [

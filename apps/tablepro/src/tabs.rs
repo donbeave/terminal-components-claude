@@ -276,18 +276,58 @@ pub struct ExplorerItem {
     pub kind: crate::db::ObjectKind,
     /// Estimated row count.
     pub rows: usize,
+    /// Whether Enter opens this row as a catalog object.
+    ///
+    /// Database, schema, and section rows are intentionally represented in
+    /// the same keyed collection as objects.  This preserves the legacy
+    /// explorer's cursor route while keeping the list component generic.
+    pub openable: bool,
 }
 
 /// Build explorer rows from a catalog.
 pub fn explorer_items(catalog: &Catalog) -> Vec<ExplorerItem> {
-    catalog
-        .tables
-        .iter()
-        .map(|table| ExplorerItem {
-            schema: table.schema.clone(),
-            name: table.name.clone(),
-            kind: table.kind,
-            rows: table.row_count,
-        })
-        .collect()
+    let mut items = Vec::with_capacity(catalog.tables.len().saturating_add(3));
+    items.push(ExplorerItem {
+        schema: String::new(),
+        name: catalog.database.clone(),
+        kind: crate::db::ObjectKind::Sequence,
+        rows: 0,
+        openable: false,
+    });
+    let schema = catalog
+        .schemas
+        .first()
+        .cloned()
+        .unwrap_or_else(|| "public".to_owned());
+    items.push(ExplorerItem {
+        schema: String::new(),
+        name: schema.clone(),
+        kind: crate::db::ObjectKind::Sequence,
+        rows: 0,
+        openable: false,
+    });
+    items.push(ExplorerItem {
+        schema: schema.clone(),
+        name: "Tables".to_owned(),
+        kind: crate::db::ObjectKind::Sequence,
+        rows: catalog
+            .tables
+            .iter()
+            .filter(|table| table.kind == crate::db::ObjectKind::Table)
+            .count(),
+        openable: false,
+    });
+    items.extend(
+        catalog
+            .tables
+            .iter()
+            .map(|table| ExplorerItem {
+                schema: table.schema.clone(),
+                name: table.name.clone(),
+                kind: table.kind,
+                rows: table.row_count,
+                openable: true,
+            }),
+    );
+    items
 }
