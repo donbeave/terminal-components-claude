@@ -1,6 +1,10 @@
 //! Accounts route state and controls.
 
-use tui_next::{Id, ListState};
+use core::fmt;
+
+use tui_next::{Id, ListState, TextInputState};
+
+use crate::domain::onepassword::OpReference;
 
 /// Accounts list control.
 pub const LIST: Id = Id::root("jackin.accounts.list");
@@ -12,9 +16,17 @@ pub const SAVE: Id = FORM.sub("save");
 pub const PROVIDER: Id = FORM.sub("provider");
 /// 1Password source control.
 pub const OP: Id = FORM.sub("op");
+/// New-account opener.
+pub const START: Id = FORM.sub("start");
+/// Display-name field.
+pub const NAME: Id = FORM.sub("name");
+/// Local-folder field.
+pub const FOLDER: Id = FORM.sub("folder");
+/// Plain API-key field.
+pub const SECRET: Id = FORM.sub("secret");
 
 /// Durable accounts route state.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Clone, Default, PartialEq, Eq)]
 pub struct AccountsState {
     /// Public-list selection state owned by this route.
     pub list: ListState,
@@ -24,6 +36,47 @@ pub struct AccountsState {
     pub masked_input: String,
     pub pending_refresh: Option<String>,
     pub remove_confirmation: Option<String>,
+    /// Controlled public text field state for the display name.
+    pub name_input: TextInputState,
+    /// Controlled public text field state for a local folder.
+    pub folder_input: TextInputState,
+    /// Controlled public text field state for a transient API key.
+    pub secret_input: TextInputState,
+    /// Selected registerable provider (Anthropic, OpenAI, xAI, OpenCode).
+    pub provider_index: u8,
+    /// Credential source choice (1Password, folder, API key).
+    pub source_index: u8,
+    /// Selected 1Password item metadata.
+    pub selected_op: Option<OpReference>,
+    /// Selected item label in the 1Password browser.
+    pub op_item: String,
+    /// Current 1Password browser level.
+    pub op_stage: u8,
+    /// Stable selected account id for semantic commands.
+    pub selected_id: Option<String>,
+}
+
+impl fmt::Debug for AccountsState {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("AccountsState")
+            .field("list", &self.list)
+            .field("form_open", &self.form_open)
+            .field("editing", &self.editing)
+            .field("draft_name", &self.draft_name)
+            .field("masked_input", &"[redacted]")
+            .field("pending_refresh", &self.pending_refresh)
+            .field("remove_confirmation", &self.remove_confirmation)
+            .field("name_input", &self.name_input)
+            .field("folder_input", &self.folder_input)
+            .field("secret_input", &self.secret_input)
+            .field("provider_index", &self.provider_index)
+            .field("source_index", &self.source_index)
+            .field("selected_op", &self.selected_op)
+            .field("op_item", &self.op_item)
+            .field("op_stage", &self.op_stage)
+            .field("selected_id", &self.selected_id)
+            .finish()
+    }
 }
 
 impl AccountsState {
@@ -33,6 +86,17 @@ impl AccountsState {
         self.editing = None;
         self.draft_name.clear();
         self.masked_input.clear();
+        self.name_input = TextInputState::default();
+        self.folder_input = TextInputState::default();
+        self.secret_input = TextInputState::default();
+        self.provider_index = 0;
+        self.source_index = 0;
+        self.selected_op = None;
+        self.op_item.clear();
+        self.op_stage = 0;
+        self.selected_id = None;
+        self.pending_refresh = None;
+        self.remove_confirmation = None;
     }
 
     /// Close the form without writing a credential.
