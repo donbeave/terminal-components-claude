@@ -4,6 +4,7 @@
 //! through the clipping writer in one grapheme walk with no intermediate
 //! `String`; `label_fmt`, `num` and `money` format in place.
 
+use core::cell::Cell;
 use core::fmt::{self, Write as _};
 
 use ratatui_core::buffer::Buffer;
@@ -34,10 +35,19 @@ pub struct RowUi<'u> {
     key: ItemKey,
     row: Rect,
     label_patch: Option<StylePatch>,
+    meta_patch: Option<StylePatch>,
+    props_columns: PropsColumns<'u>,
     /// Next free column from the left.
     left: u16,
     /// Columns reserved from the right (already consumed).
     right: u16,
+}
+
+#[derive(Clone, Copy)]
+enum PropsColumns<'a> {
+    None,
+    Measure(&'a Cell<u16>),
+    Paint { label_width: u16 },
 }
 
 impl fmt::Debug for RowUi<'_> {
@@ -64,7 +74,9 @@ impl<'u> RowUi<'u> {
         key: ItemKey,
         row: Rect,
     ) -> RowUi<'u> {
-        Self::new_with_patches(ui, owner, family, variant, flags, key, row, None, None)
+        Self::new_with_column_patches(
+            ui, owner, family, variant, flags, key, row, None, None, None,
+        )
     }
 
     /// Begin a row with component-owned patches forwarded only to the
@@ -84,6 +96,39 @@ impl<'u> RowUi<'u> {
         container_patch: Option<StylePatch>,
         label_patch: Option<StylePatch>,
     ) -> RowUi<'u> {
+        Self::new_with_column_patches(
+            ui,
+            owner,
+            family,
+            variant,
+            flags,
+            key,
+            row,
+            container_patch,
+            label_patch,
+            None,
+        )
+    }
+
+    /// Begin a row with component-owned patches forwarded to both text
+    /// columns. Props is the only built-in whose `META` column is primary
+    /// content rather than optional decoration.
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the crate-private constructor extends RowUi's phase context with three scoped patches"
+    )]
+    pub(crate) fn new_with_column_patches<'a: 'u>(
+        ui: &'u mut Ui<'a>,
+        owner: Id,
+        family: Family,
+        variant: Variant,
+        flags: StateFlags,
+        key: ItemKey,
+        row: Rect,
+        container_patch: Option<StylePatch>,
+        label_patch: Option<StylePatch>,
+        meta_patch: Option<StylePatch>,
+    ) -> RowUi<'u> {
         let mut ui = ui.reborrow();
         let container = match container_patch {
             Some(patch) => {
@@ -102,9 +147,65 @@ impl<'u> RowUi<'u> {
             key,
             row,
             label_patch,
+            meta_patch,
+            props_columns: PropsColumns::None,
             left: 0,
             right: 0,
         }
+    }
+
+    /// Measure the semantic label emitted by a Props row without painting it.
+    pub(crate) fn new_props_measure<'a: 'u>(
+        ui: &'u mut Ui<'a>,
+        owner: Id,
+        flags: StateFlags,
+        key: ItemKey,
+        row: Rect,
+        measured: &'u Cell<u16>,
+    ) -> RowUi<'u> {
+        let mut row_ui = Self::new(
+            ui,
+            owner,
+            Family::PROPS,
+            Variant::DEFAULT,
+            flags,
+            key,
+            Rect { width: 0, ..row },
+        );
+        row_ui.props_columns = PropsColumns::Measure(measured);
+        row_ui
+    }
+
+    /// Paint a Props row using its legacy META-label/LABEL-value columns.
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the crate-private constructor mirrors RowUi's phase context with scoped patches"
+    )]
+    pub(crate) fn new_props<'a: 'u>(
+        ui: &'u mut Ui<'a>,
+        owner: Id,
+        flags: StateFlags,
+        key: ItemKey,
+        row: Rect,
+        label_width: u16,
+        container_patch: Option<StylePatch>,
+        label_patch: Option<StylePatch>,
+        value_patch: Option<StylePatch>,
+    ) -> RowUi<'u> {
+        let mut row_ui = Self::new_with_column_patches(
+            ui,
+            owner,
+            Family::PROPS,
+            Variant::DEFAULT,
+            flags,
+            key,
+            row,
+            container_patch,
+            value_patch,
+            label_patch,
+        );
+        row_ui.props_columns = PropsColumns::Paint { label_width };
+        row_ui
     }
 
     /// The row's state flags.
@@ -138,8 +239,13 @@ impl<'u> RowUi<'u> {
     }
 
     fn style_of(&mut self, part: Part) -> Style {
-        let r = match (part, self.label_patch) {
-            (Part::LABEL, Some(patch)) => {
+        let patch = match part {
+            Part::LABEL => self.label_patch,
+            Part::META => self.meta_patch,
+            _ => None,
+        };
+        let r = match patch {
+            Some(patch) => {
                 self.ui
                     .style_patched(self.family, self.variant, part, self.flags, &patch)
             }
@@ -154,6 +260,9 @@ impl<'u> RowUi<'u> {
     /// Paint a marker glyph at the left, then a gap. A resolved `Set`
     /// overrides `g`; `Clear` suppresses the marker while keeping its cell.
     pub fn marker(&mut self, g: GlyphRole) {
+        if matches!(self.props_columns, PropsColumns::Measure(_)) {
+            return;
+        }
         let r = self
             .ui
             .style(self.family, self.variant, Part::MARKER, self.flags);
@@ -184,6 +293,9 @@ impl<'u> RowUi<'u> {
     /// Paint the focus gutter (`GlyphRole::FocusBar` when the recipe says so,
     /// else a blank gutter cell).
     pub fn gutter(&mut self) {
+        if matches!(self.props_columns, PropsColumns::Measure(_)) {
+            return;
+        }
         let r = self
             .ui
             .style(self.family, self.variant, Part::GUTTER, self.flags);
@@ -203,6 +315,9 @@ impl<'u> RowUi<'u> {
 
     /// Indent by `depth` tree levels.
     pub fn indent(&mut self, depth: u16) {
+        if matches!(self.props_columns, PropsColumns::Measure(_)) {
+            return;
+        }
         let step = self.ui.design().space.tree_indent;
         self.left = self.left.saturating_add(depth.saturating_mul(step));
     }
@@ -210,22 +325,47 @@ impl<'u> RowUi<'u> {
     /// Paint the label into what is left, ending with the ellipsis glyph
     /// when it does not fit (the legacy `fit` contract, now allocation-free).
     pub fn label(&mut self, s: &str) {
-        let st = self.style_of(Part::LABEL);
+        if let PropsColumns::Measure(measured) = self.props_columns {
+            measured.set(measured.get().max(width(s)));
+            return;
+        }
+        let part = if matches!(self.props_columns, PropsColumns::Paint { .. }) {
+            Part::META
+        } else {
+            Part::LABEL
+        };
+        let st = self.style_of(part);
         self.label_in(s, st);
     }
 
     /// Paint the label with an instance patch.
     pub fn label_patched(&mut self, s: &str, p: &StylePatch) {
-        let patch = self.label_patch.map_or(*p, |forwarded| forwarded.merge(*p));
+        if let PropsColumns::Measure(measured) = self.props_columns {
+            measured.set(measured.get().max(width(s)));
+            return;
+        }
+        let (part, forwarded) = if matches!(self.props_columns, PropsColumns::Paint { .. }) {
+            (Part::META, self.meta_patch)
+        } else {
+            (Part::LABEL, self.label_patch)
+        };
+        let patch = forwarded.map_or(*p, |forwarded| forwarded.merge(*p));
         let st = self
             .ui
-            .style_patched(self.family, self.variant, Part::LABEL, self.flags, &patch)
+            .style_patched(self.family, self.variant, part, self.flags, &patch)
             .style;
         self.label_in(s, st);
     }
 
     fn label_in(&mut self, s: &str, st: Style) {
-        let area = self.remaining();
+        let remaining = self.remaining();
+        let area = match self.props_columns {
+            PropsColumns::Paint { label_width } => Rect {
+                width: remaining.width.min(label_width),
+                ..remaining
+            },
+            PropsColumns::None | PropsColumns::Measure(_) => remaining,
+        };
         let used = if width(s) <= area.width {
             self.ui.paint_str(area, s, st)
         } else {
@@ -241,21 +381,70 @@ impl<'u> RowUi<'u> {
             };
             used.saturating_add(self.ui.glyph(tail, GlyphRole::Ellipsis, st))
         };
-        self.left = self.left.saturating_add(used);
+        self.left = match self.props_columns {
+            PropsColumns::Paint { label_width } => self
+                .left
+                .saturating_add(label_width.min(remaining.width))
+                .saturating_add(2),
+            PropsColumns::None | PropsColumns::Measure(_) => self.left.saturating_add(used),
+        };
     }
 
     /// Paint role-carrying spans as the label (`Buffer::set_line`).
     pub fn label_spans(&mut self, spans: &[Span<'_>]) {
-        let st = self.style_of(Part::LABEL);
-        let area = self.remaining();
+        if let PropsColumns::Measure(measured) = self.props_columns {
+            let span_width = spans
+                .iter()
+                .fold(0u16, |total, span| total.saturating_add(width(span.text)));
+            measured.set(measured.get().max(span_width));
+            return;
+        }
+        let part = if matches!(self.props_columns, PropsColumns::Paint { .. }) {
+            Part::META
+        } else {
+            Part::LABEL
+        };
+        let st = self.style_of(part);
+        let remaining = self.remaining();
+        let area = match self.props_columns {
+            PropsColumns::Paint { label_width } => Rect {
+                width: remaining.width.min(label_width),
+                ..remaining
+            },
+            PropsColumns::None | PropsColumns::Measure(_) => remaining,
+        };
         let used = self.ui.paint_spans(area, spans, st);
-        self.left = self.left.saturating_add(used);
+        self.left = match self.props_columns {
+            PropsColumns::Paint { label_width } => self
+                .left
+                .saturating_add(label_width.min(remaining.width))
+                .saturating_add(2),
+            PropsColumns::None | PropsColumns::Measure(_) => self.left.saturating_add(used),
+        };
     }
 
     /// Format the label in place (0 allocations).
     pub fn label_fmt(&mut self, args: fmt::Arguments<'_>) {
-        let st = self.style_of(Part::LABEL);
-        let area = self.remaining();
+        if let PropsColumns::Measure(measured) = self.props_columns {
+            let mut counter = WidthWriter::default();
+            let _ = counter.write_fmt(args);
+            measured.set(measured.get().max(counter.width));
+            return;
+        }
+        let part = if matches!(self.props_columns, PropsColumns::Paint { .. }) {
+            Part::META
+        } else {
+            Part::LABEL
+        };
+        let st = self.style_of(part);
+        let remaining = self.remaining();
+        let area = match self.props_columns {
+            PropsColumns::Paint { label_width } => Rect {
+                width: remaining.width.min(label_width),
+                ..remaining
+            },
+            PropsColumns::None | PropsColumns::Measure(_) => remaining,
+        };
         let mut w = CellWriter {
             ui: &mut self.ui,
             area,
@@ -264,12 +453,28 @@ impl<'u> RowUi<'u> {
         };
         let _ = w.write_fmt(args);
         let used = w.x.saturating_sub(area.x);
-        self.left = self.left.saturating_add(used);
+        self.left = match self.props_columns {
+            PropsColumns::Paint { label_width } => self
+                .left
+                .saturating_add(label_width.min(remaining.width))
+                .saturating_add(2),
+            PropsColumns::None | PropsColumns::Measure(_) => self.left.saturating_add(used),
+        };
     }
 
     /// Right-aligned meta text, dropped all-or-none when it does not fit
     /// after a two-cell gap (`DESIGN.md:478`).
     pub fn meta(&mut self, s: &str) {
+        if matches!(self.props_columns, PropsColumns::Measure(_)) {
+            return;
+        }
+        if matches!(self.props_columns, PropsColumns::Paint { .. }) {
+            let area = self.remaining();
+            let st = self.style_of(Part::LABEL);
+            let used = self.ui.paint_str(area, s, st);
+            self.left = self.left.saturating_add(used);
+            return;
+        }
         let need = width(s);
         let area = self.remaining();
         if need == 0 || need.saturating_add(2) > area.width {
@@ -358,6 +563,18 @@ impl<'u> RowUi<'u> {
         let row = self.row;
         let (buf, _) = self.ui.buffer_in(row);
         (buf, row)
+    }
+}
+
+#[derive(Default)]
+struct WidthWriter {
+    width: u16,
+}
+
+impl fmt::Write for WidthWriter {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        self.width = self.width.saturating_add(width(s));
+        Ok(())
     }
 }
 
