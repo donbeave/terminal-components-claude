@@ -196,11 +196,7 @@ fn keymap() -> KeyMap {
             Chord::with(KeyCode::Char('x'), KeyModifiers::ALT),
             EXPLAIN,
         )
-        .bind(
-            KeyPhase::Bubble,
-            Chord::key(KeyCode::Char('f')),
-            FILTER,
-        )
+        .bind(KeyPhase::Bubble, Chord::key(KeyCode::Char('f')), FILTER)
         .bind(
             KeyPhase::Bubble,
             Chord::with(KeyCode::Char('g'), KeyModifiers::CONTROL),
@@ -821,7 +817,7 @@ impl App for TableProApp {
                     self.surface = Surface::QuickSwitcher;
                     response |= Response::changed();
                 }
-            c if c == NEW_QUERY => {
+                c if c == NEW_QUERY => {
                     self.query.clear();
                     self.query_state = TextInputState::default();
                     self.result = ResultGrid::empty();
@@ -837,13 +833,10 @@ impl App for TableProApp {
                 }
                 c if c == EXPLAIN => {
                     let catalog = self.workbench.catalog.clone();
-                    let planned = self
-                        .workbench
-                        .active_mut()
-                        .and_then(|tab| match tab {
-                            crate::tabs::Tab::Query(query) => Some(query.explain(&catalog)),
-                            _ => None,
-                        });
+                    let planned = self.workbench.active_mut().and_then(|tab| match tab {
+                        crate::tabs::Tab::Query(query) => Some(query.explain(&catalog)),
+                        _ => None,
+                    });
                     if matches!(planned, Some(Ok(()))) {
                         self.surface = Surface::ExplainPlan;
                         self.status = "Explain plan ready".to_owned();
@@ -1030,7 +1023,10 @@ impl App for TableProApp {
             grid.update(cx, &mut self.grid_state, &self.result)
         };
         let sync_table = grid_response.action_ref().is_some_and(|action| {
-            !matches!(action, GridAction::Moved | GridAction::LeaveForward | GridAction::LeaveBackward)
+            !matches!(
+                action,
+                GridAction::Moved | GridAction::LeaveForward | GridAction::LeaveBackward
+            )
         });
         if let Some(action) = grid_response.action_ref() {
             self.handle_grid(action);

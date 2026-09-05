@@ -317,17 +317,12 @@ pub fn explorer_items(catalog: &Catalog) -> Vec<ExplorerItem> {
             .count(),
         openable: false,
     });
-    items.extend(
-        catalog
-            .tables
-            .iter()
-            .map(|table| ExplorerItem {
-                schema: table.schema.clone(),
-                name: table.name.clone(),
-                kind: table.kind,
-                rows: table.row_count,
-                openable: true,
-            }),
-    );
+    items.extend(catalog.tables.iter().map(|table| ExplorerItem {
+        schema: table.schema.clone(),
+        name: table.name.clone(),
+        kind: table.kind,
+        rows: table.row_count,
+        openable: true,
+    }));
     items
 }
