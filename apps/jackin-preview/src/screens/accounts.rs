@@ -14,12 +14,16 @@ pub const FORM: Id = Id::root("jackin.accounts.form");
 pub const SAVE: Id = FORM.sub("save");
 /// Provider selection control.
 pub const PROVIDER: Id = FORM.sub("provider");
+/// Credential-source selection control.
+pub const SOURCE: Id = FORM.sub("source");
 /// 1Password source control.
 pub const OP: Id = FORM.sub("op");
 /// New-account opener.
 pub const START: Id = FORM.sub("start");
 /// Display-name field.
 pub const NAME: Id = FORM.sub("name");
+/// Agent/runtime selection control.
+pub const AGENT: Id = FORM.sub("agent");
 /// Local-folder field.
 pub const FOLDER: Id = FORM.sub("folder");
 /// Plain API-key field.
@@ -44,6 +48,10 @@ pub struct AccountsState {
     pub folder_input: TextInputState,
     /// Controlled public text field state for a transient API key.
     pub secret_input: TextInputState,
+    /// Provider selector list state.
+    pub provider_list: ListState,
+    /// Credential-source selector list state.
+    pub source_list: ListState,
     /// Selected registerable provider (Anthropic, OpenAI, xAI, OpenCode).
     pub provider_index: u8,
     /// Credential source choice (1Password, folder, API key).
@@ -72,6 +80,8 @@ impl fmt::Debug for AccountsState {
             .field("name_input", &self.name_input)
             .field("folder_input", &self.folder_input)
             .field("secret_input", &self.secret_input)
+            .field("provider_list", &self.provider_list)
+            .field("source_list", &self.source_list)
             .field("provider_index", &self.provider_index)
             .field("source_index", &self.source_index)
             .field("selected_op", &self.selected_op)
@@ -93,6 +103,8 @@ impl AccountsState {
         self.name_input = TextInputState::default();
         self.folder_input = TextInputState::default();
         self.secret_input = TextInputState::default();
+        self.provider_list = ListState::default();
+        self.source_list = ListState::default();
         self.provider_index = 0;
         self.source_index = 0;
         self.selected_op = None;

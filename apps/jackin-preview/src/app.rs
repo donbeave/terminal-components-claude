@@ -13,7 +13,7 @@ use tui_next::{
 };
 
 use crate::domain::account::{
-    Account, AccountOrigin, CredentialSource, DetectedKind, DuplicateProbe, fingerprint, tail_of,
+    Account, CredentialSource, DetectedKind, DuplicateProbe, fingerprint, tail_of,
 };
 use crate::domain::agent::{Agent, Provider};
 use crate::domain::instance::{DaemonSnapshot, InstanceStatus};
@@ -491,19 +491,23 @@ impl App {
     }
 
     fn account_rows(&self) -> Vec<String> {
-        self.world
-            .accounts
-            .sorted()
-            .into_iter()
-            .map(|account| {
-                format!(
-                    "{} · {} · {}",
-                    account.title(),
-                    account.status_word(),
-                    account.source.safe_detail()
-                )
-            })
-            .collect()
+        let mut rows = vec!["Overview".to_owned()];
+        rows.extend(
+            self.world
+                .accounts
+                .sorted()
+                .into_iter()
+                .map(|account| {
+                    format!(
+                        "{} · {} · {}",
+                        account.title(),
+                        account.status_word(),
+                        account.source.safe_detail()
+                    )
+                })
+                .collect::<Vec<_>>(),
+        );
+        rows
     }
 
     fn launch_dialog() -> Dialog<'static> {
@@ -563,22 +567,22 @@ impl App {
             }],
             2 => vec![
                 AccountOption {
-                    key: "anthropic".into(),
+                    key: "it_ant01".into(),
                     label: "Anthropic · Work".into(),
                     detail: "Claude credential".into(),
                 },
                 AccountOption {
-                    key: "codex-primary".into(),
+                    key: "it_cdx01".into(),
                     label: "OpenAI · Codex Primary".into(),
                     detail: "Codex credential".into(),
                 },
                 AccountOption {
-                    key: "grok-team".into(),
+                    key: "it_grk01".into(),
                     label: "xAI · Grok Team".into(),
                     detail: "Grok credential".into(),
                 },
                 AccountOption {
-                    key: "opencode-go".into(),
+                    key: "it_ocg01".into(),
                     label: "OpenCode Go".into(),
                     detail: "OpenCode credential".into(),
                 },
@@ -674,50 +678,51 @@ impl App {
         result |= response.erase();
         if cx.is_open(ACCOUNT_PICKER)
             && let Some(PickerAction::Chosen(key)) = action
-            && let Some(account) = picker_items.iter().find(|account| ItemKey::text(&account.key) == key)
+            && let Some(account) = picker_items
+                .iter()
+                .find(|account| ItemKey::text(&account.key) == key)
+                .cloned()
         {
             match self.picker_mode {
-                Some(PickerMode::OnePassword) => {
-                    match self.accounts.op_stage {
-                        0 => {
-                            self.status = Some("chainargos.1password.com".into());
-                            self.set_op_stage(1);
-                        }
-                        1 => {
-                            self.status = Some("Engineering".into());
-                            self.set_op_stage(2);
-                        }
-                        2 => {
-                            self.accounts.op_item = account.label.clone();
-                            self.set_op_stage(3);
-                            self.status = Some(account.label.clone());
-                        }
-                        _ => {
-                            let item = self.accounts.op_item.clone();
-                            let title = item
-                                .split_once(" · ")
-                                .map_or(item.as_str(), |(_, name)| name);
-                            if let Ok(reference) = self.world.op.reference(
-                                "chainargos.1password.com",
-                                "Engineering",
-                                match title {
-                                    "Anthropic · Work" | "Work" => "item-anthropic-work",
-                                    "OpenAI · Codex Primary" | "Codex Primary" => "item-openai-primary",
-                                    "xAI · Grok Team" | "Grok Team" => "item-grok-team",
-                                    _ => "item-opencode-go",
-                                },
-                                "credential",
-                            ) {
-                                self.accounts.selected_op = Some(reference.clone());
-                                self.status = Some(reference.display_path());
-                            } else {
-                                self.status = Some(format!("{item} · Work › credential"));
-                            }
-                            self.picker_mode = None;
-                            cx.close_layer(ACCOUNT_PICKER, Some(ActionKey::CONFIRM));
-                        }
+                Some(PickerMode::OnePassword) => match self.accounts.op_stage {
+                    0 => {
+                        self.status = Some("chainargos.1password.com".into());
+                        self.set_op_stage(1);
                     }
-                }
+                    1 => {
+                        self.status = Some("Engineering".into());
+                        self.set_op_stage(2);
+                    }
+                    2 => {
+                        self.accounts.op_item = account.label.clone();
+                        self.set_op_stage(3);
+                        self.status = Some(account.label.clone());
+                    }
+                    _ => {
+                        let item = self.accounts.op_item.clone();
+                        let title = item
+                            .split_once(" · ")
+                            .map_or(item.as_str(), |(_, name)| name);
+                        if let Ok(reference) = self.world.op.reference(
+                            "chainargos.1password.com",
+                            "Engineering",
+                            match title {
+                                "Anthropic · Work" | "Work" => "it_ant01",
+                                "OpenAI · Codex Primary" | "Codex Primary" => "it_cdx01",
+                                "xAI · Grok Team" | "Grok Team" => "it_grk01",
+                                _ => "it_ocg01",
+                            },
+                            "credential",
+                        ) {
+                            self.accounts.selected_op = Some(reference.clone());
+                            self.status = Some(reference.display_path());
+                        } else {
+                            self.status = Some(format!("{item} · Work › credential"));
+                        }
+                        self.picker_mode = None;
+                        cx.close_layer(ACCOUNT_PICKER, Some(ActionKey::CONFIRM));
+                    }
+                },
                 _ => {
                     self.status = Some(format!("Selected reference · {}", account.detail));
                     self.picker_mode = None;
@@ -812,9 +817,141 @@ impl App {
     }
 
     fn update_accounts(&mut self, cx: &mut Cx<'_>) -> Response<()> {
+        if self.accounts.form_open {
+            if !self.accounts.started {
+                let start = Button::new(crate::screens::accounts::START, "New account")
+                    .variant(Variant::PRIMARY)
+                    .update(cx);
+                let chosen = start.activated();
+                let mut result = start.erase();
+                if chosen {
+                    self.accounts.started = true;
+                    cx.focus(crate::screens::accounts::NAME);
+                    result |= Response::changed();
+                }
+                return result;
+            }
+
+            let name = TextInput::new(crate::screens::accounts::NAME)
+                .placeholder("Display name")
+                .update(
+                    cx,
+                    &mut self.accounts.name_input,
+                    &mut self.accounts.draft_name,
+                );
+            let mut result = name.erase();
+
+            // Keep the agent choice explicit in the tab order.  The current
+            // account flow registers the provider for a selected agent, so a
+            // public button is preferable to an implicit/raw form field.
+            let agent = Button::new(crate::screens::accounts::AGENT, "Claude Code")
+                .checked(true)
+                .update(cx);
+            result |= agent.erase();
+
+            let provider_rows = vec![
+                provider_label(Provider::Anthropic).to_owned(),
+                provider_label(Provider::OpenAi).to_owned(),
+                provider_label(Provider::XAi).to_owned(),
+                provider_label(Provider::OpenCode).to_owned(),
+            ];
+            let provider = List::new(crate::screens::accounts::PROVIDER).update(
+                cx,
+                &mut self.accounts.provider_list,
+                &provider_rows,
+            );
+            if let Some(ItemKey::Index(index)) = self.accounts.provider_list.cursor() {
+                self.accounts.provider_index = u8::try_from(index).unwrap_or(0).min(3);
+            }
+            result |= provider.erase();
+
+            let source_rows = vec![
+                source_label(0).to_owned(),
+                source_label(1).to_owned(),
+                source_label(2).to_owned(),
+            ];
+            let source = List::new(crate::screens::accounts::SOURCE).update(
+                cx,
+                &mut self.accounts.source_list,
+                &source_rows,
+            );
+            let source_action = source.action_ref().copied();
+            if let Some(ItemKey::Index(index)) = self.accounts.source_list.cursor() {
+                self.accounts.source_index = u8::try_from(index).unwrap_or(0).min(2);
+            }
+            result |= source.erase();
+            if matches!(source_action, Some(ListAction::Activated(_))) {
+                result |= Response::changed();
+            }
+            if self.accounts.source_index == 0 {
+                let label = self.accounts.selected_op.as_ref().map_or(
+                    "Choose 1Password reference…",
+                    |reference| {
+                        // Keep the value in a local owned string below; this
+                        // label is a non-secret reference path only.
+                        let _ = reference;
+                        "Selected 1Password reference"
+                    },
+                );
+                let op = Button::new(crate::screens::accounts::OP, label).update(cx);
+                let chosen = op.activated();
+                result |= op.erase();
+                if chosen {
+                    self.open_op_picker(cx);
+                }
+            }
+
+            match self.accounts.source_index {
+                1 => {
+                    let folder = TextInput::new(crate::screens::accounts::FOLDER)
+                        .placeholder("Local agent folder")
+                        .update(
+                            cx,
+                            &mut self.accounts.folder_input,
+                            &mut self.accounts.masked_input,
+                        );
+                    result |= folder.erase();
+                }
+                2 => {
+                    let secret = TextInput::new(crate::screens::accounts::SECRET)
+                        .placeholder("API key")
+                        .secret(SecretPolicy::default())
+                        .update(
+                            cx,
+                            &mut self.accounts.secret_input,
+                            &mut self.accounts.masked_input,
+                        );
+                    result |= secret.erase();
+                }
+                _ => {}
+            }
+
+            let save = Button::new(crate::screens::accounts::SAVE, "Save account")
+                .variant(Variant::PRIMARY)
+                .update(cx);
+            let save_chosen = save.activated();
+            result |= save.erase();
+            if save_chosen {
+                self.save_account();
+                result |= Response::changed();
+            }
+            return result;
+        }
+
         let rows = self.account_rows();
         let list = List::new(ACCOUNTS_LIST).update(cx, &mut self.accounts.list, &rows);
+        let list_action = list.action_ref().copied();
         let mut result = list.erase();
+        self.accounts.selected_id = selected_account_id(&self.world, self.accounts.list.cursor());
+        if matches!(list_action, Some(ListAction::Chose(_))) {
+            if let Some(id) = self.accounts.selected_id.clone() {
+                match self.world.accounts.set_default(&id) {
+                    Ok(()) => self.status = Some("Default set for provider".into()),
+                    Err(error) => self.status = Some(error),
+                }
+            }
+            result |= Response::changed();
+        }
         let add = Self::account_add_button().update(cx);
         let chosen = add.activated();
         result |= add.erase();
@@ -822,6 +959,136 @@ impl App {
             self.open_account_picker(cx);
         }
         result
+    }
+
+    fn save_account(&mut self) {
+        let provider = register_provider(self.accounts.provider_index);
+        let name = if self.accounts.draft_name.trim().is_empty() {
+            "Unnamed"
+        } else {
+            self.accounts.draft_name.trim()
+        };
+        let source = match self.accounts.source_index {
+            0 => match self.accounts.selected_op.clone() {
+                Some(reference) => CredentialSource::OnePassword(reference),
+                None => {
+                    self.status = Some("Choose a 1Password reference first".into());
+                    return;
+                }
+            },
+            1 => {
+                let path = self.accounts.masked_input.trim().to_owned();
+                if path.is_empty() {
+                    self.status = Some("Local agent folder is required".into());
+                    return;
+                }
+                let detected = match provider::probe_folder(&path) {
+                    provider::FolderProbe::Found(kind) => kind,
+                    _ => DetectedKind::Unknown,
+                };
+                CredentialSource::LocalFolder { path, detected }
+            }
+            _ => {
+                let value = self.accounts.masked_input.clone();
+                if value.is_empty() {
+                    self.status = Some("API key is required".into());
+                    return;
+                }
+                CredentialSource::PlainApiKey {
+                    fingerprint: fingerprint(&value),
+                    tail: tail_of(&value),
+                }
+            }
+        };
+
+        let duplicate = match &source {
+            CredentialSource::OnePassword(reference) => {
+                self.world
+                    .accounts
+                    .find_duplicate(&DuplicateProbe::OpReference {
+                        canonical: reference.canonical(),
+                        account: reference.account.clone(),
+                    })
+            }
+            CredentialSource::LocalFolder { path, .. } => {
+                self.world.accounts.find_duplicate(&DuplicateProbe::Folder {
+                    provider,
+                    path: path.clone(),
+                })
+            }
+            CredentialSource::PlainApiKey { fingerprint, .. } => self
+                .world
+                .accounts
+                .find_duplicate(&DuplicateProbe::KeyFingerprint {
+                    provider,
+                    fingerprint: fingerprint.clone(),
+                }),
+            CredentialSource::HostEnv { .. } => None,
+        };
+        if let Some(account) = duplicate {
+            self.status = Some(format!(
+                "Already registered: this source is used by {}",
+                account.title()
+            ));
+            return;
+        }
+        if self.world.accounts.name_taken(provider, name, None) {
+            self.status = Some(format!("Name already used for {}", provider.short()));
+            return;
+        }
+
+        let slug = name
+            .chars()
+            .map(|c| {
+                if c.is_ascii_alphanumeric() {
+                    c.to_ascii_lowercase()
+                } else {
+                    '-'
+                }
+            })
+            .collect::<String>()
+            .trim_matches('-')
+            .to_owned();
+        let id = format!("acct-{}-{}", provider_slug(provider), slug);
+        let plain =
+            (self.accounts.source_index == 2).then_some(self.accounts.masked_input.as_str());
+        let outcome = provider::validate(
+            provider,
+            &source,
+            plain,
+            &self.world.op,
+            self.world.now_secs(),
+        );
+        let mut account = Account::registered(&id, name, provider, source);
+        account.identity = outcome.identity;
+        account.confidence = outcome.confidence;
+        account.lifecycle = outcome.lifecycle;
+        account.issue = outcome.issue;
+        account.validation = outcome
+            .level
+            .map(crate::domain::account::ValidationState::Valid)
+            .unwrap_or(crate::domain::account::ValidationState::NeverValidated);
+        if let Some(usage) = outcome.usage {
+            account.usage = usage;
+        }
+        if provider == Provider::XAi {
+            account = account.with_endpoint("Grok Team", "https://api.x.ai");
+        }
+        let title = account.title();
+        self.world.accounts.insert(account);
+        self.account_options = self
+            .world
+            .accounts
+            .sorted()
+            .into_iter()
+            .map(AccountOption::from)
+            .collect();
+        self.accounts.form_open = false;
+        self.accounts.started = false;
+        self.accounts.masked_input.clear();
+        self.accounts.secret_input = tui_next::TextInputState::default();
+        self.accounts.folder_input = tui_next::TextInputState::default();
+        self.status = Some(format!("Saved {title}"));
     }
 
     fn update_settings(&mut self, cx: &mut Cx<'_>) -> Response<()> {
@@ -1019,9 +1286,66 @@ impl App {
             CMD_ACCOUNTS => {
                 if self.route == Route::Accounts {
                     self.accounts.open_new();
+                    cx.focus(crate::screens::accounts::START);
                 } else {
                     self.route = Route::Accounts;
                 }
+                Some(Response::changed())
+            }
+            CMD_ACCOUNT_REFRESH if self.route == Route::Accounts && !self.accounts.form_open => {
+                if let Some(id) = self.accounts.selected_id.clone() {
+                    self.accounts.pending_refresh = Some(id.clone());
+                    self.status = Some("Refreshing account…".into());
+                    self.world.schedule(
+                        1_000,
+                        crate::sim::world::Msg::AccountRefreshed { account: id },
+                    );
+                }
+                Some(Response::changed())
+            }
+            CMD_ACCOUNT_VALIDATE if self.route == Route::Accounts && !self.accounts.form_open => {
+                if let Some(id) = self.accounts.selected_id.clone()
+                    && let Some(account) = self.world.accounts.get(&id).cloned()
+                {
+                    let outcome = provider::validate(
+                        account.provider,
+                        &account.source,
+                        None,
+                        &self.world.op,
+                        self.world.now_secs(),
+                    );
+                    if let Some(account) = self.world.accounts.get_mut(&id) {
+                        account.identity = outcome.identity;
+                        account.confidence = outcome.confidence;
+                        account.lifecycle = outcome.lifecycle;
+                        account.issue = outcome.issue;
+                        account.usage = outcome.usage.unwrap_or_else(|| account.usage.clone());
+                    }
+                    self.status = Some("Validation fingerprint matches configured source".into());
+                }
+                Some(Response::changed())
+            }
+            CMD_ACCOUNT_REMOVE if self.route == Route::Accounts && !self.accounts.form_open => {
+                if let Some(id) = self.accounts.selected_id.clone()
+                    && let Some(account) = self.world.accounts.get(&id)
+                {
+                    self.accounts.remove_confirmation = Some(id);
+                    self.status = Some(format!("Remove account {}?", account.display_name));
+                }
+                Some(Response::changed())
+            }
+            CMD_ACCOUNT_DEFAULT if self.route == Route::Accounts && !self.accounts.form_open => {
+                if let Some(id) = self.accounts.selected_id.clone() {
+                    match self.world.accounts.set_default(&id) {
+                        Ok(()) => self.status = Some("Default set for provider".into()),
+                        Err(error) => self.status = Some(error),
+                    }
+                }
+                Some(Response::changed())
+            }
+            CMD_ACCOUNT_HELP if self.route == Route::Accounts => {
+                self.status =
+                    Some("Credential sources · 1Password · Local agent folder · API key".into());
                 Some(Response::changed())
             }
             CMD_USAGE => {
@@ -1217,7 +1541,17 @@ impl App {
                     });
                 }
                 crate::sim::world::Msg::AccountRefreshed { account } => {
-                    self.status = Some(format!("Account {account} refreshed"));
+                    self.accounts.pending_refresh = None;
+                    if self.world.refresh_fails {
+                        self.status = Some(
+                            "Refresh failed · broker unreachable · last good data retained".into(),
+                        );
+                    } else if let Some(entry) = self.world.accounts.get(&account) {
+                        self.status =
+                            Some(format!("Refreshed {} · still rate limited", entry.title()));
+                    } else {
+                        self.status = Some(format!("Account {account} refreshed"));
+                    }
                 }
             }
         }
@@ -1513,6 +1847,132 @@ impl App {
     }
 
     fn draw_accounts(&self, ui: &mut Ui<'_>, area: Rect) {
+        if self.accounts.form_open {
+            if !self.accounts.started {
+                paint_lines(
+                    ui,
+                    area,
+                    &[
+                        "New account",
+                        "Register a provider account without storing secret material.",
+                    ],
+                );
+                Button::new(crate::screens::accounts::START, "New account")
+                    .variant(Variant::PRIMARY)
+                    .draw(ui, Rect::new(area.x, area.y.saturating_add(3), 18, 1));
+                return;
+            }
+            paint_lines(
+                ui,
+                area,
+                &[
+                    "New account · register",
+                    "Name · provider · credential source",
+                ],
+            );
+            TextInput::new(crate::screens::accounts::NAME)
+                .value(&self.accounts.draft_name)
+                .placeholder("Display name")
+                .draw(
+                    ui,
+                    Rect::new(area.x, area.y.saturating_add(3), area.width, 1),
+                    &self.accounts.name_input,
+                );
+            ui.paint_str(
+                Rect::new(area.x, area.y.saturating_add(4), area.width, 1),
+                "Agent · Claude Code",
+                ui.surface_style(),
+            );
+            Button::new(crate::screens::accounts::AGENT, "Claude Code")
+                .checked(true)
+                .draw(
+                    ui,
+                    Rect::new(area.x, area.y.saturating_add(5), area.width.min(28), 1),
+                );
+            List::new(crate::screens::accounts::PROVIDER).draw(
+                ui,
+                Rect::new(area.x, area.y.saturating_add(6), area.width.min(34), 4),
+                &self.accounts.provider_list,
+                &[
+                    provider_label(Provider::Anthropic),
+                    provider_label(Provider::OpenAi),
+                    provider_label(Provider::XAi),
+                    provider_label(Provider::OpenCode),
+                ],
+            );
+            let source_y = area.y.saturating_add(11);
+            List::new(crate::screens::accounts::SOURCE).draw(
+                ui,
+                Rect::new(area.x, source_y, area.width.min(34), 3),
+                &self.accounts.source_list,
+                &[source_label(0), source_label(1), source_label(2)],
+            );
+            let input_y = source_y.saturating_add(4);
+            match self.accounts.source_index {
+                0 => {
+                    Button::new(
+                        crate::screens::accounts::OP,
+                        self.accounts.selected_op.as_ref().map_or(
+                            "Choose 1Password reference…",
+                            |_| "Selected 1Password reference",
+                        ),
+                    )
+                    .draw(ui, Rect::new(area.x, input_y, area.width.min(38), 1));
+                }
+                1 => {
+                    TextInput::new(crate::screens::accounts::FOLDER)
+                        .value(&self.accounts.masked_input)
+                        .placeholder("Local agent folder")
+                        .draw(
+                            ui,
+                            Rect::new(area.x, input_y, area.width, 1),
+                            &self.accounts.folder_input,
+                        );
+                }
+                2 => {
+                    TextInput::new(crate::screens::accounts::SECRET)
+                        .value(&self.accounts.masked_input)
+                        .placeholder("API key")
+                        .secret(SecretPolicy::default())
+                        .draw(
+                            ui,
+                            Rect::new(area.x, input_y, area.width, 1),
+                            &self.accounts.secret_input,
+                        );
+                    if !self.accounts.masked_input.is_empty() {
+                        let tail = crate::domain::account::tail_of(&self.accounts.masked_input);
+                        ui.paint_str(
+                            Rect::new(area.x, input_y.saturating_add(1), area.width, 1),
+                            &format!("Last four · {tail}"),
+                            ui.surface_style(),
+                        );
+                    }
+                }
+                _ => {
+                    if let Some(reference) = self.accounts.selected_op.as_ref() {
+                        let display = reference.display_path();
+                        ui.paint_str(
+                            Rect::new(area.x, input_y, area.width, 1),
+                            &display,
+                            ui.surface_style(),
+                        );
+                    } else {
+                        ui.paint_str(
+                            Rect::new(area.x, input_y, area.width, 1),
+                            "Choose 1Password reference…",
+                            ui.surface_style(),
+                        );
+                    }
+                }
+            }
+            Button::new(crate::screens::accounts::SAVE, "Save account")
+                .variant(Variant::PRIMARY)
+                .draw(
+                    ui,
+                    Rect::new(area.x, area.bottom().saturating_sub(1), 18, 1),
+                );
+            return;
+        }
         let rows = self.account_rows();
         let list_area = Rect {
             height: area.height.saturating_sub(3),
@@ -1846,6 +2306,21 @@ impl TuiApp for App {
             self.status = None;
             return Response::changed();
         }
+        if self.route == Route::Accounts {
+            if self.accounts.remove_confirmation.take().is_some() {
+                self.status = None;
+                return Response::changed();
+            }
+            if self.accounts.form_open {
+                self.accounts.close();
+                if self.world.scenario == Scenario::AccountsMixed {
+                    self.route = Route::Editor;
+                } else {
+                    self.status = Some("Cancelled account registration".into());
+                }
+                return Response::changed();
+            }
+        }
         if self.route == Route::Prelude {
             if self.prelude.step() == 2 {
                 self.prelude.source_back();
@@ -1903,6 +2378,26 @@ fn app_keymap() -> KeyMap {
             KeyPhase::Bubble,
             Chord::key(KeyCode::Char('c')),
             CMD_CAPSULE,
+        )
+        .bind(
+            KeyPhase::Bubble,
+            Chord::key(KeyCode::Char('r')),
+            CMD_ACCOUNT_REFRESH,
+        )
+        .bind(
+            KeyPhase::Bubble,
+            Chord::key(KeyCode::Char('v')),
+            CMD_ACCOUNT_VALIDATE,
+        )
+        .bind(
+            KeyPhase::Bubble,
+            Chord::key(KeyCode::Char('x')),
+            CMD_ACCOUNT_REMOVE,
+        )
+        .bind(
+            KeyPhase::Bubble,
+            Chord::key(KeyCode::Char('?')),
+            CMD_ACCOUNT_HELP,
         )
         .bind(
             KeyPhase::Bubble,
@@ -1983,6 +2478,52 @@ fn plan_label(plan: LaunchPlan) -> &'static str {
         LaunchPlan::CredentialsLocked => "credentials locked",
         LaunchPlan::BlockedSidecar => "sidecar blocked",
     }
+}
+
+fn register_provider(index: u8) -> Provider {
+    match index {
+        1 => Provider::OpenAi,
+        2 => Provider::XAi,
+        3 => Provider::OpenCode,
+        _ => Provider::Anthropic,
+    }
+}
+
+fn provider_slug(provider: Provider) -> &'static str {
+    match provider {
+        Provider::Anthropic => "anthropic",
+        Provider::OpenAi => "openai",
+        Provider::XAi => "xai",
+        Provider::OpenCode => "opencode",
+        _ => "provider",
+    }
+}
+
+fn provider_label(provider: Provider) -> &'static str {
+    match provider {
+        Provider::Anthropic => "Claude · Anthropic",
+        Provider::OpenAi => "Codex · OpenAI",
+        Provider::XAi => "Grok Build · xAI",
+        Provider::OpenCode => "OpenCode",
+        _ => "Provider",
+    }
+}
+
+fn source_label(index: u8) -> &'static str {
+    match index {
+        1 => "Local agent folder",
+        2 => "API key",
+        _ => "1Password reference",
+    }
+}
+
+fn selected_account_id(world: &World, key: Option<ItemKey>) -> Option<String> {
+    let Some(ItemKey::Index(index)) = key else {
+        return None;
+    };
+    index
+        .checked_sub(1)
+        .and_then(|index| world.accounts.sorted().get(index).map(|a| a.id.clone()))
 }
 
 fn capsule_tabs() -> Vec<String> {
