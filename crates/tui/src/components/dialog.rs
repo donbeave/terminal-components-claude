@@ -4,6 +4,7 @@
 use core::fmt;
 
 use ratatui_core::layout::Rect;
+use ratatui_core::style::Modifier;
 
 use super::button::Button;
 use super::field::Field;
@@ -21,7 +22,7 @@ use crate::measure::{Constraints, Size};
 use crate::response::{Response, StateFlags};
 use crate::secret::{Secret, SecretPolicy};
 use crate::text::{width, wrap, wrapped_rows};
-use crate::theme::{DesignTokens, Family, StylePatch, Surface, Variant};
+use crate::theme::{DesignTokens, Family, FgStep, Role, StylePatch, Surface, Variant};
 use crate::ui::{Cx, FrameRead, Ui};
 
 /// What a dialog reports.
@@ -91,6 +92,13 @@ const ACK_ACTIONS: [Action<'static>; 2] = [
     Action::new(ActionKey::CANCEL, "Cancel"),
     Action::danger(ActionKey::CONFIRM, "Confirm"),
 ];
+
+// Disabled actions retain their disabled background while using primary text
+// and DIM so labels and chords stay readable at every colour capability.
+const DISABLED_ACTION_PATCH: StylePatch = StylePatch::new()
+    .set_fg(Role::Fg(FgStep::Primary))
+    .remove(Modifier::all())
+    .add(Modifier::DIM);
 const INFO_ACTIONS: [Action<'static>; 1] = [Action::new(ActionKey::CLOSE, "Close")];
 
 /// Durable state of a [`Dialog`]: the prompt / acknowledgement draft.
@@ -862,10 +870,14 @@ impl<'a> Dialog<'a> {
                 for ((i, a), r) in actions.iter().enumerate().zip(rects) {
                     let action_id = self.action_id(i);
                     let enabled = self.enabled(i, a, st);
-                    Button::new(action_id, a.label())
+                    let button = Button::new(action_id, a.label())
                         .variant(self.variant_of(a))
-                        .disabled(!enabled)
-                        .draw(ui, r);
+                        .disabled(!enabled);
+                    if enabled {
+                        button.draw(ui, r);
+                    } else {
+                        button.patch(&DISABLED_ACTION_PATCH).draw(ui, r);
+                    }
                     if enabled {
                         ui.publish_dynamic_bindings(
                             action_id,
@@ -881,12 +893,22 @@ impl<'a> Dialog<'a> {
                             width: key_width,
                             ..r
                         };
-                        let style = ui.resolve(
-                            Family::BUTTON,
-                            self.variant_of(a),
-                            Part::LABEL,
-                            ui.state(action_id),
-                        );
+                        let style = if enabled {
+                            ui.resolve(
+                                Family::BUTTON,
+                                self.variant_of(a),
+                                Part::LABEL,
+                                ui.state(action_id),
+                            )
+                        } else {
+                            ui.style_patched(
+                                Family::BUTTON,
+                                self.variant_of(a),
+                                Part::LABEL,
+                                ui.state(action_id),
+                                &DISABLED_ACTION_PATCH,
+                            )
+                        };
                         ui.paint_str(key, text.as_str(), style.style);
                     }
                 }
@@ -921,13 +943,15 @@ mod tests {
 
     use ratatui_core::buffer::Buffer;
     use ratatui_core::layout::Position;
+    use ratatui_core::style::Modifier;
 
     use super::*;
-    use crate::event::{Input, Key, KeyModifiers};
+    use crate::event::{Input, Key, KeyModifiers, MouseKind};
     use crate::keymap::KeyMap;
-    use crate::runtime::stub::{SCREEN, Stub};
+    use crate::runtime::stub::{SCREEN, Stub, mouse};
     use crate::runtime::{App, Runtime};
-    use crate::theme::Theme;
+    use crate::theme::builder::contrast;
+    use crate::theme::{ColorLevel, Theme};
 
     const DLG: Id = Id::root("dialog.tests");
     const BODY: Id = Id::root("dialog.tests.body");
@@ -945,6 +969,22 @@ mod tests {
         Dialog::acknowledge(DLG, "Delete table", TOKEN)
     }
 
+    const DISABLED_ACTIONS: [Action<'static>; 2] = [
+        Action::quiet(ActionKey::CANCEL, "Cancel")
+            .chord(Chord::key(KeyCode::F(3)))
+            .enabled(false),
+        Action::new(ActionKey::CONFIRM, "Run")
+            .chord(Chord::key(KeyCode::F(4)))
+            .enabled(false),
+    ];
+
+    fn disabled_actions() -> Dialog<'static> {
+        Dialog::new(DLG)
+            .width(32)
+            .body_rows(0)
+            .actions(&DISABLED_ACTIONS)
+    }
+
     fn esc() -> Input {
         Input::Key(Key {
             code: KeyCode::Esc,
@@ -958,6 +998,117 @@ mod tests {
             Runtime::new(Stub::default(), Theme::junie()),
             Buffer::empty(SCREEN),
         )
+    }
+
+    #[test]
+    fn disabled_action_labels_and_chords_keep_contrast_and_dim_at_every_level() {
+        let levels = [
+            ColorLevel::TrueColor,
+            ColorLevel::Ansi256,
+            ColorLevel::Ansi16,
+            ColorLevel::Mono,
+        ];
+        for base in [Theme::junie(), Theme::paper()] {
+            for level in levels {
+                let mut runtime = Runtime::new(Stub::default(), base.downgrade(level));
+                let mut buffer = Buffer::empty(SCREEN);
+                runtime.draw_scene(SCREEN, &mut buffer, |ui, _| {
+                    disabled_actions().draw(
+                        ui,
+                        Rect::new(0, 0, 32, 5),
+                        &DialogState::default(),
+                        |_, _| (),
+                    );
+                });
+                let actions = runtime
+                    .area_of_part(DLG, PartRef::of(Part::ACTIONS))
+                    .expect("disabled dialog registers its action row");
+                let row: String = actions
+                    .positions()
+                    .filter_map(|position| buffer.cell(position).map(|cell| cell.symbol()))
+                    .collect();
+                assert!(row.contains("Cancel"), "{base:?}/{level:?}: {row:?}");
+                assert!(row.contains("F3"), "{base:?}/{level:?}: {row:?}");
+                assert!(row.contains("Run"), "{base:?}/{level:?}: {row:?}");
+                assert!(row.contains("F4"), "{base:?}/{level:?}: {row:?}");
+                for position in actions.positions() {
+                    let cell = buffer
+                        .cell(position)
+                        .expect("action row positions are inside the buffer");
+                    if cell.symbol() != " " {
+                        assert!(
+                            contrast(cell.fg, cell.bg) >= 3.0,
+                            "{base:?}/{level:?}: disabled dialog cell at {position:?} has {:?} on {:?}",
+                            cell.fg,
+                            cell.bg
+                        );
+                        assert!(
+                            cell.modifier.contains(Modifier::DIM),
+                            "{base:?}/{level:?}: disabled dialog cell at {position:?} lost DIM"
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn disabled_action_chords_and_clicks_never_activate() {
+        #[derive(Default)]
+        struct DisabledDialogApp {
+            state: DialogState,
+            opened: bool,
+            chosen: Option<ActionKey>,
+        }
+
+        impl App for DisabledDialogApp {
+            fn update(&mut self, cx: &mut Cx<'_>) -> Response<()> {
+                if !self.opened {
+                    self.opened = true;
+                    cx.open_layer(DLG, disabled_actions().layer(cx));
+                }
+                let response = disabled_actions().update(cx, &mut self.state);
+                if let Some(DialogAction::Action(action)) = response.action_ref() {
+                    self.chosen = Some(*action);
+                }
+                response.erase()
+            }
+
+            fn draw(&self, ui: &mut Ui<'_>) {
+                let _ = ui.layer(DLG, |ui, area| {
+                    disabled_actions().draw(ui, area, &self.state, |_, _| {});
+                });
+            }
+        }
+
+        let mut runtime = Runtime::new(DisabledDialogApp::default(), Theme::junie());
+        let mut buffer = Buffer::empty(SCREEN);
+        runtime.draw_buffer(SCREEN, &mut buffer);
+        let _ = runtime.handle(Input::Tick);
+        runtime.draw_buffer(SCREEN, &mut buffer);
+        assert!(runtime.is_open(DLG));
+        assert!(
+            runtime.ring().reachable().all(|entry| {
+                entry.id != disabled_actions().action_id(0)
+                    && entry.id != disabled_actions().action_id(1)
+            }),
+            "disabled actions entered the focus ring"
+        );
+
+        let _ = runtime.handle(Input::Key(Key {
+            code: KeyCode::F(4),
+            mods: KeyModifiers::NONE,
+        }));
+        assert_eq!(runtime.app().chosen, None, "disabled chord activated");
+
+        let area = runtime
+            .area_of(disabled_actions().action_id(1))
+            .expect("disabled action remains registered for hit testing");
+        let x = area.x.saturating_add(area.width / 2);
+        let y = area.y;
+        let _ = runtime.handle(mouse(MouseKind::Down, x, y));
+        let _ = runtime.handle(mouse(MouseKind::Up, x, y));
+        assert_eq!(runtime.app().chosen, None, "disabled click activated");
     }
 
     #[test]

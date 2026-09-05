@@ -247,6 +247,28 @@ fn field_like(m: &mut PartMap<PartRecipe>) {
     );
 }
 
+/// Code keeps the field-like base recipe, but its disabled textual lanes must
+/// remain readable when syntax colours would otherwise replace the resolved
+/// disabled foreground.
+fn code_like(m: &mut PartMap<PartRecipe>) {
+    field_like(m);
+    let disabled = p()
+        .set_fg(Role::Fg(FgStep::Primary))
+        .remove(Modifier::all())
+        .add(Modifier::DIM);
+    part(m, Part::CONTAINER, p().set_bg(Role::CurrentSurface))
+        .when(StateFlags::DISABLED, disabled.set_bg(Role::DisabledBg));
+    for part_name in [
+        Part::TEXT,
+        Part::META,
+        Part::PLACEHOLDER,
+        Part::QUERY,
+        Part::DETAIL,
+    ] {
+        part(m, part_name, p()).when(StateFlags::DISABLED, disabled);
+    }
+}
+
 fn container_like(m: &mut PartMap<PartRecipe>) {
     part(
         m,
@@ -615,9 +637,10 @@ pub(crate) fn default_recipes() -> Recipes {
         match f {
             Family::BUTTON => button(r),
             Family::MENU => menu(r),
-            Family::FIELD | Family::INPUT | Family::TEXTAREA | Family::CODE | Family::SELECT => {
+            Family::FIELD | Family::INPUT | Family::TEXTAREA | Family::SELECT => {
                 field_like(&mut r.parts);
             }
+            Family::CODE => code_like(&mut r.parts),
             Family::PANEL | Family::DIALOG | Family::OVERLAY | Family::FORM | Family::WIZARD => {
                 container_like(&mut r.parts);
             }
@@ -653,6 +676,7 @@ mod tests {
     use crate::Slot;
     use crate::theme::Theme;
     use crate::theme::border;
+    use crate::theme::builder::contrast;
     use crate::theme::patch::StateRule;
 
     #[test]
@@ -854,6 +878,58 @@ mod tests {
     fn builtin_border_sets_are_ratatui_sets() {
         assert_eq!(Theme::junie().design.borders, border::ROUNDED);
         assert_eq!(Theme::paper().design.borders, border::PLAIN);
+    }
+
+    #[test]
+    fn disabled_code_lanes_keep_contrast_and_dim_at_every_level() {
+        let levels = [
+            crate::ColorLevel::TrueColor,
+            crate::ColorLevel::Ansi256,
+            crate::ColorLevel::Ansi16,
+            crate::ColorLevel::Mono,
+        ];
+        for base in [Theme::junie(), Theme::paper()] {
+            for level in levels {
+                let theme = base.downgrade(level);
+                let container = theme.resolve(
+                    Family::CODE,
+                    Variant::DEFAULT,
+                    Part::CONTAINER,
+                    StateFlags::DISABLED,
+                    Surface::Canvas,
+                );
+                let code_bg = container.style.bg.unwrap_or(theme.bg(Surface::Canvas));
+                for part in [
+                    Part::CONTAINER,
+                    Part::META,
+                    Part::TEXT,
+                    Part::PLACEHOLDER,
+                    Part::QUERY,
+                    Part::DETAIL,
+                ] {
+                    let resolved = theme.resolve(
+                        Family::CODE,
+                        Variant::DEFAULT,
+                        part,
+                        StateFlags::DISABLED,
+                        Surface::Canvas,
+                    );
+                    let fg = resolved
+                        .style
+                        .fg
+                        .unwrap_or_else(|| panic!("{base:?}/{level:?} CODE/{part:?} has no fg"));
+                    let bg = resolved.style.bg.unwrap_or(code_bg);
+                    assert!(
+                        contrast(fg, bg) >= 3.0,
+                        "{base:?}/{level:?} CODE/{part:?}: {fg:?} on {bg:?} is below 3:1"
+                    );
+                    assert!(
+                        resolved.style.add_modifier.contains(Modifier::DIM),
+                        "{base:?}/{level:?} CODE/{part:?} lost the non-colour DIM signal"
+                    );
+                }
+            }
+        }
     }
 
     #[test]

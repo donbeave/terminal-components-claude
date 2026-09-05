@@ -619,6 +619,12 @@ the same `(symbol, modifier)` multiset. A component may narrow the state list
 it is checked against only by supplying
 `Conformance::mono_narrowing_reason()` naming every dropped flag.
 
+Code is the one disabled-content exception to the shared field fallback. Its
+`CONTAINER`, `TEXT`, `META`, `PLACEHOLDER`, `QUERY`, and `DETAIL` lanes use the
+primary foreground with `DIM` over `DisabledBg` at every colour level, and the
+editor suppresses syntax foreground replacement while disabled. `FIELD`,
+`INPUT`, `TEXTAREA`, `SELECT`, and `MENU` are unchanged.
+
 ---
 
 ## Precedence

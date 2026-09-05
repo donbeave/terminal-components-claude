@@ -250,8 +250,10 @@ White at 100 / 70 / 50 / 30 / 15 percent over black:
   busy labels, strings and numbers in code, active progress fill.
 - **text-muted (`#808080`)** metadata, placeholders, helper text, hint
   actions, column headers, `NULL`, operators and punctuation in code.
-- **text-faint (`#4d4d4d`)** panel meta, row numbers, comments, disabled
-  content. It is also the disabled foreground and the strong border.
+- **text-faint (`#4d4d4d`)** panel meta, row numbers, comments, and ordinary
+  disabled content. Disabled CODE content is the explicit exception: it uses
+  the primary foreground with `DIM` over the disabled background so syntax
+  lanes remain readable.
 - **text-ghost (`#262626`)** appears only under a modal backdrop; never for
   live content.
 
@@ -305,7 +307,7 @@ replaces the placeholder.
 | selected, unfocused | marker glyph only, text-primary, no tint |
 | selected + focused | marker glyph, bold, accent-tint background |
 | pressed | reversed: canvas text on text-primary, 140 ms after activation |
-| disabled | text-faint; no bar, no hover, not in the Tab ring |
+| disabled | text-faint with no modifiers for ordinary content; CODE uses primary + `DIM`; no bar, no hover, not in the Tab ring |
 | error | error text, trailing bold `!`, message in error |
 | editing | field plane keeps its colour; accent underline under the text; hardware cursor |
 | busy | spinner in primary, label in text-secondary |
@@ -352,9 +354,10 @@ its whole hierarchy from those.
   = a diagnostic range in code.
 - **Strikethrough** appears only on a grid row queued for deletion, with faint
   text; its markers and row number stay legible so it can be undone.
-- Dim and reverse-video attributes are never used. Dimming is done by stepping
-  down the ladder; "reversed" is drawn explicitly as canvas-on-white so it
-  degrades predictably.
+- `DIM` is reserved for disabled CODE content, where stepping down the colour
+  ladder would erase syntax text at low colour capabilities. Reverse-video
+  attributes are never used; "reversed" is drawn explicitly as canvas-on-
+  white so it degrades predictably.
 
 ### Hierarchy
 
@@ -371,7 +374,7 @@ its whole hierarchy from those.
 | Status message | text-secondary, right edge of the footer |
 | Warning / dirty | warning tone plus `•` or `▲` |
 | Error | error tone plus bold `!` |
-| Disabled | text-faint, no modifiers |
+| Disabled | text-faint, no modifiers; CODE content uses primary + `DIM` |
 | Selected content | `›` or `✓` marker; the label keeps text-primary |
 | Code | keywords bold; identifiers plain; strings and numbers text-secondary; operators muted; comments faint italic |
 
@@ -1033,6 +1036,10 @@ Tab still reaches them.
   block), text with caller-supplied syntax tones, popover selection, find
   matches, bracket match, diagnostic underlines; footer with the find bar or
   the nearest diagnostic on the left and `ln 1/26 · col 18` on the right.
+- **Disabled content**: retain the disabled background, use primary text with
+  `DIM` for `CONTAINER`, `TEXT`, `META`, `PLACEHOLDER`, `QUERY`, and `DETAIL`,
+  and suppress syntax foreground replacement. This exception is CODE-only;
+  FIELD, INPUT, TEXTAREA, SELECT, and MENU keep their existing contracts.
 - **Keys**: navigation `i`/`a`/`Enter` edit, `{ }` blocks, `/` find, `n N`
   matches, `←→` horizontal scroll; editing rules above, `Tab` indents (or
   leaves when configured), `Esc` finishes.
