@@ -6949,12 +6949,33 @@ fn baseline_moves_are_classified() -> Result<(), String> {
                     )
                 })
             }) == Some(true);
-            if exact_move {
+            let exact_perf_move = path == "tests/perf_baseline.txt"
+                && paths.iter().any(|destination| {
+                    is_exact_perf_ownership_move(
+                        path,
+                        destination,
+                        &git_show(&base, path),
+                        &read(&root().join(path)),
+                        &read(&root().join(destination)),
+                    )
+                });
+            if exact_move || exact_perf_move {
                 continue;
             }
             if touched.contains(path) || untracked.contains(path) {
                 frozen_changed.push(path.clone());
             }
+            continue;
+        }
+        let exact_perf_move = classify_baseline(path) == Some(BaselineKind::Perf)
+            && is_exact_perf_ownership_move(
+                "tests/perf_baseline.txt",
+                path,
+                &git_show(&base, "tests/perf_baseline.txt"),
+                &read(&root().join("tests/perf_baseline.txt")),
+                &read(&root().join(path)),
+            );
+        if exact_perf_move {
             continue;
         }
         let base_path = renames.get(path).cloned().unwrap_or_else(|| path.clone());
