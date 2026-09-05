@@ -241,6 +241,10 @@ fn tablepro_visual_baseline() {
     let mut out = String::new();
     for (w, hgt) in [(120u16, 40u16), (80, 24)] {
         for (label, build) in SURFACES {
+            if *label == "connections" && w == 120 {
+                let debug = build(w, hgt);
+                println!("OLD FRAME\\n{}", debug.text());
+            }
             let a = digest(&build(w, hgt));
             let b = digest(&build(w, hgt));
             assert_eq!(
