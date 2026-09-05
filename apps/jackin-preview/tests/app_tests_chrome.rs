@@ -18,9 +18,7 @@
     clippy::expect_used
 )]
 
-use ratatui::crossterm::event::KeyCode;
-
-use jackin_app::core::event::MouseKind;
+use tui_next::{KeyCode, MouseKind};
 
 use jackin_app::Route;
 mod support;
@@ -39,7 +37,7 @@ fn last_row(h: &H) -> String {
 #[test]
 fn capsule_has_a_menu_bar_and_a_status_bar_instead_of_the_identity_line() {
     let h = H::new(Scenario::CapsuleMulti, Motion::Reduced, 0, 120, 40);
-    assert_eq!(h.app.route, Route::Capsule);
+    assert_eq!(h.app().route(), Route::Capsule);
     let top = row(&h, 0);
     assert!(!top.contains("inside the Construct"), "{top}");
     assert!(
@@ -172,7 +170,7 @@ fn inspect_changes_opens_from_the_view_menu_in_both_modes() {
     h.key(KeyCode::Esc);
     h.key(KeyCode::Esc);
     assert!(!h.text().contains("Inspect changes ·"), "{}", h.text());
-    assert_eq!(h.app.route, Route::Capsule);
+    assert_eq!(h.app().route(), Route::Capsule);
 }
 
 #[test]
