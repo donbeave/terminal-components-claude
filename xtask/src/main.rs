@@ -204,6 +204,21 @@ fn capture_lock_staging(shots: &Path) -> PathBuf {
     ))
 }
 
+fn capture_lock_destination_exists(error: &std::io::Error) -> bool {
+    if error.kind() == std::io::ErrorKind::AlreadyExists {
+        return true;
+    }
+    #[cfg(unix)]
+    {
+        return error.raw_os_error() == Some(libc::EEXIST)
+            || error.raw_os_error() == Some(libc::ENOTEMPTY);
+    }
+    #[cfg(not(unix))]
+    {
+        false
+    }
+}
+
 fn read_capture_lock_owner(path: &Path) -> Result<String, String> {
     #[cfg(unix)]
     {
@@ -402,23 +417,9 @@ fn publish_capture_matrix_lock(path: &Path, owner: &str) -> Result<(), String> {
         let _ = remove_capture_lock_staging(&staging);
         return Err(error);
     }
-    eprintln!(
-        "matrix rename before staging={} path={} path_metadata={:?}",
-        staging.display(),
-        path.display(),
-        fs::symlink_metadata(path).ok()
-    );
     if let Err(error) = fs::rename(&staging, path) {
-        eprintln!(
-            "matrix rename failed staging={} path={} exists={} metadata={:?} error={error} raw={:?}",
-            staging.display(),
-            path.display(),
-            path.exists(),
-            fs::symlink_metadata(path).ok(),
-            error.raw_os_error()
-        );
         let _ = remove_capture_lock_staging(&staging);
-        if error.kind() == std::io::ErrorKind::AlreadyExists {
+        if capture_lock_destination_exists(&error) {
             return Err("capture matrix lock exists".to_owned());
         }
         return Err(error.to_string());
@@ -9744,6 +9745,60 @@ exec /usr/bin/mktemp "$@"
             "recovered lock must be released cleanly"
         );
         fs::remove_dir_all(directory).expect("remove isolated stale lock fixture");
+    }
+
+    #[test]
+    fn capture_matrix_lock_recovers_staging_left_after_killed_creator() {
+        let directory = std::env::temp_dir().join(format!(
+            "terminal-components-capture-lock-staging-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("clock after epoch")
+                .as_nanos()
+        ));
+        fs::create_dir(&directory).expect("create isolated staging fixture");
+        let shots = directory.join("shots");
+        fs::create_dir(&shots).expect("create staging output directory");
+        let mut killed_creator = Command::new("/usr/bin/true")
+            .spawn()
+            .expect("spawn staging creator");
+        let killed_pid = killed_creator.id();
+        killed_creator.wait().expect("reap staging creator");
+        let orphan = shots.join(format!(
+            ".capture-matrix.lock.tmp.{killed_pid}.killed-after-create-dir"
+        ));
+        fs::create_dir(&orphan).expect("simulate kill after staging create");
+
+        let lock = acquire_capture_matrix_lock(&shots)
+            .expect("an orphaned unpublished staging directory must be recoverable");
+        assert!(!orphan.exists(), "orphaned staging must be reclaimed");
+        assert!(shots.join(".capture-matrix.lock/owner").is_file());
+        drop(lock);
+        fs::remove_dir_all(directory).expect("remove isolated staging fixture");
+    }
+
+    #[test]
+    fn capture_matrix_lock_rejects_ownerless_published_directory() {
+        let directory = std::env::temp_dir().join(format!(
+            "terminal-components-capture-lock-ownerless-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("clock after epoch")
+                .as_nanos()
+        ));
+        fs::create_dir(&directory).expect("create isolated ownerless fixture");
+        let shots = directory.join("shots");
+        fs::create_dir(&shots).expect("create ownerless output directory");
+        let lock_path = shots.join(".capture-matrix.lock");
+        fs::create_dir(&lock_path).expect("create ownerless published lock");
+
+        let error = acquire_capture_matrix_lock(&shots)
+            .expect_err("an ownerless published lock must fail closed");
+        assert!(error.contains("owner"), "{error}");
+        assert!(lock_path.is_dir(), "ownerless lock must not be deleted");
+        fs::remove_dir_all(directory).expect("remove isolated ownerless fixture");
     }
 
     #[cfg(unix)]
