@@ -417,6 +417,20 @@ fn publish_capture_matrix_lock(path: &Path, owner: &str) -> Result<(), String> {
         let _ = remove_capture_lock_staging(&staging);
         return Err(error);
     }
+    match fs::symlink_metadata(path) {
+        Ok(_) => {
+            let _ = remove_capture_lock_staging(&staging);
+            return Err("capture matrix lock exists".to_owned());
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => {
+            let _ = remove_capture_lock_staging(&staging);
+            return Err(format!(
+                "cannot inspect capture matrix lock {}: {error}",
+                rel(path)
+            ));
+        }
+    }
     if let Err(error) = fs::rename(&staging, path) {
         let _ = remove_capture_lock_staging(&staging);
         if capture_lock_destination_exists(&error) {
