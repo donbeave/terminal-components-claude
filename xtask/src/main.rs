@@ -995,6 +995,18 @@ fn provenance_dimensions(record: &Value, key: &str) -> Option<(u16, u16)> {
     Some((columns, rows))
 }
 
+fn capture_artifact_path(name: &str, extension: &str, legacy_flat: bool) -> String {
+    if legacy_flat {
+        format!("shots/{name}.{extension}")
+    } else {
+        format!("shots/{name}/{extension}")
+    }
+}
+
+fn capture_recorded_path_matches(value: Option<&str>, expected: &str) -> bool {
+    value.is_some_and(|value| value == expected || Path::new(value) == root().join(expected))
+}
+
 fn validate_capture_provenance(
     expected: &[CaptureCase],
     path: &Path,
@@ -1038,6 +1050,21 @@ fn validate_capture_provenance(
         if !seen.insert(name.to_owned()) {
             errors.push(format!("duplicate capture provenance cell: {name}"));
         }
+
+        let legacy_flat = match object.get("schema_version").and_then(Value::as_u64) {
+            Some(1) => true,
+            Some(2) => false,
+            Some(version) => {
+                errors.push(format!(
+                    "{name}: unsupported provenance schema version {version}"
+                ));
+                false
+            }
+            None => {
+                errors.push(format!("{name}: provenance has no schema version"));
+                false
+            }
+        };
 
         if provenance_string(record, "app") != Some(case.app.name) {
             errors.push(format!(
@@ -1110,8 +1137,11 @@ fn validate_capture_provenance(
                 errors.push(format!("{name}: provenance is missing the {kind} artifact"));
                 continue;
             };
-            let artifact_path = format!("shots/{name}.{extension}");
-            if info.get("path").and_then(Value::as_str) != Some(artifact_path.as_str()) {
+            let artifact_path = capture_artifact_path(name, extension, legacy_flat);
+            if !capture_recorded_path_matches(
+                info.get("path").and_then(Value::as_str),
+                &artifact_path,
+            ) {
                 errors.push(format!(
                     "{name}: {kind} artifact path is not {artifact_path}"
                 ));
@@ -1138,8 +1168,17 @@ fn validate_capture_provenance(
             errors.push(format!("{name}: provenance is missing stderr information"));
             continue;
         };
-        if stderr.get("path").and_then(Value::as_str) != Some("shots/stderr.log") {
-            errors.push(format!("{name}: stderr path is not shots/stderr.log"));
+        let run_id = provenance_string(record, "run_id").unwrap_or_default();
+        let expected_stderr = if legacy_flat {
+            "shots/stderr.log".to_owned()
+        } else {
+            format!("shots/.capture-state/{run_id}/stderr.log")
+        };
+        if !capture_recorded_path_matches(
+            stderr.get("path").and_then(Value::as_str),
+            &expected_stderr,
+        ) {
+            errors.push(format!("{name}: stderr path is not {expected_stderr}"));
         }
         if stderr.get("status").and_then(Value::as_str) != Some("empty")
             || stderr.get("bytes").and_then(Value::as_u64) != Some(0)
@@ -1219,12 +1258,24 @@ fn validate_capture_tsv(expected: &[CaptureCase], path: &Path) -> Result<(), Str
         ));
     }
 
-    let expected_by_path: BTreeMap<String, CaptureCase> = expected
+    let expected_by_path: BTreeMap<String, (CaptureCase, bool)> = expected
         .iter()
         .copied()
-        .map(|case| (format!("shots/{}.png", case.shot_name()), case))
+        .flat_map(|case| {
+            [
+                (
+                    capture_artifact_path(&case.shot_name(), "png", false),
+                    (case, false),
+                ),
+                (
+                    capture_artifact_path(&case.shot_name(), "png", true),
+                    (case, true),
+                ),
+            ]
+        })
         .collect();
     let mut seen = BTreeSet::new();
+    let mut layout = None;
     let mut errors = Vec::new();
     for (index, line) in lines.enumerate() {
         let fields: Vec<&str> = line.split('\t').collect();
@@ -1239,10 +1290,17 @@ fn validate_capture_tsv(expected: &[CaptureCase], path: &Path) -> Result<(), Str
         let [path, size, color, theme, bytes, sha256] = fields.as_slice() else {
             unreachable!("length checked above");
         };
-        let Some(case) = expected_by_path.get(*path).copied() else {
+        let Some((case, legacy_flat)) = expected_by_path.get(*path).copied() else {
             errors.push(format!("unexpected capture matrix path: {path}"));
             continue;
         };
+        if let Some(previous) = layout {
+            if previous != legacy_flat {
+                errors.push("capture matrix mixes flat and generation artifact paths".to_owned());
+            }
+        } else {
+            layout = Some(legacy_flat);
+        }
         if !seen.insert((*path).to_owned()) {
             errors.push(format!("duplicate capture matrix path: {path}"));
         }
@@ -1262,10 +1320,11 @@ fn validate_capture_tsv(expected: &[CaptureCase], path: &Path) -> Result<(), Str
             Err(error) => errors.push(error),
         }
     }
-    let missing: Vec<&str> = expected_by_path
-        .keys()
-        .filter(|path| !seen.contains(*path))
-        .map(String::as_str)
+    let legacy_flat = layout.unwrap_or(false);
+    let missing: Vec<String> = expected
+        .iter()
+        .map(|case| capture_artifact_path(&case.shot_name(), "png", legacy_flat))
+        .filter(|path| !seen.contains(path))
         .collect();
     if !missing.is_empty() {
         errors.push(format!(
@@ -1487,7 +1546,6 @@ fn capture_script_contract_hits(script: &str) -> Vec<String> {
         ("no-follow shell state reader", "read-state"),
         ("no-follow shell state writer", "write-state"),
         ("trusted shell state interpreter", "STATE_PYTHON"),
-        ("stale shot lock check", "shot_lock_owner_is_live"),
         ("COLOR dispatch", "case \"$COLOR\" in"),
         ("truecolor branch", "truecolor)"),
         ("256-color branch", "256)"),
@@ -1665,6 +1723,8 @@ fn capture_provenance_contract_hits(script: &str) -> Vec<String> {
             "hash_descriptor(binary_descriptor)",
         ),
         ("execution directory pin", "lock_execution_directory"),
+        ("stale shot lock recovery", "inspect_and_recover_stale_lock"),
+        ("nonblocking special-file opens", "O_NONBLOCK"),
     ]
     .into_iter()
     .filter(|(_, fragment)| !script.contains(fragment))
@@ -10893,6 +10953,53 @@ set -eu
         fs::remove_dir_all(directory).expect("remove isolated parent fixture");
     }
 
+    #[cfg(unix)]
+    #[test]
+    fn capture_provenance_rejects_fifo_state_without_blocking() {
+        let directory = std::env::temp_dir().join(format!(
+            "terminal-components-capture-fifo-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("clock after epoch")
+                .as_nanos()
+        ));
+        fs::create_dir(&directory).expect("create isolated FIFO fixture");
+        let fifo = directory.join("state");
+        let fifo_status = Command::new("/usr/bin/mkfifo")
+            .arg(&fifo)
+            .status()
+            .expect("create FIFO fixture");
+        assert!(fifo_status.success(), "mkfifo failed: {fifo_status}");
+
+        let mut child = Command::new("/usr/bin/python3")
+            .arg(root().join("tools/capture_provenance.py"))
+            .arg("read-state")
+            .arg("--path")
+            .arg(&fifo)
+            .spawn()
+            .expect("run FIFO state reader");
+        let mut finished = None;
+        for _ in 0..100 {
+            match child.try_wait().expect("poll FIFO state reader") {
+                Some(status) => {
+                    finished = Some(status);
+                    break;
+                }
+                None => std::thread::sleep(std::time::Duration::from_millis(10)),
+            }
+        }
+        let status = if let Some(status) = finished {
+            status
+        } else {
+            child.kill().expect("stop blocked FIFO state reader");
+            let _ = child.wait();
+            panic!("FIFO state reader blocked before descriptor validation");
+        };
+        assert!(!status.success(), "FIFO state must fail closed: {status}");
+        fs::remove_dir_all(directory).expect("remove isolated FIFO fixture");
+    }
+
     #[test]
     fn capture_tmux_entrypoint_executes_serialized_argv_without_shell_interpretation() {
         use std::os::unix::fs::PermissionsExt;
@@ -10924,16 +11031,18 @@ set -eu
         let marker = directory.join("must-not-exist");
         let shaped = format!("$(touch {})", marker.display());
         let stage = Command::new("python3")
+            .current_dir(&directory)
             .arg(root().join("tools/capture_provenance.py"))
             .arg("stage-binary")
             .arg("--source")
-            .arg(&source)
+            .arg("source-runner")
             .arg("--destination")
             .arg(&executable)
             .output()
             .expect("stage serialized runner executable");
         assert!(stage.status.success(), "{stage:?}");
         let init = Command::new("python3")
+            .current_dir(&directory)
             .arg(root().join("tools/capture_provenance.py"))
             .arg("init")
             .arg("--metadata")
@@ -10946,6 +11055,8 @@ set -eu
             .arg("$serialized")
             .arg("--binary")
             .arg(&executable)
+            .arg("--source-binary")
+            .arg("source-runner")
             .arg("--revision")
             .arg("0".repeat(40))
             .arg("--dirty")
@@ -10967,7 +11078,7 @@ set -eu
             .arg("--env")
             .arg("COLOR=truecolor")
             .arg("--argv")
-            .arg(&executable)
+            .arg("source-runner")
             .arg("%s\\n")
             .arg("argument with spaces")
             .arg(&shaped)
