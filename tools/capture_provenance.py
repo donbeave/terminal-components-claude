@@ -146,6 +146,17 @@ def open_trusted_directory(path: Path, label: str) -> int:
         fail(f"cannot safely open {label} without O_NOFOLLOW")
     if not path.is_absolute():
         fail(f"{label} must be an absolute path: {path}")
+    # macOS exposes /var and /tmp as stable system symlinks into /private.
+    # Canonicalize only that first system component; all caller-controlled
+    # components are still walked with O_NOFOLLOW below.
+    components = path.parts[1:]
+    if components and components[0] in {"tmp", "var"}:
+        system_component = Path(os.sep) / components[0]
+        if system_component.is_symlink():
+            try:
+                path = system_component.resolve(strict=True).joinpath(*components[1:])
+            except OSError as error:
+                fail(f"cannot resolve stable system path component for {label}: {error}")
     directory_flag = getattr(os, "O_DIRECTORY", 0)
     flags = os.O_RDONLY | directory_flag | nofollow
     descriptor = os.open(os.sep, flags)

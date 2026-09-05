@@ -9985,7 +9985,7 @@ set -eu
     }
 
     #[test]
-    fn capture_runner_preserves_spaced_and_injection_shaped_arguments() {
+    fn capture_runner_rejects_legacy_positional_arguments() {
         let suffix = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .expect("clock after epoch")
@@ -9995,27 +9995,18 @@ set -eu
             std::process::id()
         ));
         fs::create_dir(&directory).expect("create isolated runner fixture");
-        let stderr = directory.join("stderr");
-        let exit = directory.join("exit");
-        let marker = directory.join("must-not-exist");
-        let shaped = format!("$(touch {})", marker.display());
         let output = Command::new("/bin/bash")
             .arg(root().join("tools/capture_exec.sh"))
-            .arg(&stderr)
-            .arg(&exit)
             .arg("/usr/bin/printf")
             .arg("%s\\n")
             .arg("argument with spaces")
-            .arg(&shaped)
             .output()
             .expect("run capture runner fixture");
-        assert!(output.status.success(), "{output:?}");
-        assert_eq!(
-            String::from_utf8_lossy(&output.stdout),
-            format!("argument with spaces\n{shaped}\n")
+        assert!(!output.status.success(), "legacy argv mode must be rejected");
+        assert!(
+            String::from_utf8_lossy(&output.stderr).contains("positional argv mode is unsupported"),
+            "{output:?}"
         );
-        assert_eq!(fs::read_to_string(&exit).expect("exit state"), "0\n");
-        assert!(!marker.exists(), "injection-shaped argv was evaluated");
         fs::remove_dir_all(directory).expect("remove isolated runner fixture");
     }
 
