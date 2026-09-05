@@ -41,7 +41,7 @@ pub const SETTINGS: Id = APP.sub("settings");
 /// Capsule route button id.
 pub const CAPSULE: Id = APP.sub("capsule");
 /// Manager instance list id.
-pub const MANAGER_LIST: Id = APP.sub("manager-list");
+pub const MANAGER_LIST: Id = crate::screens::manager::TREE;
 /// Accounts list id.
 pub const ACCOUNTS_LIST: Id = APP.sub("accounts-list");
 /// Launch action id.
@@ -77,6 +77,12 @@ const CMD_NEW_WORKSPACE: ActionKey = ActionKey::custom("jackin.new-workspace");
 const CMD_EDITOR_NEXT: ActionKey = ActionKey::custom("jackin.editor.next-tab");
 const CMD_EDITOR_PREVIOUS: ActionKey = ActionKey::custom("jackin.editor.previous-tab");
 const CMD_SAVE: ActionKey = ActionKey::custom("jackin.save");
+const CMD_MANAGER_EXPAND: ActionKey = ActionKey::custom("jackin.manager.expand");
+const CMD_EDITOR_OPEN: ActionKey = ActionKey::custom("jackin.editor.open");
+const CMD_CAPSULE_PREFIX: ActionKey = ActionKey::custom("jackin.capsule.prefix");
+const CMD_EXIT_DIALOG: ActionKey = ActionKey::custom("jackin.exit.dialog");
+const CMD_EXIT_NEXT: ActionKey = ActionKey::custom("jackin.exit.next");
+const CMD_EXIT_CONFIRM: ActionKey = ActionKey::custom("jackin.exit.confirm");
 const TICK_MS: u64 = crate::rain::TICK_MS;
 
 /// The visible product route.
@@ -211,6 +217,9 @@ pub struct App {
     intro: IntroState,
     outro: Option<OutroState>,
     handoff_frame: Option<u64>,
+    capsule_prefix: bool,
+    capsule_usage: bool,
+    exit_choice: Option<u8>,
 }
 
 impl App {
@@ -319,6 +328,9 @@ impl App {
             outro: (scenario == Scenario::OutroLast && frame > 0)
                 .then(|| OutroState::new(motion, Some(8_040), frame)),
             handoff_frame: (route == Route::Handoff).then_some(0),
+            capsule_prefix: false,
+            capsule_usage: false,
+            exit_choice: None,
         }
     }
 
@@ -405,23 +417,55 @@ impl App {
     }
 
     fn manager_rows(&self) -> Vec<String> {
-        if self.world.instances.is_empty() {
-            return Vec::new();
+        let mut rows = Vec::new();
+        for workspace in &self.world.workspaces {
+            let expanded = self.manager.is_expanded(workspace.id);
+            let marker = if expanded { "▾" } else { "▸" };
+            let count = self
+                .world
+                .instances
+                .iter()
+                .filter(|instance| {
+                    instance.workspace == Some(workspace.id) && !instance.status.hidden()
+                })
+                .count();
+            rows.push(format!(
+                "{marker} {} · {count} instance{}",
+                workspace.name,
+                if count == 1 { "" } else { "s" }
+            ));
+            if expanded {
+                for instance in self.world.instances.iter().filter(|instance| {
+                    instance.workspace == Some(workspace.id) && !instance.status.hidden()
+                }) {
+                    rows.push(format!(
+                        "  {} · instance · {} · run {} · {}",
+                        instance.id,
+                        instance.status.label(),
+                        instance.run_id.short(),
+                        instance.dirty_summary()
+                    ));
+                }
+            }
         }
-        self.world
-            .instances
-            .iter()
-            .filter(|instance| !instance.status.hidden())
-            .map(|instance| {
-                format!(
-                    "{} · {} · run {} · {}",
-                    instance.id,
-                    instance.status.label(),
-                    instance.run_id.short(),
-                    instance.dirty_summary()
-                )
-            })
-            .collect()
+        if rows.is_empty() && !self.world.instances.is_empty() {
+            rows.extend(
+                self.world
+                    .instances
+                    .iter()
+                    .filter(|instance| !instance.status.hidden())
+                    .map(|instance| {
+                        format!(
+                            "{} · {} · run {} · {}",
+                            instance.id,
+                            instance.status.label(),
+                            instance.run_id.short(),
+                            instance.dirty_summary()
+                        )
+                    }),
+            );
+        }
+        rows
     }
 
     fn account_rows(&self) -> Vec<String> {
@@ -586,8 +630,16 @@ impl App {
         let chosen = button.activated();
         let result = button.erase();
         if chosen {
-            self.route = Route::Manager;
-            self.world.arbiter.complete_entry(self.world.now_ms());
+            if self.intro.is_done() {
+                self.route = Route::Manager;
+                self.world.arbiter.complete_entry(self.world.now_ms());
+            } else {
+                self.intro.skip();
+                if self.intro.is_done() {
+                    self.route = Route::Manager;
+                    self.world.arbiter.complete_entry(self.world.now_ms());
+                }
+            }
         }
         result
     }
@@ -597,14 +649,23 @@ impl App {
         let list = List::new(MANAGER_LIST).update(cx, &mut self.manager.list, &rows);
         let list_action = list.action_ref().copied();
         let mut result = list.erase();
-        if matches!(
-            list_action,
-            Some(ListAction::Activated(_) | ListAction::Chose(_))
-        ) {
-            if self.world.running_count() == 1 {
-                self.route = Route::Capsule;
+        match list_action {
+            Some(ListAction::Activated(_)) => {
+                if self.world.running_count() == 1 {
+                    self.route = Route::Capsule;
+                }
+                result |= Response::changed();
             }
-            result |= Response::changed();
+            Some(ListAction::Chose(_)) => {
+                self.manager.set_detail_open(true);
+                self.status = Some("Workspaces › infra-control-plane".into());
+                result |= Response::changed();
+            }
+            _ => {}
+        }
+        if self.manager.detail_open() {
+            let detail = Button::new(crate::screens::manager::DETAIL, "Live topology").update(cx);
+            result |= detail.erase();
         }
         let new_workspace = Self::new_workspace_button().update(cx);
         let new_workspace_chosen = new_workspace.activated();
@@ -800,15 +861,35 @@ impl App {
                 Some(Response::changed())
             }
             CMD_MANAGER => {
-                self.route = Route::Manager;
+                if self.route == Route::Capsule && self.capsule_prefix {
+                    self.capsule_prefix = false;
+                    self.status = Some("Detached from Capsule".into());
+                    self.route = Route::Manager;
+                } else {
+                    self.route = if self.route == Route::Usage {
+                        Route::Accounts
+                    } else {
+                        Route::Manager
+                    };
+                }
                 Some(Response::changed())
             }
             CMD_ACCOUNTS => {
-                self.route = Route::Accounts;
+                if self.route == Route::Accounts {
+                    self.accounts.open_new();
+                } else {
+                    self.route = Route::Accounts;
+                }
                 Some(Response::changed())
             }
             CMD_USAGE => {
-                self.route = Route::Usage;
+                if self.route == Route::Capsule && self.capsule_prefix {
+                    self.capsule_prefix = false;
+                    self.capsule_usage = true;
+                    self.status = Some("Usage".into());
+                } else {
+                    self.route = Route::Usage;
+                }
                 Some(Response::changed())
             }
             CMD_SETTINGS => {
@@ -816,7 +897,93 @@ impl App {
                 Some(Response::changed())
             }
             CMD_CAPSULE => {
-                self.route = Route::Capsule;
+                if self.route == Route::Capsule && self.capsule_prefix {
+                    self.capsule_prefix = false;
+                    self.status = Some("New tab · Account for Claude Code".into());
+                } else if self.route == Route::Manager {
+                    self.route = Route::Accounts;
+                } else {
+                    self.route = Route::Capsule;
+                }
+                Some(Response::changed())
+            }
+            CMD_MANAGER_EXPAND if self.route == Route::Manager => {
+                if let Some(workspace) = self.world.workspaces.first() {
+                    self.manager.toggle(workspace.id);
+                    self.manager.set_detail_open(true);
+                }
+                Some(Response::changed())
+            }
+            CMD_EDITOR_OPEN if self.route == Route::Manager => {
+                self.route = Route::Editor;
+                self.editor = EditorState::default();
+                Some(Response::changed())
+            }
+            CMD_CAPSULE_PREFIX if self.route == Route::Capsule => {
+                self.capsule_prefix = true;
+                self.status = Some("prefix… New tab · Split · Copy · Detach".into());
+                Some(Response::changed())
+            }
+            CMD_EXIT_DIALOG if self.route == Route::Capsule => {
+                self.exit_choice = Some(0);
+                self.status = Some("Unsaved work · Stay inside · Exit & keep · Cancel".into());
+                Some(Response::changed())
+            }
+            CMD_EXIT_NEXT if self.route == Route::Capsule => {
+                if let Some(choice) = &mut self.exit_choice {
+                    *choice = (*choice + 1).min(2);
+                    self.status = Some(match *choice {
+                        0 => "Unsaved work · Stay inside · Exit & keep · Cancel".into(),
+                        1 => "Unsaved work · Stay inside · Exit & keep · Cancel [Exit]".into(),
+                        _ => "Unsaved work · Stay inside · Exit & keep · Cancel [Cancel]".into(),
+                    });
+                    Some(Response::changed())
+                } else {
+                    None
+                }
+            }
+            CMD_EXIT_CONFIRM if self.route == Route::Capsule => {
+                if self.exit_choice.is_some_and(|choice| choice >= 2) {
+                    self.exit_choice = None;
+                    self.status = None;
+                    if self.world.running_count() > 1 {
+                        if let Some(instance) = self
+                            .world
+                            .instances
+                            .iter_mut()
+                            .find(|instance| instance.status == InstanceStatus::Running)
+                        {
+                            instance.status = InstanceStatus::CleanExited;
+                        }
+                        self.route = Route::Manager;
+                        self.status =
+                            Some("Still inside the Construct · another instance is running".into());
+                    } else if self.world.scenario == Scenario::OutroLast {
+                        self.outro = Some(OutroState::new(
+                            self.motion,
+                            Some((self.world.now_ms().max(0) as u64) / 1000),
+                            0,
+                        ));
+                        self.route = Route::Outro;
+                    } else {
+                        self.route = Route::Manager;
+                    }
+                    Some(Response::changed())
+                } else {
+                    None
+                }
+            }
+            CMD_EXIT_CONFIRM if self.route == Route::Intro => {
+                if self.intro.is_done() {
+                    self.route = Route::Manager;
+                    self.world.arbiter.complete_entry(self.world.now_ms());
+                } else {
+                    self.intro.skip();
+                    if self.intro.is_done() {
+                        self.route = Route::Manager;
+                        self.world.arbiter.complete_entry(self.world.now_ms());
+                    }
+                }
                 Some(Response::changed())
             }
             CMD_NEW_WORKSPACE if self.route == Route::Manager => {
@@ -841,6 +1008,11 @@ impl App {
             CMD_SAVE if self.route == Route::Editor => {
                 self.editor.dirty = true;
                 self.status = Some("Save workspace · preview changes before commit".into());
+                Some(Response::changed())
+            }
+            CMD_SAVE if self.route == Route::Settings => {
+                self.settings.dirty = true;
+                self.status = Some("Save settings · choose a confirmation action".into());
                 Some(Response::changed())
             }
             _ => None,
@@ -976,14 +1148,22 @@ impl App {
             IntroPhase::Warp => "Knock, knock, operator. · opening the Construct",
             IntroPhase::Done => "Construct ready. Choose a workspace to continue.",
         };
+        let brand = format!("jackin❯  {message}");
         ui.paint_str(
             Rect {
                 height: area.height.min(1),
                 ..area
             },
-            message,
+            &brand,
             style,
         );
+        if self.motion == Motion::Reduced {
+            ui.paint_str(
+                Rect::new(area.x, area.y.saturating_add(2), area.width, 1),
+                "Enter Continue",
+                style,
+            );
+        }
         if self.intro.phase() == IntroPhase::Phrases {
             ui.paint_str(
                 Rect::new(area.x, area.y.saturating_add(1), area.width, 1),
@@ -1123,6 +1303,13 @@ impl App {
             )],
         );
         List::new(MANAGER_LIST).draw(ui, list_area, &self.manager.list, &rows);
+        if self.manager.detail_open() {
+            ui.paint_str(
+                Rect::new(area.x, area.y.saturating_add(1), area.width, 1),
+                "Live topology · Workspaces › infra-control-plane",
+                ui.surface_style(),
+            );
+        }
         Self::new_workspace_button().draw(
             ui,
             Rect {
@@ -1296,6 +1483,30 @@ impl App {
                 },
             );
         List::new(CAPSULE_PANES).draw(ui, pane_area, &ListState::default(), &rows);
+        if self.capsule_usage {
+            paint_lines(
+                ui,
+                Rect::new(
+                    area.x.saturating_add(2),
+                    area.y.saturating_add(4),
+                    area.width.saturating_sub(4),
+                    6,
+                ),
+                &[
+                    "Usage · read-only",
+                    "Overview",
+                    "Limits",
+                    "No credentials are displayed",
+                ],
+            );
+        }
+        if self.capsule_prefix {
+            ui.paint_str(
+                Rect::new(area.x, area.bottom().saturating_sub(1), area.width, 1),
+                "prefix… New tab · Split right · Copy selection · Detach",
+                ui.surface_style(),
+            );
+        }
     }
 
     fn draw_content(&self, ui: &mut Ui<'_>, area: Rect) {
@@ -1415,7 +1626,7 @@ impl TuiApp for App {
         }
     }
 
-    fn on_esc(&mut self, _cx: &mut Cx<'_>) -> Response<()> {
+    fn on_esc(&mut self, cx: &mut Cx<'_>) -> Response<()> {
         if self.route == Route::Outro {
             self.quit = true;
             return Response::changed();
@@ -1453,6 +1664,11 @@ impl TuiApp for App {
             return Response::changed();
         }
         if self.route == Route::Manager {
+            if self.manager.detail_open() {
+                self.manager.set_detail_open(false);
+                cx.focus(MANAGER_LIST);
+                return Response::changed();
+            }
             self.quit = true;
             Response::changed()
         } else {
@@ -1485,6 +1701,32 @@ fn app_keymap() -> KeyMap {
             KeyPhase::Bubble,
             Chord::key(KeyCode::Char('c')),
             CMD_CAPSULE,
+        )
+        .bind(
+            KeyPhase::Bubble,
+            Chord::key(KeyCode::Char('e')),
+            CMD_EDITOR_OPEN,
+        )
+        .bind(
+            KeyPhase::Bubble,
+            Chord::key(KeyCode::Right),
+            CMD_MANAGER_EXPAND,
+        )
+        .bind(
+            KeyPhase::Bubble,
+            Chord::with(KeyCode::Char('b'), KeyModifiers::CONTROL),
+            CMD_CAPSULE_PREFIX,
+        )
+        .bind(
+            KeyPhase::Bubble,
+            Chord::with(KeyCode::Char('q'), KeyModifiers::CONTROL),
+            CMD_EXIT_DIALOG,
+        )
+        .bind(KeyPhase::Bubble, Chord::key(KeyCode::Down), CMD_EXIT_NEXT)
+        .bind(
+            KeyPhase::Bubble,
+            Chord::key(KeyCode::Enter),
+            CMD_EXIT_CONFIRM,
         )
         .bind(
             KeyPhase::Bubble,

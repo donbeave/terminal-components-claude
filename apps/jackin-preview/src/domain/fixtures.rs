@@ -579,12 +579,24 @@ pub fn fixture_roles_for(scenario: crate::scenario::Scenario) -> Vec<RoleEntry> 
 /// fixture data; they are not inferred from live daemon snapshots.
 pub fn fixture_workspaces_for(scenario: crate::scenario::Scenario) -> Vec<Workspace> {
     let mut workspaces = vec![fixture_workspace()];
-    if scenario == crate::scenario::Scenario::HardCases {
+    if scenario != crate::scenario::Scenario::FirstUse {
         for (id, name) in [
             (2, "infra-control-plane"),
-            (3, "release-automation"),
-            (4, "customer-portal"),
-            (5, "data-pipeline"),
+            (3, "customer-portal"),
+            (4, "data-pipeline"),
+        ] {
+            let mut workspace = Workspace::new(id, name, &format!("/workspace/{name}"));
+            workspace.roles = RolePolicy {
+                allowed: AllowedRoles::All,
+                default: Some("chainargos/the-architect".into()),
+                last: Some("chainargos/the-architect".into()),
+            };
+            workspaces.push(workspace);
+        }
+    }
+    if scenario == crate::scenario::Scenario::HardCases {
+        for (id, name) in [
+            (5, "release-automation"),
             (6, "docs-site"),
             (7, "shared-libraries"),
             (8, "mobile-shell"),
