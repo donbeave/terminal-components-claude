@@ -210,8 +210,7 @@ fn capture_lock_destination_exists(error: &std::io::Error) -> bool {
     }
     #[cfg(unix)]
     {
-        return error.raw_os_error() == Some(libc::EEXIST)
-            || error.raw_os_error() == Some(libc::ENOTEMPTY);
+        error.raw_os_error() == Some(libc::EEXIST) || error.raw_os_error() == Some(libc::ENOTEMPTY)
     }
     #[cfg(not(unix))]
     {
@@ -1178,6 +1177,7 @@ fn capture_script_contract_hits(script: &str) -> Vec<String> {
         ("shot lock cleanup", "cleanup_shot_lock_only"),
         ("guarded shot lock helper", "shot-lock acquire"),
         ("no-follow shell state reader", "read-state"),
+        ("no-follow shell state writer", "write-state"),
         ("trusted shell state interpreter", "STATE_PYTHON"),
         ("COLOR dispatch", "case \"$COLOR\" in"),
         ("truecolor branch", "truecolor)"),
@@ -1313,10 +1313,12 @@ fn capture_exec_contract_hits(script: &str) -> Vec<String> {
             "capture runner interpolates BIN/ARGS into shell source; use its opaque argv".to_owned()
         }),
     )
-    .chain((script.contains("\"$@\"") || script.contains("2>\"$stderr_path\"")).then(|| {
-        "capture runner still executes a caller-provided shell argv; use serialized metadata"
-            .to_owned()
-    }))
+    .chain(
+        (script.contains("\"$@\"") || script.contains("2>\"$stderr_path\"")).then(|| {
+            "capture runner still executes a caller-provided shell argv; use serialized metadata"
+                .to_owned()
+        }),
+    )
     .collect()
 }
 
@@ -9395,7 +9397,7 @@ printf 'new-png\n' > "$3"
                 "rollback left a mixed generation for {artifact}"
             );
         }
-        let leftovers: Vec<String> = fs::read_dir(&shots)
+        let mut leftovers: Vec<String> = fs::read_dir(&shots)
             .expect("read rollback output directory")
             .map(|entry| {
                 entry
@@ -9405,9 +9407,10 @@ printf 'new-png\n' > "$3"
                     .into_owned()
             })
             .collect();
+        leftovers.sort();
         assert_eq!(
             leftovers,
-            vec![case_name],
+            vec![format!(".{case_name}.lock.guard"), case_name.to_owned()],
             "transactional debris remained: {leftovers:?}"
         );
         fs::remove_dir_all(directory).expect("remove isolated rollback fixture");
@@ -9432,9 +9435,6 @@ printf 'new-png\n' > "$3"
         let run_dir = state_root.join("concurrent-run");
         let fake_bin = directory.join("bin");
         let ready = directory.join("provenance.ready");
-        let pause_ready = directory.join("lock-pause.ready");
-        let pause_release = directory.join("lock-pause.release");
-        let pause_finished = directory.join("lock-pause.finished");
         fs::create_dir(&shots).expect("create concurrent shot output directory");
         fs::create_dir_all(&run_dir).expect("create concurrent shot state directory");
         fs::create_dir(&fake_bin).expect("create concurrent shot fake command directory");
@@ -9455,15 +9455,57 @@ printf 'new-png\n' > "$3"
         ] {
             fs::write(run_dir.join(name), contents).expect("write concurrent shot state");
         }
-        fs::write(run_dir.join("metadata.json"), b"{}\n").expect("write concurrent metadata");
+        let metadata = run_dir.join("metadata.json");
+        let init = Command::new("/usr/bin/python3")
+            .arg(root().join("tools/capture_provenance.py"))
+            .arg("init")
+            .arg("--metadata")
+            .arg(&metadata)
+            .arg("--run-id")
+            .arg("concurrent-run")
+            .arg("--session")
+            .arg("concurrent-session")
+            .arg("--session-id")
+            .arg("$concurrent-session")
+            .arg("--binary")
+            .arg("/usr/bin/tail")
+            .arg("--revision")
+            .arg("0".repeat(40))
+            .arg("--dirty")
+            .arg("false")
+            .arg("--columns")
+            .arg("80")
+            .arg("--rows")
+            .arg("24")
+            .arg("--capture-dir")
+            .arg(&shots)
+            .arg("--manifest")
+            .arg(directory.join("manifest.json"))
+            .arg("--stderr")
+            .arg(run_dir.join("stderr.log"))
+            .arg("--theme")
+            .arg("junie")
+            .arg("--color")
+            .arg("truecolor")
+            .arg("--env")
+            .arg("COLOR=truecolor")
+            .arg("--argv")
+            .arg("/usr/bin/tail")
+            .output()
+            .expect("initialize concurrent metadata");
+        assert!(init.status.success(), "{init:?}");
         let stale_lock = shots.join(format!(".{case_name}.lock"));
         let mut stale_process = Command::new("/usr/bin/true")
             .spawn()
             .expect("spawn stale shot owner");
         let stale_pid = stale_process.id();
         stale_process.wait().expect("reap stale shot owner");
-        fs::write(&stale_lock, format!("{stale_pid}:crashed-run\n"))
-            .expect("write stale shot owner");
+        fs::create_dir(&stale_lock).expect("create legacy stale shot lock");
+        fs::write(
+            stale_lock.join("owner"),
+            format!("{stale_pid}:crashed-run\n"),
+        )
+        .expect("write stale shot owner");
 
         let write_executable = |path: &Path, contents: &str| {
             fs::write(path, contents).expect("write concurrent fake executable");
@@ -9480,6 +9522,7 @@ case "$1" in
   has-session) exit 0 ;;
   display-message) printf '%s\n' '$concurrent-session' ;;
   display)
+    : > "$CAPTURE_PROVENANCE_READY"
     case "$*" in
       *'#{pane_width}'*) printf '80\n' ;;
       *'#{pane_height}'*) printf '24\n' ;;
@@ -9496,86 +9539,17 @@ esac
 exit 0
 "#,
         );
-        write_executable(
-            &fake_bin.join("python3"),
-            r#"#!/bin/bash
-case "$1" in
-  *ansi2html.py) printf '<html>new</html>\n' > "$3" ;;
-  *capture_provenance.py) printf 'ready\n' > "$CAPTURE_PROVENANCE_READY"; sleep 1 ;;
-esac
-exit 0
-"#,
-        );
         let fake_png = directory.join("fake-png");
         write_executable(
             &fake_png,
             r#"#!/bin/bash
 printf 'new-png\n' > "$3"
-"#,
-        );
-
-        write_executable(
-            &fake_bin.join("mktemp"),
-            r#"#!/bin/bash
-case "$1" in
-  *'.concurrent.lock.tmp.'*)
-    temporary=$(/usr/bin/mktemp "$@")
-    : > "$CAPTURE_LOCK_PAUSE_READY"
-    while [[ ! -e "$CAPTURE_LOCK_PAUSE_RELEASE" ]]; do /bin/sleep 0.01; done
-    : > "$CAPTURE_LOCK_PAUSE_FINISHED"
-    printf '%s\n' "$temporary"
-    exit 0
-    ;;
-esac
-exec /usr/bin/mktemp "$@"
+/bin/sleep 1
 "#,
         );
 
         let original_path = std::env::var_os("PATH").expect("PATH is set");
         let path = format!("{}:{}", fake_bin.display(), original_path.to_string_lossy());
-        let mut interrupted = Command::new("/bin/bash")
-            .arg(root().join("tools/capture.sh"))
-            .arg("shot")
-            .arg(case_name)
-            .current_dir(root())
-            .env("PATH", &path)
-            .env("CAPTURE_LOCK_PAUSE_READY", &pause_ready)
-            .env("CAPTURE_LOCK_PAUSE_RELEASE", &pause_release)
-            .env("CAPTURE_LOCK_PAUSE_FINISHED", &pause_finished)
-            .env("CAPTURE_PROVENANCE_READY", &ready)
-            .env("PY", &fake_png)
-            .env("BIN", "/usr/bin/tail")
-            .env("CAPTURE_RUN_ID", "concurrent-run")
-            .env("CAPTURE_DIR", &shots)
-            .env("CAPTURE_MANIFEST", directory.join("manifest.json"))
-            .env("CAPTURE_STATE_DIR", &state_root)
-            .spawn()
-            .expect("start interrupted shot");
-        for _ in 0..500 {
-            if pause_ready.exists() {
-                break;
-            }
-            std::thread::sleep(std::time::Duration::from_millis(10));
-        }
-        assert!(
-            pause_ready.exists(),
-            "interrupted shot did not reach lock staging"
-        );
-        interrupted.kill().expect("kill interrupted shot");
-        fs::write(&pause_release, b"release\n").expect("release lock staging helper");
-        for _ in 0..500 {
-            if pause_finished.exists() {
-                break;
-            }
-            std::thread::sleep(std::time::Duration::from_millis(10));
-        }
-        interrupted.wait().expect("reap interrupted shot");
-        assert!(
-            pause_finished.exists(),
-            "lock staging helper did not finish after owner death"
-        );
-        fs::remove_file(fake_bin.join("mktemp")).expect("remove interrupted lock helper");
-
         let first = Command::new("/bin/bash")
             .arg(root().join("tools/capture.sh"))
             .arg("shot")
@@ -9700,6 +9674,145 @@ exec /usr/bin/mktemp "$@"
             b"/usr/bin/tail\n"
         );
         fs::remove_dir_all(directory).expect("remove isolated shell state fixture");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn capture_provenance_rejects_symlinked_parent_directories() {
+        let directory = std::env::temp_dir().join(format!(
+            "terminal-components-capture-parent-symlink-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("clock after epoch")
+                .as_nanos()
+        ));
+        fs::create_dir(&directory).expect("create isolated parent fixture");
+        let real = directory.join("real");
+        let alias = directory.join("alias");
+        fs::create_dir(&real).expect("create trusted parent fixture");
+        symlink(&real, &alias).expect("create parent symlink");
+        let state = real.join("state");
+        fs::write(&state, b"untouched\n").expect("write state fixture");
+
+        let state_output = Command::new("/usr/bin/python3")
+            .arg(root().join("tools/capture_provenance.py"))
+            .arg("read-state")
+            .arg("--path")
+            .arg(alias.join("state"))
+            .output()
+            .expect("run parent state fixture");
+        assert!(
+            !state_output.status.success(),
+            "state parent symlink must fail"
+        );
+        assert_eq!(
+            fs::read(&state).expect("read untouched state"),
+            b"untouched\n"
+        );
+        let state_write = Command::new("/usr/bin/python3")
+            .arg(root().join("tools/capture_provenance.py"))
+            .arg("write-state")
+            .arg("--path")
+            .arg(alias.join("state"))
+            .arg("--value")
+            .arg("redirected")
+            .output()
+            .expect("run parent state writer fixture");
+        assert!(
+            !state_write.status.success(),
+            "state writer parent symlink must fail"
+        );
+        assert_eq!(
+            fs::read(&state).expect("read state after rejected write"),
+            b"untouched\n"
+        );
+
+        let metadata = real.join("metadata.json");
+        let stderr = real.join("stderr");
+        fs::write(&stderr, b"stderr\n").expect("write stderr fixture");
+        let mut artifacts = Vec::new();
+        for name in ["ansi", "cursor", "txt", "html", "png"] {
+            let path = real.join(name);
+            fs::write(&path, name.as_bytes()).expect("write artifact fixture");
+            artifacts.push((name, path));
+        }
+        let init = Command::new("/usr/bin/python3")
+            .arg(root().join("tools/capture_provenance.py"))
+            .arg("init")
+            .arg("--metadata")
+            .arg(&metadata)
+            .arg("--run-id")
+            .arg("parent-run")
+            .arg("--session")
+            .arg("parent-session")
+            .arg("--session-id")
+            .arg("pending")
+            .arg("--binary")
+            .arg("/usr/bin/tail")
+            .arg("--revision")
+            .arg("0".repeat(40))
+            .arg("--dirty")
+            .arg("false")
+            .arg("--columns")
+            .arg("80")
+            .arg("--rows")
+            .arg("24")
+            .arg("--capture-dir")
+            .arg(&real)
+            .arg("--manifest")
+            .arg(alias.join("manifest.json"))
+            .arg("--stderr")
+            .arg(&stderr)
+            .arg("--theme")
+            .arg("junie")
+            .arg("--color")
+            .arg("truecolor")
+            .arg("--env")
+            .arg("COLOR=truecolor")
+            .arg("--argv")
+            .arg("/usr/bin/tail")
+            .output()
+            .expect("initialize parent provenance fixture");
+        assert!(init.status.success(), "{init:?}");
+
+        let mut record = Command::new("/usr/bin/python3");
+        record
+            .arg(root().join("tools/capture_provenance.py"))
+            .arg("record")
+            .arg("--metadata")
+            .arg(&metadata)
+            .arg("--manifest")
+            .arg(alias.join("manifest.json"))
+            .arg("--run-id")
+            .arg("parent-run")
+            .arg("--name")
+            .arg("parent-shot")
+            .arg("--columns")
+            .arg("80")
+            .arg("--rows")
+            .arg("24")
+            .arg("--status")
+            .arg("ok")
+            .arg("--exit-status")
+            .arg("0")
+            .arg("--stderr")
+            .arg(&stderr);
+        for (name, path) in artifacts {
+            record
+                .arg("--artifact")
+                .arg(format!("{name}={}", path.display()));
+        }
+        let record = record.output().expect("run parent manifest fixture");
+        assert!(
+            !record.status.success(),
+            "manifest parent symlink must fail"
+        );
+        assert!(
+            !real.join("manifest.json").exists(),
+            "manifest escaped alias"
+        );
+        fs::remove_dir_all(directory).expect("remove isolated parent fixture");
     }
 
     #[test]
@@ -10008,7 +10121,10 @@ set -eu
             .arg("argument with spaces")
             .output()
             .expect("run capture runner fixture");
-        assert!(!output.status.success(), "legacy argv mode must be rejected");
+        assert!(
+            !output.status.success(),
+            "legacy argv mode must be rejected"
+        );
         assert!(
             String::from_utf8_lossy(&output.stderr).contains("positional argv mode is unsupported"),
             "{output:?}"

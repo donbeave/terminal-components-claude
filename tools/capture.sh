@@ -160,12 +160,10 @@ ensure_state_target() {
 }
 
 write_state() {
-  local path=$1 value=$2 temporary
-  ensure_state_target "$path" "capture state"
-  temporary=$(mktemp "${path}.tmp.XXXXXX")
-  chmod 600 "$temporary"
-  printf '%s\n' "$value" > "$temporary"
-  mv -f "$temporary" "$path"
+  local path=$1 value=$2
+  "$STATE_PYTHON" "$PROVENANCE_TOOL" write-state \
+    --path "$path" \
+    --value "$value"
 }
 
 state_value() {

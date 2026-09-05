@@ -825,6 +825,11 @@ def command_read_state(args: argparse.Namespace) -> None:
     print(value.replace("\r", "").replace("\n", ""))
 
 
+def command_write_state(args: argparse.Namespace) -> None:
+    """Write one shell state value below a pinned parent directory."""
+    write_text_atomic(Path(args.path), f"{args.value}\n")
+
+
 def recorded_environment(metadata: dict[str, Any]) -> dict[str, str]:
     snapshot = metadata.get("environment")
     if not isinstance(snapshot, dict):
@@ -1060,6 +1065,11 @@ def parser() -> argparse.ArgumentParser:
     state = subparsers.add_parser("read-state")
     state.add_argument("--path", required=True)
     state.set_defaults(handler=command_read_state)
+
+    write_state = subparsers.add_parser("write-state")
+    write_state.add_argument("--path", required=True)
+    write_state.add_argument("--value", required=True)
+    write_state.set_defaults(handler=command_write_state)
 
     shot_lock = subparsers.add_parser("shot-lock")
     shot_lock.add_argument("action", choices=("acquire", "release"))
