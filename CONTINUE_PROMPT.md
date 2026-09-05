@@ -37,9 +37,12 @@ overrides.
 
 ## Current state — measured at the current tip
 
-The current **committed** source tip is **`HEAD == origin/main == c152b97`
-(`c152b97109774d0a43472de6daf20aa1567e1b6c`)**. The latest lineage is:
+The current **committed** source tip is **`HEAD == origin/main == b23df21`
+(`b23df21c93a4694a4e71c4e76029bea14e275759`)**. The latest lineage is:
 
+- `b23df21` — redact environment debug values;
+- `c936d51` — keep environment drafts masked until save;
+- `5dc310a` — satisfy the Form clippy gate;
 - `c152b97` — register Jackin shell props from `update`;
 - `a69a7f1` — retain dynamic Form sensitivity state across updates;
 - `e92944f` — clear stale Grid edit errors;
@@ -73,21 +76,26 @@ paths, not pending work. `bless-guard` must fail closed unless
 Measured at this tip:
 
 - `cargo fmt --all --check`: **PASS**.
-- `cargo run -p xtask -- doc-check`: **PASS**, 76 Rust blocks and 865 resolved
+- `cargo run -p xtask -- doc-check`: **PASS**, 76 Rust blocks and 864 resolved
   references; the existing not-yet-built allow-list remains explicit.
 - `cargo run -p xtask -- boundary`: all named source/contract checks pass except
   the fail-closed `baseline_moves_are_classified` check without a comparison
   base. `props_are_built_once` passes at 131 configured constructions, and
   `every_named_test_exists` reports 388 names, 387 present, and 1 deferred, and
   passes.
+- `cargo test -p junie-tui --lib --all-features`: **PASS**, 735 tests.
+- Current app/full-workspace evidence is not green: Jackin `app_tests` reports
+  11 passed / 15 failed; TablePro's `tablepro_visual_baseline` reports digest
+  `c1fdb4fc → fb80a107`; Showcase reports 28 passed / 1 failed at Pickers
+  diagnostics. Workspace Clippy reports 711 errors and 1 warning.
 - `shots/capture-provenance.json` is schema 1 at revision `a358272…`; the TSV
   contains 96 cells. Those captures predate the current tip and are stale
   evidence. The latest recorded independent audit still has the TablePro
   `connections` digest regression and the Jackin
   `accounts-1password-step-1` fixture failure. No baseline edit or visual
   blessing is authorized from them.
-- The full workspace §26 gate set has not been re-run at `c152b97`; do not claim
-  Slice or goal completion from the named checks above.
+- The full workspace §26 gate set is not green at `b23df21`; do not claim Slice
+  or goal completion from the named checks above.
 
 ## Resume actions
 

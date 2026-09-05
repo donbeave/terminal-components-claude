@@ -29,9 +29,11 @@ not pass model or effort overrides.
 
 ## Current tip — measured
 
-The current **committed** tip is `HEAD == origin/main == c152b97`
-(`c152b97109774d0a43472de6daf20aa1567e1b6c`). Its immediate lineage is
-`c152b97` (Jackin shell props registration), `e92944f` (stale Grid edit errors),
+The current **committed** tip is `HEAD == origin/main == b23df21`
+(`b23df21c93a4694a4e71c4e76029bea14e275759`). Its immediate lineage is
+`b23df21` (redact environment debug values), `c936d51` (mask environment
+drafts until save), `5dc310a` (Form clippy gate), `c152b97` (Jackin shell props
+registration), and `e92944f` (stale Grid edit errors),
 `ff68306` (safe sensitive-text state
 constructors), `85ecac1` (Jackin preview gates), `0369742` (§73 adjudication),
 and `e49de3f` (dynamic Form error disclosure), following the prior capture,
@@ -48,19 +50,24 @@ the removed root package.
 and `list`. Current named checks:
 
 - `cargo fmt --all --check`: PASS.
-- `doc-check`: PASS — 76 Rust blocks and 865 resolved references; the existing
+- `doc-check`: PASS — 76 Rust blocks and 864 resolved references; the existing
   not-yet-built allow-list remains explicit.
 - `boundary`: all named checks pass except the fail-closed
   `baseline_moves_are_classified` check needs `BLESS_GUARD_BASE` or
 -  `GITHUB_BASE_REF`; `props_are_built_once` passes at 131 configured
   constructions. `every_named_test_exists` is 388/387 with one deferred name
   and passes.
+- `cargo test -p junie-tui --lib --all-features`: PASS — 735 tests.
+- App/full-workspace gates remain red: Jackin `app_tests` is 11/15 (11 passed,
+  15 failed), TablePro's `tablepro_visual_baseline` moves
+  `c1fdb4fc → fb80a107`, Showcase is 28/1 with a Pickers diagnostic, and strict
+  workspace Clippy reports 711 errors plus 1 warning.
 - Tracked capture provenance is schema 1 at revision `a358272…` with 96 cells,
-  stale against `c152b97`; the latest independent audit still records the
+  stale against `b23df21`; the latest independent audit still records the
   TablePro `connections` digest regression and Jackin
   `accounts-1password-step-1` fixture failure. No baseline edit or blessing is
   authorized until fresh provenance-backed captures and independent review exist.
-- The full workspace §26 gate set has not been re-run at `c152b97`.
+- The full workspace §26 gate set is not green at `b23df21`.
 
 ## First actions
 

@@ -1961,3 +1961,34 @@ gates. It does not claim slice or goal completion.
   remain required.
 - No baseline was edited or blessed. Baseline blessing remains unauthorized while stale provenance
   and the visual failures remain unresolved.
+
+## Current source-and-gate checkpoint — AUTHORITATIVE (2026-09-05, origin/main `b23df21`)
+
+This checkpoint supersedes the prior source checkpoint for current identity and measured status;
+earlier sections remain historical evidence. It records blockers and does not claim completion.
+
+### Identity and measured gates
+
+- Verified committed identity: `HEAD == origin/main == b23df21c93a4694a4e71c4e76029bea14e275759`
+  (`b23df21`, Jackin environment debug redaction), after `c936d51` (masked environment drafts),
+  `5dc310a` (Form clippy cleanup), and `c152b97` (Jackin shell props registration).
+- `rtk cargo fmt --all --check`: **PASS**; `rtk cargo run -p xtask -- doc-check`: **PASS** —
+  76 Rust blocks, 864 references resolved, with the existing not-yet-built allow-list explicit.
+- `rtk cargo run -p xtask -- boundary`: all named checks pass except fail-closed
+  `baseline_moves_are_classified` without a comparison base; Props passes at 131 configured
+  constructions, and `every_named_test_exists` passes at 388 names, 387 present, 1 deferred.
+- `rtk cargo test -p junie-tui --lib --all-features`: **PASS**, 735 tests. Strict workspace
+  Clippy is **not green** (711 errors, 1 warning); the full workspace §26 set is not green.
+
+### Visual and application blockers
+
+- `jackin-preview` app tests are **11 passed / 15 failed**. The focused environment-masking,
+  invalid-key, and secret-material preview tests pass; remaining journey assertions are unresolved.
+- TablePro's `tablepro_visual_baseline` fails on digest `c1fdb4fc → fb80a107`; Showcase app tests
+  are **28 passed / 1 failed** at `Pickers diagnostics`.
+- Tracked capture provenance remains schema 1 at revision
+  `a358272665d49d74e4fc17a262d6061621e861d2`, with 96 TSV cells, stale against this tip. The
+  latest independent audit still records the TablePro `connections` regression and Jackin
+  `accounts-1password-step-1` fixture failure.
+- No baseline was edited or blessed. Fresh provenance-backed captures, classification, and
+  independent visual review remain required; blessing is unauthorized.
