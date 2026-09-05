@@ -1172,5 +1172,24 @@ impl App for TableProApp {
 ///
 /// Returns terminal setup or runtime I/O errors.
 pub fn run() -> std::io::Result<()> {
-    tui_next::run(TableProApp::default(), tui_next::Theme::junie())
+    run_with(tui_next::Theme::junie(), None)
+}
+
+/// Start `TablePro` with an explicit theme and optional initial connection.
+pub fn run_with(theme: tui_next::Theme, connect: Option<&str>) -> std::io::Result<()> {
+    let mut app = TableProApp::default();
+    if let Some(name) = connect {
+        let Some(index) = app
+            .connections
+            .iter()
+            .position(|candidate| candidate.name.eq_ignore_ascii_case(name))
+        else {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!("no connection named {name:?}"),
+            ));
+        };
+        let _ = app.connect(index);
+    }
+    tui_next::run(app, theme)
 }

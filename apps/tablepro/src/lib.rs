@@ -29,7 +29,7 @@ pub mod workbench;
 
 mod app;
 
-pub use app::{MIN_HEIGHT, MIN_WIDTH, QueryOutcome, Screen, Surface, TableProApp, run};
+pub use app::{MIN_HEIGHT, MIN_WIDTH, QueryOutcome, Screen, Surface, TableProApp, run, run_with};
 
 #[cfg(test)]
 mod tablepro {
