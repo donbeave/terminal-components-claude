@@ -402,11 +402,20 @@ fn publish_capture_matrix_lock(path: &Path, owner: &str) -> Result<(), String> {
         let _ = remove_capture_lock_staging(&staging);
         return Err(error);
     }
+    eprintln!(
+        "matrix rename before staging={} path={} path_metadata={:?}",
+        staging.display(),
+        path.display(),
+        fs::symlink_metadata(path).ok()
+    );
     if let Err(error) = fs::rename(&staging, path) {
         eprintln!(
-            "matrix rename failed staging={} path={} error={error}",
+            "matrix rename failed staging={} path={} exists={} metadata={:?} error={error} raw={:?}",
             staging.display(),
-            path.display()
+            path.display(),
+            path.exists(),
+            fs::symlink_metadata(path).ok(),
+            error.raw_os_error()
         );
         let _ = remove_capture_lock_staging(&staging);
         if error.kind() == std::io::ErrorKind::AlreadyExists {
