@@ -15,8 +15,7 @@
 //! Environment knobs:
 //! - `PERF_BLESS=1`    rewrite the baseline with this run's numbers.
 //! - `PERF_STRICT=1`   also assert wall time against `baseline × 1.2`, and every
-//!   "within N×" ratio (`PERF_TARGET` is folded into it — §16.6 declares exactly
-//!   two knobs, MI-14).
+//!   "within N×" ratio (§16.6 declares exactly two knobs, MI-14).
 //! - `PERF_ITERS=n`    cap every benchmark's iteration count at `n`.
 //! - `PERF_FULL=1`     use full data sizes even in debug builds.
 //! - `PERF_BASELINE`   the baseline file (default: `crates/tui/tests/perf_baseline.txt`).

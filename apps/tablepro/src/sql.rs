@@ -2,12 +2,9 @@
 //! autocomplete, split statements, classify danger, evaluate the subset of
 //! SELECT the demo needs, and synthesize believable EXPLAIN plans.
 
-#![allow(
+#![expect(
     missing_docs,
-    clippy::arithmetic_side_effects,
-    clippy::indexing_slicing,
-    clippy::too_many_lines,
-    reason = "This migrated deterministic SQL adapter validates catalog-derived indexes and keeps parser/executor behavior aligned with the product subset."
+    reason = "The SQL adapter is application-internal parser vocabulary; public items are exercised through the app facade and tests."
 )]
 
 use crate::db::{Catalog, ColType, Table, Value};
@@ -152,6 +149,11 @@ pub fn is_keyword(word: &str) -> bool {
     KEYWORDS.contains(&up.as_str())
 }
 
+#[expect(
+    clippy::arithmetic_side_effects,
+    clippy::indexing_slicing,
+    reason = "The byte scanner advances only while its bounds predicates hold."
+)]
 pub fn tokenize(src: &str) -> Vec<Token> {
     let b = src.as_bytes();
     let mut out = Vec::new();
@@ -242,6 +244,11 @@ pub fn split_statements(src: &str) -> Vec<(usize, usize)> {
     out
 }
 
+#[expect(
+    clippy::arithmetic_side_effects,
+    clippy::indexing_slicing,
+    reason = "Trim bounds are maintained by the surrounding comparisons."
+)]
 fn trim_range(src: &str, mut a: usize, mut b: usize) -> (usize, usize) {
     while a < b && src.as_bytes()[a].is_ascii_whitespace() {
         a += 1;
@@ -384,11 +391,19 @@ impl<'a> Words<'a> {
     fn peek_up(&self) -> String {
         self.peek().unwrap_or("").to_ascii_uppercase()
     }
+    #[expect(
+        clippy::arithmetic_side_effects,
+        reason = "The token cursor advances only after get() proves an item exists."
+    )]
     fn next(&mut self) -> Option<&str> {
         let t = self.toks.get(self.pos)?;
         self.pos += 1;
         Some(&self.src[t.start..t.end])
     }
+    #[expect(
+        clippy::arithmetic_side_effects,
+        reason = "The token cursor advances only after peek() matches the accepted keyword."
+    )]
     fn accept(&mut self, kw: &str) -> bool {
         if self.peek_up() == kw {
             self.pos += 1;
@@ -397,6 +412,10 @@ impl<'a> Words<'a> {
             false
         }
     }
+    #[expect(
+        clippy::arithmetic_side_effects,
+        reason = "The token cursor advances only after get() proves an item exists."
+    )]
     fn ident(&mut self) -> Option<String> {
         let t = self.toks.get(self.pos)?;
         if t.kind == TokKind::Ident || t.kind == TokKind::Keyword {
@@ -407,6 +426,10 @@ impl<'a> Words<'a> {
         }
     }
     /// `schema.name` or `name`
+    #[expect(
+        clippy::arithmetic_side_effects,
+        reason = "Qualified-name parsing advances only after a matching separator and identifier."
+    )]
     fn qualified(&mut self) -> Option<(Option<String>, String)> {
         let first = self.ident()?;
         if self.peek() == Some(".") {
@@ -432,6 +455,10 @@ pub struct ParseError {
 ///
 /// Returns a [`ParseError`] when the input is empty, malformed, or uses a
 /// statement form outside the supported subset.
+#[expect(
+    clippy::too_many_lines,
+    reason = "Statement dispatch is one audited parser state machine."
+)]
 pub fn parse(stmt: &str) -> Result<Statement, ParseError> {
     let mut w = Words::new(stmt);
     let err = |w: &Words<'_>, m: &str| ParseError {
@@ -560,6 +587,10 @@ pub fn parse(stmt: &str) -> Result<Statement, ParseError> {
     }
 }
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "SELECT parsing preserves the deterministic supported subset in one state machine."
+)]
 fn parse_select(w: &mut Words<'_>) -> Result<Select, ParseError> {
     let err = |w: &Words<'_>, m: &str| ParseError {
         message: m.to_owned(),
@@ -792,6 +823,10 @@ pub fn fmt_rows(n: usize) -> String {
     }
 }
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "Risk text is a single auditable mapping from statement forms."
+)]
 pub fn assess(stmt: &Statement, table: Option<&Table>) -> Risk {
     let rows = table.map_or(0, |t| t.row_count);
     let t = tier(stmt);
@@ -922,6 +957,10 @@ pub struct ExecError {
 /// Maximum rows materialised for a single result.
 pub const ROW_CAP: usize = 500;
 
+#[expect(
+    clippy::indexing_slicing,
+    reason = "The projected row is generated from the same catalog column matrix."
+)]
 fn matches(pred: &Predicate, table: &Table, row: &[Value]) -> bool {
     let Some(ci) = table
         .columns
@@ -986,6 +1025,12 @@ pub fn cmp_values(a: &Value, b: &Value) -> std::cmp::Ordering {
 ///
 /// Returns an [`ExecError`] when the relation, projected column, predicate,
 /// or order column is not present in the catalog.
+#[expect(
+    clippy::arithmetic_side_effects,
+    clippy::indexing_slicing,
+    clippy::too_many_lines,
+    reason = "Bounded catalog execution preserves the legacy deterministic query subset."
+)]
 pub fn run_select(cat: &Catalog, sel: &Select) -> Result<ResultSet, ExecError> {
     let table = cat
         .find(sel.schema.as_deref(), &sel.table)
@@ -1147,6 +1192,10 @@ pub struct PlanNode {
 /// # Errors
 ///
 /// Returns an [`ExecError`] when the relation is not present in the catalog.
+#[expect(
+    clippy::too_many_lines,
+    reason = "The deterministic plan tree follows one auditable query-shape mapping."
+)]
 pub fn explain(cat: &Catalog, sel: &Select, analyze: bool) -> Result<PlanNode, ExecError> {
     let table = cat
         .find(sel.schema.as_deref(), &sel.table)

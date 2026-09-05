@@ -10,8 +10,8 @@
 //!
 //! `--test-threads=1` is only needed for stable wall times: allocation
 //! counts are protected by `perf_common::lock()`. See `tests/perf_common.rs`
-//! for the environment knobs (`PERF_BLESS`, `PERF_STRICT`, `PERF_TARGET`,
-//! `PERF_ITERS`, `PERF_FULL`).
+//! for the environment knobs (`PERF_BLESS`, `PERF_STRICT`, `PERF_ITERS`,
+//! `PERF_FULL`).
 
 mod perf_common;
 
@@ -386,7 +386,7 @@ fn style_resolve_10k_parts_with_two_overlays() {
         s.ns,
         base.ns,
         2.0,
-        env_flag("PERF_TARGET"),
+        env_flag("PERF_STRICT"),
     );
 }
 
@@ -467,7 +467,7 @@ fn list_100k_rows_render() {
         s.ns,
         ctl.ns,
         1.5,
-        env_flag("PERF_TARGET"),
+        env_flag("PERF_STRICT"),
     );
 }
 
@@ -590,7 +590,7 @@ fn viewport_100k_lines_push() {
         n / 10
     );
     report("viewport_100k_lines_push", &s);
-    if env_flag("PERF_TARGET") {
+    if !cfg!(debug_assertions) {
         // allocations must be independent of `lines.len()`: same ±10 %
         let hi = base_allocs + base_allocs / 10;
         assert!(
@@ -667,7 +667,7 @@ fn fit_10k_grapheme_line_to_80() {
         black_box(text::fit(&line, 80));
     });
     report("fit_10k_grapheme_line_to_80", &s);
-    if env_flag("PERF_TARGET") {
+    if !cfg!(debug_assertions) {
         assert_eq!(s.allocs, 0, "R5: the row painter must not allocate");
     }
 }
@@ -751,7 +751,7 @@ fn viewport_layout_10k_grapheme_line() {
         c.frame(|_area, buf, ctx| vp.render(Rect::new(0, 0, w, 3), buf, ctx, bg()));
     });
     report("viewport_layout_10k_grapheme_line", &s);
-    if env_flag("PERF_TARGET") {
+    if !cfg!(debug_assertions) {
         assert_eq!(s.allocs, 0, "layout must not allocate per grapheme");
     }
 }
@@ -779,7 +779,8 @@ fn render_twice_allocates_the_same() {
 
 /// §25.6: no path may copy a whole data set per frame. Expected to fail on
 /// the pre-refactor tree for the viewport; the assertion is gated behind
-/// `PERF_TARGET=1` and the measurement is always printed.
+/// The allocation budgets are release assertions; the measurement is always
+/// printed.
 #[test]
 fn no_full_collection_clone_per_frame() {
     let _g = lock();
@@ -798,7 +799,7 @@ fn no_full_collection_clone_per_frame() {
         "PERF no_full_collection_clone_per_frame_viewport ns={} allocs={} bytes={}",
         vs.ns, vs.allocs, vs.bytes
     );
-    if env_flag("PERF_TARGET") {
+    if !cfg!(debug_assertions) {
         assert!(ls.bytes < 64 * 1024, "list frame copies {} bytes", ls.bytes);
         assert!(
             vs.bytes < 64 * 1024,
@@ -809,7 +810,8 @@ fn no_full_collection_clone_per_frame() {
 }
 
 /// One click into a 100 000-row list versus a 100-row list: same cost.
-/// Hard assertions gated behind `PERF_TARGET=1`; numbers always printed.
+/// Allocation assertions are hard in release; wall-clock ratios are strict-mode
+/// assertions, and numbers are always printed.
 #[test]
 fn event_dispatch_is_not_o_n() {
     let _g = lock();
@@ -830,8 +832,7 @@ fn event_dispatch_is_not_o_n() {
     };
     let big_l = click(&mut list_of(big(100_000)), "100k");
     let small = click(&mut list_of(100), "100");
-    let target = env_flag("PERF_TARGET");
-    if target {
+    if !cfg!(debug_assertions) {
         assert_eq!(big_l.allocs, 0, "a click must not allocate");
     }
     check_ratio(
@@ -839,7 +840,7 @@ fn event_dispatch_is_not_o_n() {
         big_l.ns,
         small.ns,
         3.0,
-        target,
+        env_flag("PERF_STRICT") && !cfg!(debug_assertions),
     );
 }
 

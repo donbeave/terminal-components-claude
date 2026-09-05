@@ -5916,7 +5916,9 @@ enum BaselineKind {
 
 /// Which baseline rule a repository-relative path obeys, or `None` if it is not
 /// a baseline at all. Patterns, never a hard-coded file list:
-/// `apps/*/tests/baselines/*.txt` do not exist yet and arrive in Slices 5–7.
+/// Application-owned digest baselines are matched by the destination shape;
+/// the old root `tests/baselines/*.txt` paths remain frozen when they are not
+/// undergoing an exact ownership move.
 fn classify_baseline(rel: &str) -> Option<BaselineKind> {
     let frozen = rel.starts_with("baseline/before/")
         || rel == "tests/showcase_baseline.txt"
@@ -5932,6 +5934,85 @@ fn classify_baseline(rel: &str) -> Option<BaselineKind> {
         return Some(BaselineKind::Digest);
     }
     None
+}
+
+/// A producer move may transfer immutable before-image evidence into its
+/// owning application without becoming a visual bless. The source is frozen
+/// unless the destination is an application digest baseline and the bytes are
+/// exactly unchanged; any other edit remains a frozen-evidence failure.
+fn is_exact_baseline_ownership_move(
+    source: &str,
+    destination: &str,
+    source_text: &str,
+    destination_text: &str,
+) -> bool {
+    classify_baseline(source) == Some(BaselineKind::Frozen)
+        && classify_baseline(destination) == Some(BaselineKind::Digest)
+        && source.starts_with("tests/baselines/")
+        && source.ends_with(".txt")
+        && destination.contains("/tests/baselines/")
+        && source_text == destination_text
+}
+
+/// A performance baseline move may split application rows out of the frozen
+/// root file while library rows remain there.  This is deliberately stricter
+/// than a digest-baseline move: the root may only lose complete rows, every
+/// removed row must be present byte-for-byte in the application file, and the
+/// application file may contain no row that was not already recorded in the
+/// frozen source.  That proves ownership changed without blessing timings or
+/// permitting a library row to disappear with the application rows.
+fn is_exact_perf_ownership_move(
+    source: &str,
+    destination: &str,
+    source_base: &str,
+    source_work: &str,
+    destination_work: &str,
+) -> bool {
+    if source != "tests/perf_baseline.txt"
+        || !destination.starts_with("apps/")
+        || !destination.ends_with("/tests/perf_baseline.txt")
+    {
+        return false;
+    }
+
+    let rows = |text: &str| {
+        text.lines()
+            .map(str::trim)
+            .filter(|line| !line.is_empty() && !line.starts_with('#'))
+            .filter_map(|line| {
+                let name = line.split_whitespace().next()?.to_owned();
+                Some((name, line.to_owned()))
+            })
+            .collect::<BTreeMap<_, _>>()
+    };
+    let base = rows(source_base);
+    let work = rows(source_work);
+    let destination = rows(destination_work);
+
+    // The frozen root can only lose rows; a timing edit, replacement, or new
+    // root row remains a frozen-evidence violation.
+    if work
+        .iter()
+        .any(|(name, line)| base.get(name) != Some(line))
+    {
+        return false;
+    }
+    let removed: BTreeSet<&str> = base
+        .keys()
+        .filter(|name| !work.contains_key(*name))
+        .map(String::as_str)
+        .collect();
+    if removed.is_empty() {
+        return false;
+    }
+
+    // The destination can duplicate a row that remains in the root (for
+    // example a shared `grid_500x12_load` fixture), but it may not invent or
+    // alter any recorded value.  At least one removed row must be transferred.
+    destination.iter().all(|(name, line)| {
+        base.get(name) == Some(line)
+            && (removed.contains(name.as_str()) || work.contains_key(name))
+    }) && removed.iter().all(|name| destination.contains_key(*name))
 }
 
 /// A baseline file's `key -> compared value` map under its own rule. Blank and
@@ -6858,6 +6939,19 @@ fn baseline_moves_are_classified() -> Result<(), String> {
     let mut files: Vec<(String, String, String)> = Vec::new();
     for path in &paths {
         if classify_baseline(path) == Some(BaselineKind::Frozen) {
+            let exact_move = renames.iter().find_map(|(destination, source)| {
+                (source == path).then(|| {
+                    is_exact_baseline_ownership_move(
+                        source,
+                        destination,
+                        &git_show(&base, source),
+                        &read(&root().join(destination)),
+                    )
+                })
+            }) == Some(true);
+            if exact_move {
+                continue;
+            }
             if touched.contains(path) || untracked.contains(path) {
                 frozen_changed.push(path.clone());
             }
@@ -8214,6 +8308,23 @@ captures / classification: `(pending — filled when the change lands)`
         assert!(err.contains("Revert it"), "{err}");
     }
 
+    #[test]
+    fn exact_application_baseline_move_is_not_a_bless() {
+        let old = "120x40 connections aaaaaaaaaaaaaaaa\n";
+        assert!(is_exact_baseline_ownership_move(
+            "tests/baselines/tablepro.txt",
+            "apps/tablepro/tests/baselines/tablepro.txt",
+            old,
+            old,
+        ));
+        assert!(!is_exact_baseline_ownership_move(
+            "tests/baselines/tablepro.txt",
+            "apps/tablepro/tests/baselines/tablepro.txt",
+            old,
+            "120x40 connections bbbbbbbbbbbbbbbb\n",
+        ));
+    }
+
     /// The perf rule: the `ns` column is re-measured per machine, so a timing
     /// difference is not a movement — but an allocation or hit-count one is.
     #[test]
@@ -8242,6 +8353,7 @@ captures / classification: `(pending — filled when the change lands)`
             ("tests/perf_baseline.txt", Some(Frozen)),
             ("tests/showcase_baseline.txt", Some(Frozen)),
             ("tests/baselines/tablepro.txt", Some(Frozen)),
+            ("apps/tablepro/tests/baselines/tablepro.txt", Some(Digest)),
             (
                 "baseline/before/showcase_forms_default_120x40.png",
                 Some(Frozen),

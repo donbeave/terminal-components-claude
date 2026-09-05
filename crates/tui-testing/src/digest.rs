@@ -170,6 +170,27 @@ impl Scene {
         h
     }
 
+    /// FNV-1a using the pre-refactor before-image encoding.
+    ///
+    /// Before-image files intentionally retain the legacy cell encoding while
+    /// applications move behind the public runtime facade. This read-only
+    /// compatibility digest lets a migrated harness compare the recorded
+    /// evidence without blessing or rewriting it.
+    pub fn before_image_digest(&self) -> u64 {
+        let mut h = FNV_OFFSET;
+        for pos in self.area.positions() {
+            let Some(c) = self.buf.cell(pos) else {
+                continue;
+            };
+            let encoded = format!(
+                "{}|{:?}|{:?}|{:?};",
+                c.symbol(), c.fg, c.bg, c.modifier
+            );
+            h = fnv(h, encoded.as_bytes());
+        }
+        h
+    }
+
     /// The frame as text, rows joined with newlines.
     pub fn text(&self) -> String {
         let mut out = String::new();
@@ -345,9 +366,32 @@ impl Baseline {
     /// that every before-image row moved with it without rewriting or
     /// silently reinterpreting that evidence.
     pub fn has_before_image(&self, name: &str, width: u16, height: u16) -> bool {
+        self.before_image(name, width, height).is_some()
+    }
+
+    /// Return the recorded legacy digest for a `WIDTHxHEIGHT name` row.
+    ///
+    /// The first-generation application baselines are immutable evidence, so
+    /// this parser never writes and rejects malformed or duplicate-looking
+    /// rows rather than treating a prefix match as proof of visual equality.
+    pub fn before_image_digest(
+        &self,
+        name: &str,
+        width: u16,
+        height: u16,
+    ) -> Option<u64> {
+        self.before_image(name, width, height)
+    }
+
+    fn before_image(&self, name: &str, width: u16, height: u16) -> Option<u64> {
         let prefix = format!("{width}x{height} {name} ");
-        std::fs::read_to_string(self.path)
-            .is_ok_and(|text| text.lines().any(|line| line.starts_with(&prefix)))
+        let text = std::fs::read_to_string(self.path).ok()?;
+        let mut matching = text.lines().filter_map(|line| {
+            let value = line.strip_prefix(&prefix)?.trim();
+            u64::from_str_radix(value, 16).ok()
+        });
+        let digest = matching.next()?;
+        matching.next().is_none().then_some(digest)
     }
 
     /// Compare `digest` with the recorded entry for `key`. No file access

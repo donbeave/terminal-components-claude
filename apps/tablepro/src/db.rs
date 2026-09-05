@@ -3,12 +3,9 @@
 //! in-memory engine evaluates the SQL subset the workbench needs, so every
 //! interaction is real while results stay reproducible.
 
-#![allow(
+#![expect(
     missing_docs,
-    clippy::arithmetic_side_effects,
-    clippy::indexing_slicing,
-    clippy::too_many_lines,
-    reason = "This migrated in-memory domain adapter preserves the product fixture vocabulary; generated values use bounded catalog data and deterministic arithmetic."
+    reason = "The database adapter is application-internal domain vocabulary; public items are exercised through the app facade and tests."
 )]
 
 // ------------------------------------------------------------------ catalog
@@ -401,6 +398,10 @@ pub struct Catalog {
 }
 
 impl Catalog {
+    #[expect(
+        clippy::too_many_lines,
+        reason = "The deterministic catalog is one auditable fixture definition."
+    )]
     pub fn acme_prod() -> Self {
         let created = || dflt(col("created_at", ColType::Timestamp), "now()");
         let updated = || nullable(col("updated_at", ColType::Timestamp));
@@ -793,9 +794,17 @@ impl Rng {
         z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
         z ^ (z >> 31)
     }
+    #[expect(
+        clippy::arithmetic_side_effects,
+        reason = "SplitMix64's bounded modulo is intentional deterministic fixture arithmetic."
+    )]
     fn below(&mut self, n: u64) -> u64 {
         self.next() % n.max(1)
     }
+    #[expect(
+        clippy::indexing_slicing,
+        reason = "below() is bounded by the non-empty fixture slice."
+    )]
     fn pick<'a>(&mut self, items: &[&'a str]) -> &'a str {
         items[self.below(items.len() as u64) as usize]
     }
@@ -909,6 +918,10 @@ fn uuid(r: &mut Rng) -> String {
     )
 }
 
+#[expect(
+    clippy::arithmetic_side_effects,
+    reason = "Date components are bounded deterministic fixture values."
+)]
 fn timestamp(r: &mut Rng, year: i32) -> String {
     let month = 1 + r.below(12);
     let day = 1 + r.below(28);
@@ -920,11 +933,21 @@ fn timestamp(r: &mut Rng, year: i32) -> String {
     )
 }
 
+#[expect(
+    clippy::arithmetic_side_effects,
+    reason = "Date components are bounded deterministic fixture values."
+)]
 fn date(r: &mut Rng, year: i32) -> String {
     format!("{year}-{:02}-{:02}", 1 + r.below(12), 1 + r.below(28))
 }
 
 /// Generate deterministic rows for a table. `n` rows starting at `offset`.
+#[expect(
+    clippy::arithmetic_side_effects,
+    clippy::indexing_slicing,
+    clippy::too_many_lines,
+    reason = "The generated fixture keeps the legacy catalog's deterministic column matrix intact."
+)]
 pub fn rows(table: &Table, offset: usize, n: usize) -> Vec<Vec<Value>> {
     let mut out = Vec::with_capacity(n);
     for i in offset..offset + n {

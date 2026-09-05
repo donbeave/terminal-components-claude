@@ -25,9 +25,6 @@
 //! Environment knobs:
 //! - `PERF_BLESS=1`   rewrite `tests/perf_baseline.txt` with this run's numbers.
 //! - `PERF_STRICT=1`  also assert wall time against `baseline × 1.2`.
-//! - `PERF_TARGET=1`  enable the post-refactor acceptance assertions (target
-//!   allocation counts and "within N×" ratios); some are expected to fail
-//!   on the pre-refactor tree.
 //! - `PERF_ITERS=n`   cap every benchmark's iteration count at `n`.
 //! - `PERF_FULL=1`    use full data sizes even in debug builds.
 //!

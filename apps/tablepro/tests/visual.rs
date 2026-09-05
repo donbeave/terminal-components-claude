@@ -241,12 +241,26 @@ fn tablepro_visual_baseline() {
     for (width, height) in [(120u16, 40u16), (80, 24)] {
         for &(surface, builder) in SURFACES {
             rows = rows.saturating_add(1);
+            let expected = BASELINE.before_image_digest(surface.label(), width, height);
             assert!(
-                BASELINE.has_before_image(surface.label(), width, height),
-                "missing frozen before-image row for {width}x{height} {}",
+                expected.is_some(),
+                "missing or malformed frozen before-image row for {width}x{height} {}",
                 surface.label()
             );
+            let expected = expected.unwrap_or_default();
             let (first, second) = scene_pair(builder, surface, width, height);
+            assert_eq!(
+                first.before_image_digest(),
+                expected,
+                "{width}x{height} {}: rendered digest differs from frozen before-image",
+                surface.label()
+            );
+            assert_eq!(
+                second.before_image_digest(),
+                expected,
+                "{width}x{height} {}: repeated render differs from frozen before-image",
+                surface.label()
+            );
             assert_eq!(
                 first.digest(),
                 second.digest(),
