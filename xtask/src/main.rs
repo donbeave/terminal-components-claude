@@ -1024,9 +1024,13 @@ const RULES: &[Rule] = &[
     },
     Rule {
         n: 17,
-        re: r"#\[allow\(",
+        // Match both item-level and module-level forms.  The latter was
+        // previously missed by the production scanner because `#![allow`
+        // has a `!` between `#` and `[`.  Applications must use a scoped
+        // `#[expect(..., reason = ...)]` instead.
+        re: r"#!?\[allow\(",
         allowed: &["crates/tui-testing/"],
-        why: "#[expect(…, reason)] only",
+        why: "#[expect(…, reason)] only; no module-wide allow",
         only_if: None,
         under: None,
     },
@@ -5991,10 +5995,7 @@ fn is_exact_perf_ownership_move(
 
     // The frozen root can only lose rows; a timing edit, replacement, or new
     // root row remains a frozen-evidence violation.
-    if work
-        .iter()
-        .any(|(name, line)| base.get(name) != Some(line))
-    {
+    if work.iter().any(|(name, line)| base.get(name) != Some(line)) {
         return false;
     }
     let removed: BTreeSet<&str> = base
@@ -6010,8 +6011,7 @@ fn is_exact_perf_ownership_move(
     // example a shared `grid_500x12_load` fixture), but it may not invent or
     // alter any recorded value.  At least one removed row must be transferred.
     destination.iter().all(|(name, line)| {
-        base.get(name) == Some(line)
-            && (removed.contains(name.as_str()) || work.contains_key(name))
+        base.get(name) == Some(line) && (removed.contains(name.as_str()) || work.contains_key(name))
     }) && removed.iter().all(|name| destination.contains_key(*name))
 }
 
@@ -8343,6 +8343,48 @@ captures / classification: `(pending — filled when the change lands)`
             "apps/tablepro/tests/baselines/tablepro.txt",
             old,
             "120x40 connections bbbbbbbbbbbbbbbb\n",
+        ));
+    }
+
+    #[test]
+    fn exact_perf_ownership_move_keeps_shared_library_rows() {
+        let base = concat!(
+            "tablepro_frame 10 0 0 1 1\n",
+            "grid_500x12_load 20 0 0 2 2\n",
+            "tablepro_key 30 0 0 3 3\n",
+        );
+        let work = "grid_500x12_load 20 0 0 2 2\n";
+        let app = concat!(
+            "tablepro_frame 10 0 0 1 1\n",
+            "tablepro_key 30 0 0 3 3\n",
+            "grid_500x12_load 20 0 0 2 2\n",
+        );
+        assert!(is_exact_perf_ownership_move(
+            "tests/perf_baseline.txt",
+            "apps/tablepro/tests/perf_baseline.txt",
+            base,
+            work,
+            app,
+        ));
+    }
+
+    #[test]
+    fn perf_ownership_move_rejects_changed_or_invented_rows() {
+        let base = "tablepro_frame 10 0 0 1 1\n";
+        let work = "";
+        assert!(!is_exact_perf_ownership_move(
+            "tests/perf_baseline.txt",
+            "apps/tablepro/tests/perf_baseline.txt",
+            base,
+            work,
+            "tablepro_frame 99 0 0 1 1\n",
+        ));
+        assert!(!is_exact_perf_ownership_move(
+            "tests/perf_baseline.txt",
+            "apps/tablepro/tests/perf_baseline.txt",
+            base,
+            work,
+            "tablepro_frame 10 0 0 1 1\ninvented 1 0 0 1 1\n",
         ));
     }
 

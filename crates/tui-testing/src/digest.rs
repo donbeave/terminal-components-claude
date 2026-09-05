@@ -182,10 +182,7 @@ impl Scene {
             let Some(c) = self.buf.cell(pos) else {
                 continue;
             };
-            let encoded = format!(
-                "{}|{:?}|{:?}|{:?};",
-                c.symbol(), c.fg, c.bg, c.modifier
-            );
+            let encoded = format!("{}|{:?}|{:?}|{:?};", c.symbol(), c.fg, c.bg, c.modifier);
             h = fnv(h, encoded.as_bytes());
         }
         h
@@ -374,12 +371,7 @@ impl Baseline {
     /// The first-generation application baselines are immutable evidence, so
     /// this parser never writes and rejects malformed or duplicate-looking
     /// rows rather than treating a prefix match as proof of visual equality.
-    pub fn before_image_digest(
-        &self,
-        name: &str,
-        width: u16,
-        height: u16,
-    ) -> Option<u64> {
+    pub fn before_image_digest(&self, name: &str, width: u16, height: u16) -> Option<u64> {
         self.before_image(name, width, height)
     }
 
