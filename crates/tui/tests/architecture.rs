@@ -250,6 +250,20 @@ mod architecture {
         check("applications_depend_only_on_the_library_facade");
     }
 
+    /// §16.5 / §47.5. Applications compose shared components; generic renderer
+    /// copies are forbidden except for the named animated-rain surface.
+    #[test]
+    fn no_generic_component_copies_in_applications() {
+        check("no_generic_component_copies_in_applications");
+    }
+
+    /// §16.5 / §47.5. Focus, hit-testing and child routing belong to the
+    /// runtime; application source cannot carry the retired dispatch helpers.
+    #[test]
+    fn no_owns_or_locate_in_applications() {
+        check("no_owns_or_locate_in_applications");
+    }
+
     /// §16.3 as amended by §36, and §36.5: every moved or added baseline key is
     /// accounted for by a `docs/visual-changes.md` entry citing a numbered
     /// §20.10 item. `cargo run -p xtask -- bless-guard` is the same check.
@@ -274,13 +288,12 @@ mod architecture {
         t.compile_fail("tests/ui/*.rs");
     }
 
-    /// **Recorded deviation (MA-11).** §16.5 specifies a rustdoc-json check —
-    /// "for every non-local type named in a `pub` item, a `pub use` path
-    /// exists" — and this is a substring grep over `lib.rs`. It cannot detect
-    /// the case it was written for: a `pub` signature naming an unexported
-    /// foreign type. The rustdoc-json form is a Slice-8 upgrade, tracked in
-    /// §16.5's table; until then this is a pin on the facade lines, not a
-    /// proof of completeness.
+    /// **Recorded deferral (MA-11).** The strict rustdoc-json implementation
+    /// is registered in `xtask` and reports four missing ratatui facade
+    /// targets (`symbols::*::Set` and `terminal::Terminal`). Their fixes are
+    /// in `crates/tui/src` files outside this bounded gate task, so this local
+    /// source pin remains the green compatibility check rather than claiming
+    /// complete public-surface coverage.
     #[test]
     fn every_foreign_type_in_the_public_surface_is_re_exported() {
         // Adjudication M1: every ratatui type named by a `pub` signature has

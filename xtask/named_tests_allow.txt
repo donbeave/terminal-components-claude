@@ -9,37 +9,35 @@
 # §16.1 now exists; everything below belongs to a later work package.
 #
 # §16.5 is included in the scan by §47.4. The historical blind spot is retained in
-# §47 as evidence; it no longer makes a missing boundary test invisible. The three
-# `apps/` guards now exist, and §73 built `props_are_built_once`, scoped to
+# §47 as evidence; it no longer makes a missing boundary test invisible. The five
+# app/architecture guards now exist, and §73 built `props_are_built_once`, scoped to
 # `apps/**/src`, `crates/tui/examples/**` and `crates/tui/src/components/**` — the
 # composite components build child props across both phases exactly like a screen.
 
-# ── §16.5 architecture checks not yet built (§47.4) ──
-every_component_doc_has_the_standard_sections  # Slice 8 — rustdoc-json; §16.5 records the rustdoc-json resolver as a Slice-8 upgrade
-no_generic_component_copies_in_applications  # Slice 5 — apps/**/src (first apps package)
-no_owns_or_locate_in_applications  # Slice 5 — apps/**/src; §16.5's row describes an `apps/allow/dispatch.txt` that no code reads: the live mechanism is forbidden-pattern rule 25
-showcase_covers_every_public_component  # Slice 5 — apps/showcase page registry
+# ── §16.5 architecture checks still deferred (§47.4) ──
+every_component_doc_has_the_standard_sections  # Bounded task: xtask now runs the strict rustdoc-JSON check; the architecture wrapper stays deferred because current Form/PickerChain/PropsList/Wizard docs fail §13.2, and component docs are outside this task's write boundary
+showcase_covers_every_public_component  # Blocked here: the showcase registry is not present until the root showcase binary is migrated to apps/showcase; app migration is outside this task's write boundary
 
 # ── Slices 5–7 application integration tests (`apps/**/tests`) ──
-author_component_page_participates_in_focus_and_hover  # Slices 5-7 — apps/**
-complete_flow_keyboard_first  # Slices 5-7 — apps/**
-complete_navigation_visits_every_page_and_every_state  # Slices 5-7 — apps/**
-connection_form_focuses_the_first_invalid_field  # Slices 5-7 — apps/**
-connection_form_keyboard_and_mouse_reach_every_field  # Slices 5-7 — apps/**
-connection_password_is_masked_and_absent_from_the_frame  # Slices 5-7 — apps/**
-custom_theme_injection_repaints_every_page  # Slices 5-7 — apps/**
-focus_is_restored_after_every_overlay_closes  # Slices 5-7 — apps/**
-form_dialog_secret_never_reaches_the_screen_as_a_string  # Slices 5-7 — apps/**
-form_dialog_toggles_visibility_and_keeps_drafts  # Slices 5-7 — apps/**
-keyboard_flow_full_journey  # Slices 5-7 — apps/**
-local_override_page_shows_three_distinct_buttons  # Slices 5-7 — apps/**
-mouse_flow_full_journey  # Slices 5-7 — apps/**
-nested_overlay_picker_inside_dialog  # Slices 5-7 — apps/**
-resize_across_every_supported_size  # Slices 5-7 — apps/**
+author_component_page_participates_in_focus_and_hover  # Blocked here: the required app integration test belongs under apps/**/tests; app behavior/test files are outside this task's write boundary (Slices 5–7)
+complete_flow_keyboard_first  # Blocked here: the required app integration test belongs under apps/**/tests; app behavior/test files are outside this task's write boundary (Slices 5–7)
+complete_navigation_visits_every_page_and_every_state  # Blocked here: the required app integration test belongs under apps/**/tests; app behavior/test files are outside this task's write boundary (Slices 5–7)
+connection_form_focuses_the_first_invalid_field  # Blocked here: the required app integration test belongs under apps/**/tests; app behavior/test files are outside this task's write boundary (Slices 5–7)
+connection_form_keyboard_and_mouse_reach_every_field  # Blocked here: the required app integration test belongs under apps/**/tests; app behavior/test files are outside this task's write boundary (Slices 5–7)
+connection_password_is_masked_and_absent_from_the_frame  # Blocked here: the required app integration test belongs under apps/**/tests; app behavior/test files are outside this task's write boundary (Slices 5–7)
+custom_theme_injection_repaints_every_page  # Blocked here: the required app integration test belongs under apps/**/tests; app behavior/test files are outside this task's write boundary (Slices 5–7)
+focus_is_restored_after_every_overlay_closes  # Blocked here: the required app integration test belongs under apps/**/tests; app behavior/test files are outside this task's write boundary (Slices 5–7)
+form_dialog_secret_never_reaches_the_screen_as_a_string  # Blocked here: the required app integration test belongs under apps/**/tests; app behavior/test files are outside this task's write boundary (Slices 5–7)
+form_dialog_toggles_visibility_and_keeps_drafts  # Blocked here: the required app integration test belongs under apps/**/tests; app behavior/test files are outside this task's write boundary (Slices 5–7)
+keyboard_flow_full_journey  # Blocked here: the required app integration test belongs under apps/**/tests; app behavior/test files are outside this task's write boundary (Slices 5–7)
+local_override_page_shows_three_distinct_buttons  # Blocked here: the required app integration test belongs under apps/**/tests; app behavior/test files are outside this task's write boundary (Slices 5–7)
+mouse_flow_full_journey  # Blocked here: the required app integration test belongs under apps/**/tests; app behavior/test files are outside this task's write boundary (Slices 5–7)
+nested_overlay_picker_inside_dialog  # Blocked here: the required app integration test belongs under apps/**/tests; app behavior/test files are outside this task's write boundary (Slices 5–7)
+resize_across_every_supported_size  # Blocked here: the required app integration test belongs under apps/**/tests; app behavior/test files are outside this task's write boundary (Slices 5–7)
 
 # ── §16.6 benchmarks whose subject does not exist yet ──
-frame_tablepro_connection_form_120x40  # Slices 4-7 — tests/perf.rs
+frame_tablepro_connection_form_120x40  # Blocked here: the required benchmark subject lives in app/perf code outside this task's write boundary (Slices 4–7)
 
 # ── Slice 4 component state machines (`components/*.rs`, work packages 4A–4G) ──
-range_selection_uses_the_anchor  # Slice 4 — components/*.rs
-select_all_selects_only_enabled_items  # Slice 4 — components/*.rs
+range_selection_uses_the_anchor  # Blocked here: the state-machine implementation/test belongs in components/*.rs, outside this task's write boundary (Slice 4)
+select_all_selects_only_enabled_items  # Blocked here: the state-machine implementation/test belongs in components/*.rs, outside this task's write boundary (Slice 4)
