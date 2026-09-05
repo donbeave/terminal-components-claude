@@ -345,6 +345,21 @@ pub fn report(name: &str, s: &Stats) {
 
 /// [`report`] against an explicit baseline file.
 pub fn report_to(path: &str, name: &str, s: &Stats) {
+    report_to_inner(path, name, s, true);
+}
+
+/// Report allocation and byte counts against an explicit baseline while
+/// leaving optional legacy hit/ring metadata uninterpreted.
+///
+/// Applications backed by the public runtime may use a different region
+/// registry than the historical benchmark that owns a shared baseline row.
+/// Their allocation and byte budgets remain comparable; the optional region
+/// columns are evidence for the original owner and are not silently replaced.
+pub fn report_alloc_to(path: &str, name: &str, s: &Stats) {
+    report_to_inner(path, name, s, false);
+}
+
+fn report_to_inner(path: &str, name: &str, s: &Stats, check_legacy_regions: bool) {
     let mut line = format!(
         "PERF {name} ns={} allocs={} bytes={}",
         s.ns, s.allocs, s.bytes
@@ -387,7 +402,9 @@ pub fn report_to(path: &str, name: &str, s: &Stats) {
             s.allocs, base.allocs, s.bytes, base.bytes
         );
     }
-    check_regions(name, s, base, release);
+    if check_legacy_regions {
+        check_regions(name, s, base, release);
+    }
     if s.ns > base.ns + base.ns / 5 {
         assert!(
             !(env_flag("PERF_STRICT") && release),

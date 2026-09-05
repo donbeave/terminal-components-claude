@@ -337,6 +337,19 @@ impl Baseline {
         self.path
     }
 
+    /// Whether a legacy `WIDTHxHEIGHT name digest` before-image row exists.
+    ///
+    /// The first-generation application baselines intentionally remain in
+    /// their original format until a capture/classification pass blesses the
+    /// modern `Scene` keys. This read-only query lets an application prove
+    /// that every before-image row moved with it without rewriting or
+    /// silently reinterpreting that evidence.
+    pub fn has_before_image(&self, name: &str, width: u16, height: u16) -> bool {
+        let prefix = format!("{width}x{height} {name} ");
+        std::fs::read_to_string(self.path)
+            .is_ok_and(|text| text.lines().any(|line| line.starts_with(&prefix)))
+    }
+
     /// Compare `digest` with the recorded entry for `key`. No file access
     /// after the first lookup of this path, so the assertion path of a
     /// non-bless run neither reads nor writes the baseline.
