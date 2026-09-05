@@ -25,7 +25,7 @@
     clippy::expect_used
 )]
 
-use ratatui::crossterm::event::KeyCode;
+use tui_next::KeyCode;
 
 use jackin_app::Route;
 mod support;
@@ -34,7 +34,7 @@ use support::H;
 
 /// FNV-1a over every cell of the current frame. No rect is excluded.
 fn digest(h: &H) -> u64 {
-    let buf = h.term.backend().buffer();
+    let buf = h.buffer();
     let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
     for cell in buf.content.iter() {
         let s = format!(
@@ -67,13 +67,13 @@ fn paused(sc: Scenario, frame: u64, w: u16, h: u16) -> H {
 
 fn manager(w: u16, h: u16) -> H {
     let hh = paused(Scenario::Returning, 0, w, h);
-    assert_eq!(hh.app.route, Route::Manager);
+    assert_eq!(hh.app().route(), Route::Manager);
     hh
 }
 
 fn capsule(w: u16, h: u16) -> H {
     let hh = paused(Scenario::CapsuleMulti, 0, w, h);
-    assert_eq!(hh.app.route, Route::Capsule);
+    assert_eq!(hh.app().route(), Route::Capsule);
     hh
 }
 
@@ -81,7 +81,7 @@ fn editor_tab(n: usize) -> H {
     let mut h = manager(120, 40);
     h.key(KeyCode::Down);
     h.key(KeyCode::Char('e'));
-    assert_eq!(h.app.route, Route::Editor);
+    assert_eq!(h.app().route(), Route::Editor);
     for _ in 0..n {
         h.key(KeyCode::Char(']'));
     }
@@ -94,29 +94,29 @@ const SURFACES: &[(&str, u16, u16, Builder)] = &[
     // start route of every scenario
     ("start-first-use", 120, 40, || {
         let h = paused(Scenario::FirstUse, 0, 120, 40);
-        assert_eq!(h.app.route, Route::Intro);
+        assert_eq!(h.app().route(), Route::Intro);
         h
     }),
     ("start-returning", 120, 40, || manager(120, 40)),
     ("start-accounts-mixed", 120, 40, || {
         let h = paused(Scenario::AccountsMixed, 0, 120, 40);
-        assert_eq!(h.app.route, Route::Accounts);
+        assert_eq!(h.app().route(), Route::Accounts);
         h
     }),
     ("start-launch-running", 120, 40, || {
         let h = paused(Scenario::LaunchRunning, 0, 120, 40);
-        assert_eq!(h.app.route, Route::Cockpit);
+        assert_eq!(h.app().route(), Route::Cockpit);
         h
     }),
     ("start-launch-failure", 120, 40, || {
         let h = paused(Scenario::LaunchFailure, 0, 120, 40);
-        assert_eq!(h.app.route, Route::Cockpit);
+        assert_eq!(h.app().route(), Route::Cockpit);
         h
     }),
     ("start-capsule-multi", 120, 40, || capsule(120, 40)),
     ("start-outro-last", 120, 40, || {
         let h = paused(Scenario::OutroLast, 0, 120, 40);
-        assert_eq!(h.app.route, Route::Capsule);
+        assert_eq!(h.app().route(), Route::Capsule);
         h
     }),
     ("start-hard-cases", 120, 40, || {
@@ -143,7 +143,7 @@ const SURFACES: &[(&str, u16, u16, Builder)] = &[
         let mut h = H::new(Scenario::Returning, Motion::Reduced, 0, 120, 40);
         h.key(KeyCode::End);
         h.key(KeyCode::Enter);
-        assert_eq!(h.app.route, Route::Prelude);
+        assert_eq!(h.app().route(), Route::Prelude);
         assert!(h.text().contains("step 1 of 5"), "{}", h.text());
         h
     }),
@@ -157,7 +157,7 @@ const SURFACES: &[(&str, u16, u16, Builder)] = &[
     ("settings", 120, 40, || {
         let mut h = manager(120, 40);
         h.key(KeyCode::Char('s'));
-        assert_eq!(h.app.route, Route::Settings);
+        assert_eq!(h.app().route(), Route::Settings);
         h
     }),
     // accounts
@@ -184,13 +184,13 @@ const SURFACES: &[(&str, u16, u16, Builder)] = &[
     ("usage", 120, 40, || {
         let mut h = manager(120, 40);
         h.key(KeyCode::Char('u'));
-        assert_eq!(h.app.route, Route::Usage);
+        assert_eq!(h.app().route(), Route::Usage);
         h
     }),
     // cockpit
     ("cockpit-running", 120, 40, || {
         let h = paused(Scenario::LaunchRunning, RUNNING_FRAME, 120, 40);
-        assert_eq!(h.app.route, Route::Cockpit);
+        assert_eq!(h.app().route(), Route::Cockpit);
         h
     }),
     ("cockpit-failure", 120, 40, || {
@@ -246,7 +246,7 @@ const SURFACES: &[(&str, u16, u16, Builder)] = &[
     // outro
     ("outro-caption", 120, 40, || {
         let h = paused(Scenario::OutroLast, OUTRO_FRAME, 120, 40);
-        assert_eq!(h.app.route, Route::Outro);
+        assert_eq!(h.app().route(), Route::Outro);
         assert!(
             h.text().contains("You were in the Construct"),
             "{}",
