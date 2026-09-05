@@ -84,7 +84,6 @@ fn grid_cell_editing(w: u16, h: u16) -> H {
 fn pending_change_bar(w: u16, h: u16) -> H {
     let mut harness = grid_cell_editing(w, h);
     let _ = harness.key(KeyCode::Enter);
-    println!("pending total {}\n{}", harness.app().result().pending_total(), harness.text());
     assert!(harness.text().contains("pending"));
     mark(harness, Surface::PendingChangeBar)
 }
@@ -251,20 +250,17 @@ fn tablepro_visual_baseline() {
             );
             let expected = expected.unwrap_or_default();
             let (first, second) = scene_pair(builder, surface, width, height);
-            println!(
-                "{}x{} {} current {:016x} expected {:016x}",
-                width,
-                height,
-                surface.label(),
+            assert_eq!(
                 first.before_image_digest(),
-                expected
+                expected,
+                "{width}x{height} {}: rendered digest differs from frozen before-image",
+                surface.label()
             );
-            println!(
-                "{}x{} {} repeat {:016x}",
-                width,
-                height,
-                surface.label(),
-                second.before_image_digest()
+            assert_eq!(
+                second.before_image_digest(),
+                expected,
+                "{width}x{height} {}: repeated render differs from frozen before-image",
+                surface.label()
             );
             assert_eq!(
                 first.digest(),
