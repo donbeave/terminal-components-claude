@@ -963,6 +963,8 @@ fn capture_script_contract_hits(script: &str) -> Vec<String> {
         ("per-shot lock", "acquire_shot_lock"),
         ("shot lock cleanup", "cleanup_shot_lock_only"),
         ("stale shot lock check", "shot_lock_owner_is_live"),
+        ("no-follow shell state reader", "read-state"),
+        ("trusted shell state interpreter", "STATE_PYTHON"),
         ("COLOR dispatch", "case \"$COLOR\" in"),
         ("truecolor branch", "truecolor)"),
         ("256-color branch", "256)"),
@@ -1113,6 +1115,13 @@ fn capture_provenance_contract_hits(script: &str) -> Vec<String> {
             "no inherited execution environment",
             "environment = recorded_environment(metadata)",
         ),
+        ("no-follow JSON reader", "read_regular_text(path"),
+        ("no-follow manifest lock", "open_manifest_lock"),
+        (
+            "descriptor binary hash",
+            "hash_descriptor(binary_descriptor)",
+        ),
+        ("execution directory pin", "lock_execution_directory"),
     ]
     .into_iter()
     .filter(|(_, fragment)| !script.contains(fragment))
@@ -1120,6 +1129,12 @@ fn capture_provenance_contract_hits(script: &str) -> Vec<String> {
     .chain(
         (script.contains("os.environ.copy()") || script.contains("env=os.environ")).then(|| {
             "capture execution inherits the tmux environment; use the recorded sanitized snapshot"
+                .to_owned()
+        }),
+    )
+    .chain(
+        (script.contains("path.open(") || script.contains("lock_path.open(")).then(|| {
+            "capture provenance reopens check-then-open state paths; use no-follow descriptors"
                 .to_owned()
         }),
     )
@@ -9197,6 +9212,9 @@ printf 'new-png\n' > "$3"
         let run_dir = state_root.join("concurrent-run");
         let fake_bin = directory.join("bin");
         let ready = directory.join("provenance.ready");
+        let pause_ready = directory.join("lock-pause.ready");
+        let pause_release = directory.join("lock-pause.release");
+        let pause_finished = directory.join("lock-pause.finished");
         fs::create_dir(&shots).expect("create concurrent shot output directory");
         fs::create_dir_all(&run_dir).expect("create concurrent shot state directory");
         fs::create_dir(&fake_bin).expect("create concurrent shot fake command directory");
@@ -9219,17 +9237,13 @@ printf 'new-png\n' > "$3"
         }
         fs::write(run_dir.join("metadata.json"), b"{}\n").expect("write concurrent metadata");
         let stale_lock = shots.join(format!(".{case_name}.lock"));
-        fs::create_dir(&stale_lock).expect("create stale shot lock");
         let mut stale_process = Command::new("/usr/bin/true")
             .spawn()
             .expect("spawn stale shot owner");
         let stale_pid = stale_process.id();
         stale_process.wait().expect("reap stale shot owner");
-        fs::write(
-            stale_lock.join("owner"),
-            format!("{stale_pid}:crashed-run\n"),
-        )
-        .expect("write stale shot owner");
+        fs::write(&stale_lock, format!("{stale_pid}:crashed-run\n"))
+            .expect("write stale shot owner");
 
         let write_executable = |path: &Path, contents: &str| {
             fs::write(path, contents).expect("write concurrent fake executable");
@@ -9280,8 +9294,68 @@ printf 'new-png\n' > "$3"
 "#,
         );
 
+        write_executable(
+            &fake_bin.join("mktemp"),
+            r#"#!/bin/bash
+case "$1" in
+  *'.concurrent.lock.tmp.'*)
+    temporary=$(/usr/bin/mktemp "$@")
+    : > "$CAPTURE_LOCK_PAUSE_READY"
+    while [[ ! -e "$CAPTURE_LOCK_PAUSE_RELEASE" ]]; do /bin/sleep 0.01; done
+    : > "$CAPTURE_LOCK_PAUSE_FINISHED"
+    printf '%s\n' "$temporary"
+    exit 0
+    ;;
+esac
+exec /usr/bin/mktemp "$@"
+"#,
+        );
+
         let original_path = std::env::var_os("PATH").expect("PATH is set");
         let path = format!("{}:{}", fake_bin.display(), original_path.to_string_lossy());
+        let mut interrupted = Command::new("/bin/bash")
+            .arg(root().join("tools/capture.sh"))
+            .arg("shot")
+            .arg(case_name)
+            .current_dir(root())
+            .env("PATH", &path)
+            .env("CAPTURE_LOCK_PAUSE_READY", &pause_ready)
+            .env("CAPTURE_LOCK_PAUSE_RELEASE", &pause_release)
+            .env("CAPTURE_LOCK_PAUSE_FINISHED", &pause_finished)
+            .env("CAPTURE_PROVENANCE_READY", &ready)
+            .env("PY", &fake_png)
+            .env("BIN", "/usr/bin/tail")
+            .env("CAPTURE_RUN_ID", "concurrent-run")
+            .env("CAPTURE_DIR", &shots)
+            .env("CAPTURE_MANIFEST", directory.join("manifest.json"))
+            .env("CAPTURE_STATE_DIR", &state_root)
+            .spawn()
+            .expect("start interrupted shot");
+        for _ in 0..500 {
+            if pause_ready.exists() {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        assert!(
+            pause_ready.exists(),
+            "interrupted shot did not reach lock staging"
+        );
+        interrupted.kill().expect("kill interrupted shot");
+        fs::write(&pause_release, b"release\n").expect("release lock staging helper");
+        for _ in 0..500 {
+            if pause_finished.exists() {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        interrupted.wait().expect("reap interrupted shot");
+        assert!(
+            pause_finished.exists(),
+            "lock staging helper did not finish after owner death"
+        );
+        fs::remove_file(fake_bin.join("mktemp")).expect("remove interrupted lock helper");
+
         let first = Command::new("/bin/bash")
             .arg(root().join("tools/capture.sh"))
             .arg("shot")
@@ -9359,6 +9433,53 @@ printf 'new-png\n' > "$3"
             .expect_err("a symlinked capture output directory must fail closed");
         assert!(error.contains("symlink"), "{error}");
         fs::remove_dir_all(directory).expect("remove isolated output fixture");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn capture_shell_state_reader_rejects_a_replaced_symlink() {
+        let directory = std::env::temp_dir().join(format!(
+            "terminal-components-capture-state-symlink-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("clock after epoch")
+                .as_nanos()
+        ));
+        fs::create_dir(&directory).expect("create isolated shell state fixture");
+        let shots = directory.join("shots");
+        let state_root = directory.join("state");
+        let run_dir = state_root.join("state-run");
+        fs::create_dir(&shots).expect("create shell state output directory");
+        fs::create_dir_all(&run_dir).expect("create shell state run directory");
+        let target = directory.join("state-target");
+        fs::write(&target, b"/usr/bin/tail\n").expect("write state target");
+        symlink(&target, run_dir.join("bin")).expect("create state symlink");
+        fs::write(run_dir.join("metadata.json"), b"{}\n").expect("write shell state metadata");
+
+        let output = Command::new("/bin/bash")
+            .arg(root().join("tools/capture.sh"))
+            .arg("shot")
+            .arg("state")
+            .current_dir(root())
+            .env("BIN", "/usr/bin/tail")
+            .env("CAPTURE_RUN_ID", "state-run")
+            .env("CAPTURE_DIR", &shots)
+            .env("CAPTURE_MANIFEST", directory.join("manifest.json"))
+            .env("CAPTURE_STATE_DIR", &state_root)
+            .output()
+            .expect("run shell state symlink fixture");
+        assert!(!output.status.success(), "a state symlink must fail closed");
+        assert!(
+            String::from_utf8_lossy(&output.stderr).contains("binary state is missing or unsafe"),
+            "unexpected state symlink error: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert_eq!(
+            fs::read(&target).expect("read untouched state target"),
+            b"/usr/bin/tail\n"
+        );
+        fs::remove_dir_all(directory).expect("remove isolated shell state fixture");
     }
 
     #[test]
@@ -9632,6 +9753,8 @@ set -eu
 
     #[test]
     fn capture_tmux_entrypoint_executes_serialized_argv_without_shell_interpretation() {
+        use std::os::unix::fs::PermissionsExt;
+
         let suffix = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .expect("clock after epoch")
@@ -9641,11 +9764,33 @@ set -eu
             std::process::id()
         ));
         fs::create_dir(&directory).expect("create isolated serialized runner fixture");
-        let metadata = directory.join("metadata.json");
-        let stderr = directory.join("stderr");
-        let exit = directory.join("exit.status");
+        let run_dir = directory.join("run");
+        fs::create_dir(&run_dir).expect("create serialized run directory");
+        let metadata = run_dir.join("metadata.json");
+        let stderr = run_dir.join("stderr");
+        let exit = run_dir.join("exit.status");
+        let executable = run_dir.join("executable");
+        let source = directory.join("source-runner");
+        fs::write(&source, b"#!/bin/sh\nprintf '%s\\n' \"$@\"\n")
+            .expect("write serialized runner source");
+        let mut source_permissions = fs::metadata(&source)
+            .expect("inspect serialized runner source")
+            .permissions();
+        source_permissions.set_mode(0o700);
+        fs::set_permissions(&source, source_permissions)
+            .expect("make serialized source executable");
         let marker = directory.join("must-not-exist");
         let shaped = format!("$(touch {})", marker.display());
+        let stage = Command::new("python3")
+            .arg(root().join("tools/capture_provenance.py"))
+            .arg("stage-binary")
+            .arg("--source")
+            .arg(&source)
+            .arg("--destination")
+            .arg(&executable)
+            .output()
+            .expect("stage serialized runner executable");
+        assert!(stage.status.success(), "{stage:?}");
         let init = Command::new("python3")
             .arg(root().join("tools/capture_provenance.py"))
             .arg("init")
@@ -9658,7 +9803,7 @@ set -eu
             .arg("--session-id")
             .arg("$serialized")
             .arg("--binary")
-            .arg("/usr/bin/printf")
+            .arg(&executable)
             .arg("--revision")
             .arg("0".repeat(40))
             .arg("--dirty")
@@ -9680,7 +9825,7 @@ set -eu
             .arg("--env")
             .arg("COLOR=truecolor")
             .arg("--argv")
-            .arg("/usr/bin/printf")
+            .arg(&executable)
             .arg("%s\\n")
             .arg("argument with spaces")
             .arg(&shaped)
@@ -9700,7 +9845,7 @@ set -eu
         assert!(output.status.success(), "{output:?}");
         assert_eq!(
             String::from_utf8_lossy(&output.stdout),
-            format!("argument with spaces\n{shaped}\n")
+            format!("%s\\n\nargument with spaces\n{shaped}\n")
         );
         assert_eq!(
             fs::read_to_string(&exit).expect("serialized exit state"),
@@ -9736,8 +9881,11 @@ set -eu
         fs::set_permissions(&run_dir, run_permissions).expect("protect run directory");
 
         let source = directory.join("source-app");
-        fs::write(&source, b"#!/bin/sh\nprintf '%s\\n' \"$POISON\" > \"$1\"\n")
-            .expect("write source executable");
+        fs::write(
+            &source,
+            b"#!/bin/sh\n/bin/sleep 0.2\nprintf '%s\\n' \"$POISON\" > \"$1\"\n",
+        )
+        .expect("write source executable");
         let mut source_permissions = fs::metadata(&source)
             .expect("inspect source executable")
             .permissions();
@@ -9817,6 +9965,49 @@ set -eu
         )
         .expect("swap source after metadata initialization");
 
+        let replacement = directory.join("replacement-app");
+        fs::write(
+            &replacement,
+            b"#!/bin/sh\nprintf '%s\\n' replaced-during-exec > \"$1\"\nexit 41\n",
+        )
+        .expect("write staged swap candidate");
+        let directory_locked = directory.join("execution-directory-locked");
+        let swap_denied = directory.join("staged-swap-denied");
+        let attacker = Command::new("python3")
+            .arg("-c")
+            .arg(
+                r#"
+import os
+import stat
+import sys
+import time
+
+directory, destination, replacement, observed, denied = sys.argv[1:]
+deadline = time.monotonic() + 5
+while time.monotonic() < deadline:
+    if stat.S_IMODE(os.stat(directory).st_mode) & 0o222 == 0:
+        open(observed, "w").close()
+        try:
+            os.replace(replacement, destination)
+        except PermissionError:
+            open(denied, "w").close()
+            sys.exit(0)
+        except OSError:
+            time.sleep(0.001)
+        else:
+            sys.exit("staged executable replacement unexpectedly succeeded")
+    time.sleep(0.001)
+sys.exit("execution directory was not write-pinned")
+"#,
+            )
+            .arg(&run_dir)
+            .arg(&executable)
+            .arg(&replacement)
+            .arg(&directory_locked)
+            .arg(&swap_denied)
+            .spawn()
+            .expect("start staged swap attacker");
+
         let path = std::env::var_os("PATH").expect("PATH is set");
         let execution = Command::new("/bin/bash")
             .arg(root().join("tools/capture_exec.sh"))
@@ -9837,6 +10028,18 @@ set -eu
         assert_eq!(
             fs::read_to_string(&exit).expect("read execution status"),
             "0\n"
+        );
+        let attacker_output = attacker
+            .wait_with_output()
+            .expect("wait for staged swap attacker");
+        assert!(attacker_output.status.success(), "{attacker_output:?}");
+        assert!(
+            directory_locked.exists(),
+            "execution directory was not pinned"
+        );
+        assert!(
+            swap_denied.exists(),
+            "staged executable swap was not rejected"
         );
         fs::remove_dir_all(directory).expect("remove isolated staged exec fixture");
     }

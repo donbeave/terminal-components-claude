@@ -26,6 +26,10 @@ CAPTURE_DIR=${CAPTURE_DIR:-shots}
 CAPTURE_MANIFEST=${CAPTURE_MANIFEST:-$CAPTURE_DIR/capture-provenance.json}
 CAPTURE_STATE_DIR=${CAPTURE_STATE_DIR:-$CAPTURE_DIR/.capture-state}
 PYTHON_BIN=${PY:-python3}
+STATE_PYTHON=/usr/bin/python3
+if [[ ! -x "$STATE_PYTHON" ]]; then
+  STATE_PYTHON=$(command -v python3)
+fi
 cmd=${1:-}
 shift || true
 
@@ -165,20 +169,17 @@ write_state() {
 
 state_value() {
   local path=$1 fallback=$2
-  if [[ -f "$path" && ! -L "$path" ]]; then
-    tr -d '\r\n' < "$path"
-  else
+  if ! "$STATE_PYTHON" "$PROVENANCE_TOOL" read-state --path "$path" 2>/dev/null; then
     printf '%s\n' "$fallback"
   fi
 }
 
 required_state() {
   local path=$1 label=$2 value
-  if [[ ! -f "$path" || -L "$path" ]]; then
+  if ! value=$("$STATE_PYTHON" "$PROVENANCE_TOOL" read-state --path "$path"); then
     echo "capture failed: $label is missing or unsafe: $path" >&2
     return 1
   fi
-  value=$(state_value "$path" "")
   if [[ -z "$value" ]]; then
     echo "capture failed: $label is empty: $path" >&2
     return 1
@@ -351,7 +352,6 @@ move_failed_generation_aside() {
 }
 
 SHOT_LOCK_DIR=
-SHOT_LOCK_OWNER_FILE=
 SHOT_LOCK_OWNER=
 
 shot_lock_owner_is_live() {
@@ -364,25 +364,20 @@ release_shot_lock() {
   if [[ -z "$SHOT_LOCK_DIR" ]]; then
     return 0
   fi
-  if [[ -L "$SHOT_LOCK_DIR" || ! -d "$SHOT_LOCK_DIR" ]]; then
-    echo "capture cleanup failed: shot lock is not a directory: $SHOT_LOCK_DIR" >&2
+  if [[ -L "$SHOT_LOCK_DIR" || ! -f "$SHOT_LOCK_DIR" ]]; then
+    echo "capture cleanup failed: shot lock is not a regular file: $SHOT_LOCK_DIR" >&2
     return 1
   fi
-  if [[ -L "$SHOT_LOCK_OWNER_FILE" || ! -f "$SHOT_LOCK_OWNER_FILE" ]]; then
-    echo "capture cleanup failed: shot lock owner is missing or unsafe: $SHOT_LOCK_OWNER_FILE" >&2
-    return 1
-  fi
-  owner=$(state_value "$SHOT_LOCK_OWNER_FILE" "")
+  owner=$(state_value "$SHOT_LOCK_DIR" "")
   if [[ "$owner" != "$SHOT_LOCK_OWNER" ]]; then
     echo "capture cleanup failed: shot lock ownership changed: $SHOT_LOCK_DIR" >&2
     return 1
   fi
-  if ! rm -f "$SHOT_LOCK_OWNER_FILE" || ! rmdir "$SHOT_LOCK_DIR"; then
+  if ! rm -f "$SHOT_LOCK_DIR"; then
     echo "capture cleanup failed: cannot release shot lock: $SHOT_LOCK_DIR" >&2
     return 1
   fi
   SHOT_LOCK_DIR=
-  SHOT_LOCK_OWNER_FILE=
   SHOT_LOCK_OWNER=
 }
 
@@ -394,51 +389,44 @@ cleanup_shot_lock_only() {
 }
 
 acquire_shot_lock() {
-  local name=$1 owner pid
+  local name=$1 owner pid temporary attempt
   SHOT_LOCK_DIR=$CAPTURE_DIR_PATH/.${name}.lock
-  SHOT_LOCK_OWNER_FILE=$SHOT_LOCK_DIR/owner
   SHOT_LOCK_OWNER="$$:$CAPTURE_RUN_ID"
-  if mkdir -m 700 "$SHOT_LOCK_DIR" 2>/dev/null; then
-    if ! write_state "$SHOT_LOCK_OWNER_FILE" "$SHOT_LOCK_OWNER"; then
-      rmdir "$SHOT_LOCK_DIR" 2>/dev/null || true
-      echo "capture failed: cannot initialize shot lock: $SHOT_LOCK_DIR" >&2
+  for attempt in 1 2 3; do
+    temporary=$(mktemp "$CAPTURE_DIR_PATH/.${name}.lock.tmp.XXXXXX")
+    chmod 600 "$temporary"
+    printf '%s\n' "$SHOT_LOCK_OWNER" > "$temporary"
+    # The owner is fully written before ln publishes the fixed lock path. A
+    # crash before this point leaves only an orphan temp file, never an
+    # ownerless lock that can block future captures.
+    if ln "$temporary" "$SHOT_LOCK_DIR" 2>/dev/null; then
+      rm -f "$temporary"
+      return 0
+    fi
+    rm -f "$temporary"
+    if [[ -L "$SHOT_LOCK_DIR" || ! -f "$SHOT_LOCK_DIR" ]]; then
+      echo "capture failed: shot lock path is unsafe: $SHOT_LOCK_DIR" >&2
       return 1
     fi
-    return 0
-  fi
-  if [[ -L "$SHOT_LOCK_DIR" || ! -d "$SHOT_LOCK_DIR" ]]; then
-    echo "capture failed: shot lock path is unsafe: $SHOT_LOCK_DIR" >&2
-    return 1
-  fi
-  if [[ -L "$SHOT_LOCK_OWNER_FILE" || ! -f "$SHOT_LOCK_OWNER_FILE" ]]; then
-    echo "capture failed: cannot prove shot lock is stale: $SHOT_LOCK_DIR" >&2
-    return 1
-  fi
-  owner=$(state_value "$SHOT_LOCK_OWNER_FILE" "")
-  if [[ ! "$owner" =~ ^([0-9]+):([A-Za-z0-9_-]{1,64})$ ]]; then
-    echo "capture failed: shot lock owner is invalid: $SHOT_LOCK_DIR" >&2
-    return 1
-  fi
-  pid=${BASH_REMATCH[1]}
-  if shot_lock_owner_is_live "$pid"; then
-    echo "capture failed: shot is already running: $name" >&2
-    return 1
-  fi
-  # A dead owner may be recovered, but only when the lock contains exactly
-  # the owner record. rmdir below refuses unexpected debris or replacement.
-  if ! rm -f "$SHOT_LOCK_OWNER_FILE" || ! rmdir "$SHOT_LOCK_DIR"; then
-    echo "capture failed: cannot recover stale shot lock: $SHOT_LOCK_DIR" >&2
-    return 1
-  fi
-  if ! mkdir -m 700 "$SHOT_LOCK_DIR" 2>/dev/null; then
-    echo "capture failed: shot lock was claimed concurrently: $SHOT_LOCK_DIR" >&2
-    return 1
-  fi
-  if ! write_state "$SHOT_LOCK_OWNER_FILE" "$SHOT_LOCK_OWNER"; then
-    rmdir "$SHOT_LOCK_DIR" 2>/dev/null || true
-    echo "capture failed: cannot initialize recovered shot lock: $SHOT_LOCK_DIR" >&2
-    return 1
-  fi
+    owner=$(state_value "$SHOT_LOCK_DIR" "")
+    if [[ ! "$owner" =~ ^([0-9]+):([A-Za-z0-9_-]{1,64})$ ]]; then
+      echo "capture failed: shot lock owner is invalid: $SHOT_LOCK_DIR" >&2
+      return 1
+    fi
+    pid=${BASH_REMATCH[1]}
+    if shot_lock_owner_is_live "$pid"; then
+      echo "capture failed: shot is already running: $name" >&2
+      return 1
+    fi
+    if ! rm -f "$SHOT_LOCK_DIR"; then
+      echo "capture failed: cannot recover stale shot lock: $SHOT_LOCK_DIR" >&2
+      return 1
+    fi
+    if (( attempt == 3 )); then
+      echo "capture failed: shot lock changed repeatedly: $SHOT_LOCK_DIR" >&2
+      return 1
+    fi
+  done
 }
 
 load_run_state() {

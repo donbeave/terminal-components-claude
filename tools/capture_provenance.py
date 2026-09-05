@@ -143,13 +143,9 @@ def ensure_not_symlink(path: Path, label: str) -> None:
 
 
 def load_json(path: Path) -> Any:
-    ensure_not_symlink(path, "JSON state")
     try:
-        with path.open(encoding="utf-8") as stream:
-            return json.load(stream)
-    except FileNotFoundError:
-        fail(f"JSON state is missing: {path}")
-    except (OSError, json.JSONDecodeError) as error:
+        return json.loads(read_regular_text(path, "JSON state"))
+    except json.JSONDecodeError as error:
         fail(f"cannot read JSON state {path}: {error}")
 
 
@@ -237,15 +233,115 @@ def open_regular_read(path: str, label: str) -> tuple[int, os.stat_result]:
     nofollow = getattr(os, "O_NOFOLLOW", None)
     if nofollow is None:
         fail(f"cannot safely open {label} without O_NOFOLLOW")
+    descriptor = -1
     try:
         descriptor = os.open(path, os.O_RDONLY | nofollow)
         metadata = os.fstat(descriptor)
     except OSError as error:
+        if descriptor >= 0:
+            os.close(descriptor)
         fail(f"cannot open {label} {path}: {error}")
     if not stat.S_ISREG(metadata.st_mode):
         os.close(descriptor)
         fail(f"{label} is not a regular file: {path}")
     return descriptor, metadata
+
+
+def read_regular_text(path: Path, label: str) -> str:
+    """Read a regular file through one no-follow descriptor."""
+    descriptor, _ = open_regular_read(str(path), label)
+    try:
+        with os.fdopen(descriptor, "r", encoding="utf-8") as stream:
+            descriptor = -1
+            return stream.read()
+    except (OSError, UnicodeError) as error:
+        fail(f"cannot read {label} {path}: {error}")
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+
+
+def hash_descriptor(descriptor: int) -> tuple[str, int]:
+    """Hash bytes from an already opened descriptor without reopening its path."""
+    os.lseek(descriptor, 0, os.SEEK_SET)
+    digest = hashlib.sha256()
+    bytes_read = 0
+    for chunk in iter(lambda: os.read(descriptor, 1024 * 1024), b""):
+        digest.update(chunk)
+        bytes_read += len(chunk)
+    return digest.hexdigest(), bytes_read
+
+
+def lock_execution_directory(path: Path) -> tuple[int, int]:
+    """Pin a staged path by removing its directory write permission while it runs.
+
+    macOS does not expose fexecve/execveat to this Python process. The staged
+    file is mode 0500 and lives in this private mode-0700 directory; holding
+    the directory descriptor and removing all directory write permission
+    prevents rename/unlink replacement between descriptor verification and
+    the interpreter's path-based launch. The original mode is restored after
+    the child exits.
+    """
+    nofollow = getattr(os, "O_NOFOLLOW", None)
+    if nofollow is None:
+        fail("cannot safely pin capture executable without O_NOFOLLOW")
+    directory_flag = getattr(os, "O_DIRECTORY", 0)
+    descriptor = -1
+    try:
+        descriptor = os.open(path, os.O_RDONLY | directory_flag | nofollow)
+        metadata = os.fstat(descriptor)
+        if not stat.S_ISDIR(metadata.st_mode):
+            os.close(descriptor)
+            descriptor = -1
+            fail(f"capture run directory is not a directory: {path}")
+        original_mode = stat.S_IMODE(metadata.st_mode)
+        if not original_mode & stat.S_IXUSR:
+            fail(f"capture run directory is not searchable by its owner: {path}")
+        os.fchmod(descriptor, original_mode & ~0o222)
+        return descriptor, original_mode
+    except OSError as error:
+        if descriptor >= 0:
+            os.close(descriptor)
+        fail(f"cannot pin capture executable directory {path}: {error}")
+
+
+def restore_execution_directory(descriptor: int, path: Path, mode: int) -> None:
+    """Restore the run directory mode after the path-pinned execution ends."""
+    try:
+        os.fchmod(descriptor, mode)
+    except OSError as error:
+        fail(f"cannot restore capture run directory {path}: {error}")
+
+
+def open_manifest_lock(path: Path) -> Any:
+    """Open a manifest lock without following a replaced symlink."""
+    nofollow = getattr(os, "O_NOFOLLOW", None)
+    if nofollow is None:
+        fail("cannot safely open capture manifest lock without O_NOFOLLOW")
+    descriptor = -1
+    try:
+        descriptor = os.open(path, os.O_RDWR | os.O_CREAT | nofollow, 0o600)
+        metadata = os.fstat(descriptor)
+        if not stat.S_ISREG(metadata.st_mode):
+            os.close(descriptor)
+            descriptor = -1
+            fail(f"capture manifest lock is not a regular file: {path}")
+        return os.fdopen(descriptor, "a+")
+    except OSError as error:
+        if descriptor >= 0:
+            os.close(descriptor)
+        fail(f"cannot open capture manifest lock {path}: {error}")
+
+
+def path_exists_without_follow(path: Path, label: str) -> bool:
+    """Check presence with lstat; a later no-follow open owns the decision."""
+    try:
+        os.lstat(path)
+        return True
+    except FileNotFoundError:
+        return False
+    except OSError as error:
+        fail(f"cannot inspect {label} {path}: {error}")
 
 
 def command_stage_binary(args: argparse.Namespace) -> None:
@@ -309,12 +405,10 @@ def command_stage_binary(args: argparse.Namespace) -> None:
 def update_manifest(manifest_path: Path, update: Any) -> None:
     """Run update(records) while holding a per-manifest advisory lock."""
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
-    ensure_not_symlink(manifest_path, "capture manifest")
     lock_path = manifest_path.with_name(f".{manifest_path.name}.lock")
-    ensure_not_symlink(lock_path, "capture manifest lock")
-    with lock_path.open("a+") as lock:
+    with open_manifest_lock(lock_path) as lock:
         fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
-        if manifest_path.exists():
+        if path_exists_without_follow(manifest_path, "capture manifest"):
             loaded = load_json(manifest_path)
             if not isinstance(loaded, list):
                 fail(f"capture provenance is not a JSON array: {manifest_path}")
@@ -383,6 +477,12 @@ def command_set_session(args: argparse.Namespace) -> None:
     write_json(path, metadata)
 
 
+def command_read_state(args: argparse.Namespace) -> None:
+    """Read one shell state value through a no-follow descriptor."""
+    value = read_regular_text(Path(args.path), "capture state")
+    print(value.replace("\r", "").replace("\n", ""))
+
+
 def recorded_environment(metadata: dict[str, Any]) -> dict[str, str]:
     snapshot = metadata.get("environment")
     if not isinstance(snapshot, dict):
@@ -419,12 +519,6 @@ def command_exec(args: argparse.Namespace) -> int:
     expected_hash = binary_info.get("sha256")
     if not isinstance(expected_hash, str) or not expected_hash:
         fail("capture metadata lacks a binary content hash")
-    ensure_regular(binary, "capture binary")
-    if not os.access(binary, os.X_OK):
-        fail(f"capture binary is not executable: {binary}")
-    current_binary = file_info(binary)
-    if current_binary.get("status") != "ok" or current_binary.get("sha256") != expected_hash:
-        fail("capture binary changed after provenance was initialized")
 
     color = metadata.get("color")
     if color != args.color:
@@ -435,6 +529,9 @@ def command_exec(args: argparse.Namespace) -> int:
     expected_exit = metadata_path.parent / "exit.status"
     if Path(args.exit) != expected_exit:
         fail("capture exit path does not belong to the owning run directory")
+    directory_path = metadata_path.parent
+    if Path(binary).parent != directory_path:
+        fail("capture binary is not the immutable executable owned by the run directory")
 
     if color not in {"truecolor", "256", "16", "mono"}:
         fail(f"unsupported capture color: {color!r}")
@@ -444,7 +541,16 @@ def command_exec(args: argparse.Namespace) -> int:
 
     stderr_path = Path(args.stderr)
     stderr = open_stderr(stderr_path)
+    directory_descriptor, directory_mode = lock_execution_directory(directory_path)
+    binary_descriptor = -1
+    return_code: int
     try:
+        binary_descriptor, binary_metadata = open_regular_read(binary, "capture binary")
+        if not binary_metadata.st_mode & 0o111:
+            fail(f"capture binary is not executable: {binary}")
+        current_hash, current_bytes = hash_descriptor(binary_descriptor)
+        if not current_bytes or current_hash != expected_hash:
+            fail("capture binary changed after provenance was initialized")
         try:
             process = subprocess.Popen(
                 argv,
@@ -456,13 +562,17 @@ def command_exec(args: argparse.Namespace) -> int:
         except OSError as error:
             stderr.write(f"capture exec: cannot start application: {error}\n".encode())
             stderr.flush()
-            write_text_atomic(Path(args.exit), "127\n")
-            return 127
-        return_code = process.wait()
-        write_text_atomic(Path(args.exit), f"{return_code}\n")
-        return return_code if return_code >= 0 else 128 + (-return_code)
+            return_code = 127
+        else:
+            return_code = process.wait()
     finally:
+        if binary_descriptor >= 0:
+            os.close(binary_descriptor)
+        restore_execution_directory(directory_descriptor, directory_path, directory_mode)
+        os.close(directory_descriptor)
         stderr.close()
+    write_text_atomic(Path(args.exit), f"{return_code}\n")
+    return return_code if return_code >= 0 else 128 + (-return_code)
 
 
 def metadata_record(metadata: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
@@ -559,7 +669,7 @@ def command_finalize(args: argparse.Namespace) -> None:
             changed.append(record)
         return changed
 
-    if manifest.exists():
+    if path_exists_without_follow(manifest, "capture manifest"):
         update_manifest(manifest, finalize)
 
 
@@ -599,6 +709,10 @@ def parser() -> argparse.ArgumentParser:
     session.add_argument("--run-id", required=True)
     session.add_argument("--session-id", required=True)
     session.set_defaults(handler=command_set_session)
+
+    state = subparsers.add_parser("read-state")
+    state.add_argument("--path", required=True)
+    state.set_defaults(handler=command_read_state)
 
     execute = subparsers.add_parser("exec")
     execute.add_argument("--metadata", required=True)
