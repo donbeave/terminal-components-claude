@@ -3,13 +3,59 @@
 //! These retain the named smoke-test contracts while exercising only the
 //! public application facade and domain adapter. Allocation budgets belong to
 //! a separate harness because the old backend is outside this package.
+#![allow(unsafe_code)]
+
+use std::alloc::{GlobalAlloc, Layout};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 use junie_tui::{Axis, ColumnKey, GridModel, ItemKey, KeyCode, SortDir, Theme};
 use junie_tui_testing::{Harness, perf};
 use tablepro_app::{ColType, QueryOutcome, ResultGrid, ResultSet, TableProApp, Value};
 
+static LOG_ALLOC: AtomicBool = AtomicBool::new(false);
+static ALLOC_SIZES: [AtomicUsize; 4097] = [const { AtomicUsize::new(0) }; 4097];
+static REALLOC_GROWTH: [AtomicUsize; 4097] = [const { AtomicUsize::new(0) }; 4097];
+
+struct LoggingAllocator;
+
+// Temporary release-perf diagnosis; remove before commit.
+unsafe impl GlobalAlloc for LoggingAllocator {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        if LOG_ALLOC.load(Ordering::Relaxed) {
+            let size = layout.size().min(ALLOC_SIZES.len().saturating_sub(1));
+            ALLOC_SIZES[size].fetch_add(1, Ordering::Relaxed);
+        }
+        // SAFETY: forwards the allocator contract unchanged.
+        unsafe { perf::Counting.alloc(layout) }
+    }
+
+    unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 {
+        if LOG_ALLOC.load(Ordering::Relaxed) {
+            let size = layout.size().min(ALLOC_SIZES.len().saturating_sub(1));
+            ALLOC_SIZES[size].fetch_add(1, Ordering::Relaxed);
+        }
+        // SAFETY: forwards the allocator contract unchanged.
+        unsafe { perf::Counting.alloc_zeroed(layout) }
+    }
+
+    unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
+        if LOG_ALLOC.load(Ordering::Relaxed) {
+            let growth = new_size.saturating_sub(layout.size());
+            let size = growth.min(REALLOC_GROWTH.len().saturating_sub(1));
+            REALLOC_GROWTH[size].fetch_add(1, Ordering::Relaxed);
+        }
+        // SAFETY: forwards the allocator contract unchanged.
+        unsafe { perf::Counting.realloc(ptr, layout, new_size) }
+    }
+
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        // SAFETY: forwards the allocator contract unchanged.
+        unsafe { perf::Counting.dealloc(ptr, layout) }
+    }
+}
+
 #[global_allocator]
-static GLOBAL: perf::Counting = perf::Counting;
+static GLOBAL: LoggingAllocator = LoggingAllocator;
 
 fn full_result_app() -> TableProApp {
     let mut app = TableProApp::default();
@@ -187,10 +233,34 @@ fn frame_tablepro_query_editor_2k_lines() {
 fn perf_tablepro_baseline() {
     let _guard = perf::lock();
     let mut harness = Harness::new(full_result_app(), Theme::junie(), 120, 40);
+    LOG_ALLOC.store(true, Ordering::Relaxed);
     let stats = perf::bench(2, perf::iters(100), &mut || {
         harness.draw();
         std::hint::black_box(harness.focus());
     });
+    LOG_ALLOC.store(false, Ordering::Relaxed);
+    eprintln!(
+        "ALLOC_SIZES {:?}",
+        ALLOC_SIZES
+            .iter()
+            .enumerate()
+            .filter_map(|(size, count)| {
+                let count = count.load(Ordering::Relaxed);
+                (count > 0).then_some((size, count))
+            })
+            .collect::<Vec<_>>()
+    );
+    eprintln!(
+        "REALLOC_GROWTH {:?}",
+        REALLOC_GROWTH
+            .iter()
+            .enumerate()
+            .filter_map(|(size, count)| {
+                let count = count.load(Ordering::Relaxed);
+                (count > 0).then_some((size, count))
+            })
+            .collect::<Vec<_>>()
+    );
     perf::report_to(
         concat!(env!("CARGO_MANIFEST_DIR"), "/tests/perf_baseline.txt"),
         "frame_tablepro_grid_500x12_120x40",

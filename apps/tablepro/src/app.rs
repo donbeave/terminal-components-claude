@@ -601,22 +601,24 @@ impl TableProApp {
             }
         }
     }
-    fn column_specs(columns: &[(String, ColType)], editable: bool) -> Vec<junie_tui::Column<'_>> {
-        columns
-            .iter()
-            .take(junie_tui::GRID_MAX_COLUMNS)
-            .enumerate()
-            .map(|(index, (name, _))| {
-                let mut col = junie_tui::Column::new(
-                    junie_tui::ColumnKey::num((index as u16).saturating_add(1)),
-                    name.as_str(),
-                );
-                col.sortable = true;
-                col.editable = editable;
-                col.sticky = index == 0;
-                col
-            })
-            .collect()
+    fn column_specs(
+        columns: &[(String, ColType)],
+        editable: bool,
+    ) -> ([junie_tui::Column<'_>; junie_tui::GRID_MAX_COLUMNS], usize) {
+        let count = columns.len().min(junie_tui::GRID_MAX_COLUMNS);
+        let mut specs =
+            [junie_tui::Column::new(junie_tui::ColumnKey::num(0), ""); junie_tui::GRID_MAX_COLUMNS];
+        for (index, (name, _)) in columns.iter().take(count).enumerate() {
+            let mut col = junie_tui::Column::new(
+                junie_tui::ColumnKey::num((index as u16).saturating_add(1)),
+                name.as_str(),
+            );
+            col.sortable = true;
+            col.editable = editable;
+            col.sticky = index == 0;
+            specs[index] = col;
+        }
+        (specs, count)
     }
     fn connection_form<'a>(
         fields: &'a [junie_tui::FieldSpec<'a>],
@@ -1031,8 +1033,8 @@ impl App for TableProApp {
             .erase();
         self.sync_query_tab();
         let editable = self.result.is_editable();
-        let columns = Self::column_specs(&self.columns, editable);
-        let grid = result_grid(&columns);
+        let (columns, column_count) = Self::column_specs(&self.columns, editable);
+        let grid = result_grid(&columns[..column_count]);
         let grid_response = if self.result.is_editable() {
             grid.update_editable(cx, &mut self.grid_state, &mut self.result)
         } else {
@@ -1112,8 +1114,9 @@ impl App for TableProApp {
                     Field::new("SQL query", query_input(Some(&self.query)))
                         .plain(true)
                         .draw(ui, query_area, &self.query_state);
-                    let columns = Self::column_specs(&self.columns, self.result.is_editable());
-                    let grid = result_grid(&columns);
+                    let (columns, column_count) =
+                        Self::column_specs(&self.columns, self.result.is_editable());
+                    let grid = result_grid(&columns[..column_count]);
                     let meta = format!(
                         "{} rows · {}",
                         self.result.total(),
