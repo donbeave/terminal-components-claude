@@ -31,6 +31,8 @@ pub struct AccountsState {
     /// Public-list selection state owned by this route.
     pub list: ListState,
     pub form_open: bool,
+    /// Whether the opener has handed focus to the editable form.
+    pub started: bool,
     pub editing: Option<String>,
     pub draft_name: String,
     pub masked_input: String,
@@ -61,6 +63,7 @@ impl fmt::Debug for AccountsState {
         f.debug_struct("AccountsState")
             .field("list", &self.list)
             .field("form_open", &self.form_open)
+            .field("started", &self.started)
             .field("editing", &self.editing)
             .field("draft_name", &self.draft_name)
             .field("masked_input", &"[redacted]")
@@ -83,6 +86,7 @@ impl AccountsState {
     /// Open a new account form.
     pub fn open_new(&mut self) {
         self.form_open = true;
+        self.started = false;
         self.editing = None;
         self.draft_name.clear();
         self.masked_input.clear();

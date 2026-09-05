@@ -530,8 +530,66 @@ impl App {
 
     fn open_account_picker(&mut self, cx: &mut Cx<'_>) {
         let picker = Self::account_picker();
+        self.picker_mode = Some(PickerMode::Launch);
+        self.account_state = PickerState::default();
         let spec = picker.layer(cx, &self.account_options);
         cx.open_layer(ACCOUNT_PICKER, spec);
+    }
+
+    fn open_op_picker(&mut self, cx: &mut Cx<'_>) {
+        self.accounts.op_stage = 0;
+        self.accounts.op_item.clear();
+        self.accounts.selected_op = None;
+        self.picker_mode = Some(PickerMode::OnePassword);
+        self.account_state = PickerState::default();
+        self.op_options = vec![AccountOption {
+            key: "chainargos".into(),
+            label: "chainargos.1password.com".into(),
+            detail: "signed in · 1Password account".into(),
+        }];
+        let picker = Self::account_picker().title("Choose 1Password account");
+        let spec = picker.layer(cx, &self.op_options);
+        cx.open_layer(ACCOUNT_PICKER, spec);
+    }
+
+    fn set_op_stage(&mut self, stage: u8) {
+        self.accounts.op_stage = stage;
+        self.account_state = PickerState::default();
+        self.op_options = match stage {
+            1 => vec![AccountOption {
+                key: "engineering".into(),
+                label: "Engineering".into(),
+                detail: "team vault".into(),
+            }],
+            2 => vec![
+                AccountOption {
+                    key: "anthropic".into(),
+                    label: "Anthropic · Work".into(),
+                    detail: "Claude credential".into(),
+                },
+                AccountOption {
+                    key: "codex-primary".into(),
+                    label: "OpenAI · Codex Primary".into(),
+                    detail: "Codex credential".into(),
+                },
+                AccountOption {
+                    key: "grok-team".into(),
+                    label: "xAI · Grok Team".into(),
+                    detail: "Grok credential".into(),
+                },
+                AccountOption {
+                    key: "opencode-go".into(),
+                    label: "OpenCode Go".into(),
+                    detail: "OpenCode credential".into(),
+                },
+            ],
+            3 => vec![AccountOption {
+                key: "credential".into(),
+                label: "credential".into(),
+                detail: "concealed field".into(),
+            }],
+            _ => vec![],
+        };
     }
 
     fn begin_launch(&mut self) {
@@ -607,18 +665,65 @@ impl App {
         }
 
         let picker = Self::account_picker();
-        let response = picker.update(cx, &mut self.account_state, &self.account_options);
+        let picker_items = match self.picker_mode {
+            Some(PickerMode::OnePassword) => &self.op_options,
+            _ => &self.account_options,
+        };
+        let response = picker.update(cx, &mut self.account_state, picker_items);
         let action = response.action_ref().copied();
         result |= response.erase();
         if cx.is_open(ACCOUNT_PICKER)
             && let Some(PickerAction::Chosen(key)) = action
-            && let Some(account) = self
-                .account_options
-                .iter()
-                .find(|account| ItemKey::text(&account.key) == key)
+            && let Some(account) = picker_items.iter().find(|account| ItemKey::text(&account.key) == key)
         {
-            self.status = Some(format!("Selected reference · {}", account.detail));
-            cx.close_layer(ACCOUNT_PICKER, Some(ActionKey::CONFIRM));
+            match self.picker_mode {
+                Some(PickerMode::OnePassword) => {
+                    match self.accounts.op_stage {
+                        0 => {
+                            self.status = Some("chainargos.1password.com".into());
+                            self.set_op_stage(1);
+                        }
+                        1 => {
+                            self.status = Some("Engineering".into());
+                            self.set_op_stage(2);
+                        }
+                        2 => {
+                            self.accounts.op_item = account.label.clone();
+                            self.set_op_stage(3);
+                            self.status = Some(account.label.clone());
+                        }
+                        _ => {
+                            let item = self.accounts.op_item.clone();
+                            let title = item
+                                .split_once(" · ")
+                                .map_or(item.as_str(), |(_, name)| name);
+                            if let Ok(reference) = self.world.op.reference(
+                                "chainargos.1password.com",
+                                "Engineering",
+                                match title {
+                                    "Anthropic · Work" | "Work" => "item-anthropic-work",
+                                    "OpenAI · Codex Primary" | "Codex Primary" => "item-openai-primary",
+                                    "xAI · Grok Team" | "Grok Team" => "item-grok-team",
+                                    _ => "item-opencode-go",
+                                },
+                                "credential",
+                            ) {
+                                self.accounts.selected_op = Some(reference.clone());
+                                self.status = Some(reference.display_path());
+                            } else {
+                                self.status = Some(format!("{item} · Work › credential"));
+                            }
+                            self.picker_mode = None;
+                            cx.close_layer(ACCOUNT_PICKER, Some(ActionKey::CONFIRM));
+                        }
+                    }
+                }
+                _ => {
+                    self.status = Some(format!("Selected reference · {}", account.detail));
+                    self.picker_mode = None;
+                    cx.close_layer(ACCOUNT_PICKER, Some(ActionKey::CONFIRM));
+                }
+            }
             result |= Response::changed();
         }
         result
