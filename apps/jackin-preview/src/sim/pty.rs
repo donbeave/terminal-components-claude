@@ -1201,6 +1201,57 @@ impl Daemon {
         }
     }
 
+    /// Build a live daemon model from a persisted public snapshot.
+    ///
+    /// Snapshot metadata is intentionally copied only into semantic pane and
+    /// tab state; no terminal backend or process handle crosses the boundary.
+    pub fn from_snapshot(
+        snapshot: &DaemonSnapshot,
+        workspace: &str,
+        now_ms: i64,
+    ) -> Self {
+        let mut daemon = Self::new(workspace);
+        let DaemonSnapshot::Tabs(tabs) = snapshot else {
+            return daemon;
+        };
+        for tab in tabs {
+            let first = tab.panes.first();
+            let pane = daemon.new_pane(
+                first.and_then(|pane| pane.agent),
+                None,
+                now_ms,
+                false,
+            );
+            daemon.tabs.push(Tab {
+                custom_label: Some(tab.label.clone()),
+                root: PaneNode::Leaf(pane),
+                focused: if first.is_some_and(|pane| pane.focused) {
+                    pane
+                } else {
+                    pane
+                },
+                zoomed: None,
+            });
+            for pane_snapshot in tab.panes.iter().skip(1) {
+                let extra = daemon.new_pane(pane_snapshot.agent, None, now_ms, false);
+                if let Some(active) = daemon.tabs.last_mut() {
+                    active.root = PaneNode::Split {
+                        dir: SplitDir::Horizontal,
+                        split: Split::new(50, MIN_PANE_COLS, MIN_PANE_COLS),
+                        first: Box::new(active.root.clone()),
+                        second: Box::new(PaneNode::Leaf(extra)),
+                    };
+                }
+            }
+        }
+        daemon.active = tabs
+            .iter()
+            .position(|tab| tab.active)
+            .unwrap_or(0)
+            .min(daemon.tabs.len().saturating_sub(1));
+        daemon
+    }
+
     /// Find a pane.
     pub fn pane(&self, id: PaneId) -> Option<&Pane> {
         self.panes.iter().find(|pane| pane.id == id)

@@ -3,6 +3,8 @@
 //! `World` owns virtual time, durable fixture data, live instance snapshots,
 //! and a typed job queue.  It has no terminal or process access.
 
+use std::collections::BTreeMap;
+
 use crate::arbiter::Arbiter;
 use crate::clock::{Clock, EPOCH_SECS};
 use crate::domain::account::{AccountId, AccountRegistry};
@@ -15,6 +17,23 @@ use crate::domain::instance::{Instance, InstanceStatus};
 use crate::domain::workspace::{RoleEntry, Usability, Workspace, WorkspaceId};
 use crate::scenario::Scenario;
 use crate::sim::onepassword::SimOnePassword;
+use crate::sim::pty::Daemon;
+
+/// Host trust setting projected by the Settings route.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TrustRow {
+    /// Stable source label.
+    pub source: String,
+    /// Whether the source is trusted.
+    pub trusted: bool,
+}
+
+/// Host-level configuration shared by workspace drafts.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct GlobalConfig {
+    /// Trust rows edited by Settings.
+    pub trust: Vec<TrustRow>,
+}
 
 /// Typed results of deterministic asynchronous work.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -36,15 +55,21 @@ pub struct World {
     pub clock: Clock,
     pub arbiter: Arbiter,
     pub home: String,
+    /// Mutable host configuration.
+    pub global: GlobalConfig,
     pub workspaces: Vec<Workspace>,
     pub roles: Vec<RoleEntry>,
     pub instances: Vec<Instance>,
+    /// Live daemon models keyed by persisted instance id.
+    pub daemons: BTreeMap<String, Daemon>,
     pub accounts: AccountRegistry,
     pub op: SimOnePassword,
     pub jobs: Vec<Job>,
     pub refresh_fails: bool,
     pub saved: bool,
     pub last_refresh_secs: i64,
+    /// Last copied transcript selection, if any.
+    pub clipboard: Option<String>,
 }
 
 impl World {
@@ -78,6 +103,14 @@ impl World {
                 true
             }
         });
+        for daemon in self.daemons.values_mut() {
+            daemon.tick(now);
+        }
+        for instance in &mut self.instances {
+            if let Some(daemon) = self.daemons.get(&instance.id) {
+                instance.daemon = daemon.snapshot();
+            }
+        }
         ready
     }
 
@@ -306,20 +339,37 @@ pub fn world_for(scenario: Scenario) -> World {
         .iter()
         .filter(|instance| instance.status == InstanceStatus::Running)
         .count();
+    let mut daemons = BTreeMap::new();
+    for instance in &instances {
+        if let crate::domain::instance::DaemonSnapshot::Tabs(_) = &instance.daemon {
+            daemons.insert(
+                instance.id.clone(),
+                Daemon::from_snapshot(&instance.daemon, &instance.container, now),
+            );
+        }
+    }
     World {
         scenario,
         clock,
         arbiter: Arbiter::new(running),
         home: HOME.into(),
+        global: GlobalConfig {
+            trust: vec![TrustRow {
+                source: "chainargos/the-architect".into(),
+                trusted: false,
+            }],
+        },
         workspaces,
         roles,
         instances,
+        daemons,
         accounts,
         op,
         jobs: Vec::new(),
         refresh_fails: scenario == Scenario::HardCases,
         saved: false,
         last_refresh_secs: now,
+        clipboard: None,
     }
 }
 

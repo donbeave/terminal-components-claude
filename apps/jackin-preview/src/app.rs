@@ -360,6 +360,11 @@ impl App {
         self.launch.as_ref()
     }
 
+    /// Whether the exit ritual has completed.
+    pub const fn should_quit(&self) -> bool {
+        self.quit
+    }
+
     fn enter_button() -> Button<'static> {
         Button::new(ENTER, "Enter Construct").variant(Variant::PRIMARY)
     }

@@ -2,6 +2,9 @@
 
 use tui_next::Id;
 
+use crate::domain::account::{AccountRegistry, AccountId};
+use crate::domain::workspace::{AccountPolicy, EffectiveAccount, Mount, Workspace};
+
 /// Editor root.
 pub const ROOT: Id = Id::root("jackin.editor");
 /// Editor form root retained as a stable namespace for nested controls.
@@ -34,6 +37,8 @@ pub struct EditorState {
     pub dirty: bool,
     pub preview_open: bool,
     pub env_visible: bool,
+    /// Mutable workspace draft projected by the editor controls.
+    pub pending: PendingWorkspace,
 }
 
 impl EditorState {
@@ -46,5 +51,47 @@ impl EditorState {
             4 | 5 => Tab::Accounts,
             _ => Tab::General,
         };
+    }
+}
+
+/// Workspace draft owned by the editor route.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PendingWorkspace {
+    /// Proposed display name.
+    pub name: String,
+    /// Proposed working directory.
+    pub workdir: String,
+    /// Mount rows.
+    pub mounts: Vec<Mount>,
+    /// Account activation policy.
+    pub accounts: AccountPolicy,
+}
+
+impl Default for PendingWorkspace {
+    fn default() -> Self {
+        Self {
+            name: "payments-platform".into(),
+            workdir: "/Users/alexey/src/payments-platform".into(),
+            mounts: vec![Mount::host(
+                "/Users/alexey/src/payments-platform",
+                "/Users/alexey/src/payments-platform",
+            )],
+            accounts: AccountPolicy::default(),
+        }
+    }
+}
+
+impl PendingWorkspace {
+    /// Effective accounts projected with current registry metadata.
+    pub fn effective_accounts(&self, registry: &AccountRegistry) -> Vec<EffectiveAccount> {
+        let mut workspace = Workspace::new(0, &self.name, &self.workdir);
+        workspace.mounts = self.mounts.clone();
+        workspace.accounts = self.accounts.clone();
+        workspace.effective_accounts(registry)
+    }
+
+    /// Set a proposed account as enabled in this workspace.
+    pub fn enable_account(&mut self, id: impl Into<AccountId>) {
+        self.accounts.enabled.insert(id.into());
     }
 }
