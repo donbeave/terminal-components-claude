@@ -133,10 +133,12 @@ struct CaptureMatrixLock {
 
 impl Drop for CaptureMatrixLock {
     fn drop(&mut self) {
-        let owner = fs::read_to_string(&self.owner_path).ok();
+        let owner = read_capture_lock_owner(&self.owner_path).ok();
         if owner.as_deref() == Some(&self.owner) {
-            let _ = fs::remove_file(&self.owner_path);
-            let _ = fs::remove_dir(&self.path);
+            let quarantine = capture_lock_quarantine(&self.path);
+            if fs::rename(&self.path, &quarantine).is_ok() {
+                let _ = remove_capture_lock_directory(&quarantine);
+            }
         }
     }
 }
@@ -180,6 +182,241 @@ fn capture_process_is_live(_pid: u32) -> bool {
     true
 }
 
+fn capture_lock_quarantine(path: &Path) -> PathBuf {
+    path.with_file_name(format!(
+        ".capture-matrix.lock.stale.{}.{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|duration| duration.as_nanos())
+            .unwrap_or_default()
+    ))
+}
+
+fn capture_lock_staging(shots: &Path) -> PathBuf {
+    shots.join(format!(
+        ".capture-matrix.lock.tmp.{}.{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|duration| duration.as_nanos())
+            .unwrap_or_default()
+    ))
+}
+
+fn read_capture_lock_owner(path: &Path) -> Result<String, String> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        let mut options = OpenOptions::new();
+        options
+            .read(true)
+            .custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK);
+        let mut file = options.open(path).map_err(|error| {
+            format!(
+                "cannot read capture matrix lock owner {}: {error}",
+                rel(path)
+            )
+        })?;
+        let metadata = file.metadata().map_err(|error| {
+            format!(
+                "cannot inspect capture matrix lock owner {}: {error}",
+                rel(path)
+            )
+        })?;
+        if !metadata.is_file() {
+            return Err(format!(
+                "capture matrix lock owner is not a regular file: {}",
+                rel(path)
+            ));
+        }
+        let mut owner = String::new();
+        file.read_to_string(&mut owner).map_err(|error| {
+            format!(
+                "cannot read capture matrix lock owner {}: {error}",
+                rel(path)
+            )
+        })?;
+        Ok(owner)
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = path;
+        Err("cannot safely read capture matrix lock owner without O_NOFOLLOW".to_owned())
+    }
+}
+
+fn remove_capture_lock_directory(path: &Path) -> Result<(), String> {
+    let metadata = fs::symlink_metadata(path)
+        .map_err(|error| format!("cannot inspect capture matrix lock {}: {error}", rel(path)))?;
+    if metadata.file_type().is_symlink() || !metadata.is_dir() {
+        return Err(format!(
+            "capture matrix lock path is not a directory: {}",
+            rel(path)
+        ));
+    }
+    let owner = path.join("owner");
+    let owner_metadata = fs::symlink_metadata(&owner).map_err(|error| {
+        format!(
+            "cannot inspect capture matrix lock owner {}: {error}",
+            rel(&owner)
+        )
+    })?;
+    if owner_metadata.file_type().is_symlink() || !owner_metadata.is_file() {
+        return Err(format!(
+            "capture matrix lock owner is not a regular file: {}",
+            rel(&owner)
+        ));
+    }
+    fs::remove_file(&owner).map_err(|error| {
+        format!(
+            "cannot remove capture matrix lock owner {}: {error}",
+            rel(&owner)
+        )
+    })?;
+    fs::remove_dir(path)
+        .map_err(|error| format!("cannot remove capture matrix lock {}: {error}", rel(path)))
+}
+
+fn remove_capture_lock_staging(path: &Path) -> Result<(), String> {
+    let metadata = fs::symlink_metadata(path).map_err(|error| {
+        format!(
+            "cannot inspect capture matrix staging {}: {error}",
+            rel(path)
+        )
+    })?;
+    if metadata.file_type().is_symlink() || !metadata.is_dir() {
+        return Err(format!(
+            "capture matrix staging path is not a directory: {}",
+            rel(path)
+        ));
+    }
+    for entry in fs::read_dir(path).map_err(|error| {
+        format!(
+            "cannot inspect capture matrix staging {}: {error}",
+            rel(path)
+        )
+    })? {
+        let entry = entry.map_err(|error| {
+            format!(
+                "cannot inspect capture matrix staging {}: {error}",
+                rel(path)
+            )
+        })?;
+        let child = entry.path();
+        let child_metadata = fs::symlink_metadata(&child).map_err(|error| {
+            format!(
+                "cannot inspect capture matrix staging {}: {error}",
+                rel(&child)
+            )
+        })?;
+        if child.file_name().and_then(|name| name.to_str()) != Some("owner")
+            || child_metadata.file_type().is_symlink()
+            || !child_metadata.is_file()
+        {
+            return Err(format!(
+                "capture matrix staging contains an unexpected entry: {}",
+                rel(&child)
+            ));
+        }
+        fs::remove_file(&child).map_err(|error| {
+            format!(
+                "cannot remove capture matrix staging {}: {error}",
+                rel(&child)
+            )
+        })?;
+    }
+    fs::remove_dir(path).map_err(|error| {
+        format!(
+            "cannot remove capture matrix staging {}: {error}",
+            rel(path)
+        )
+    })
+}
+
+fn cleanup_orphaned_capture_staging(shots: &Path) -> Result<(), String> {
+    let entries = fs::read_dir(shots)
+        .map_err(|error| format!("cannot inspect capture staging in {}: {error}", rel(shots)))?;
+    for entry in entries {
+        let entry = entry.map_err(|error| {
+            format!("cannot inspect capture staging in {}: {error}", rel(shots))
+        })?;
+        let name = entry.file_name();
+        let Some(name) = name.to_str() else { continue };
+        let prefix = ".capture-matrix.lock.tmp.";
+        let Some(rest) = name.strip_prefix(prefix) else {
+            continue;
+        };
+        let Some((pid, _token)) = rest.split_once('.') else {
+            continue;
+        };
+        let Ok(pid) = pid.parse::<u32>() else {
+            continue;
+        };
+        if capture_process_is_live(pid) {
+            continue;
+        }
+        remove_capture_lock_staging(&entry.path())?;
+    }
+    Ok(())
+}
+
+fn publish_capture_matrix_lock(path: &Path, owner: &str) -> Result<(), String> {
+    let staging = path
+        .parent()
+        .ok_or_else(|| format!("capture matrix lock has no parent: {}", rel(path)))
+        .map(capture_lock_staging)?;
+    fs::create_dir(&staging).map_err(|error| {
+        format!(
+            "cannot create capture matrix lock staging {}: {error}",
+            rel(&staging)
+        )
+    })?;
+    let owner_path = staging.join("owner");
+    let publish_result = (|| {
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&owner_path)
+            .map_err(|error| {
+                format!(
+                    "cannot create capture matrix lock owner {}: {error}",
+                    rel(&owner_path)
+                )
+            })?;
+        file.write_all(owner.as_bytes()).map_err(|error| {
+            format!(
+                "cannot write capture matrix lock owner {}: {error}",
+                rel(&owner_path)
+            )
+        })?;
+        file.sync_all().map_err(|error| {
+            format!(
+                "cannot sync capture matrix lock owner {}: {error}",
+                rel(&owner_path)
+            )
+        })?;
+        Ok(())
+    })();
+    if let Err(error) = publish_result {
+        let _ = remove_capture_lock_staging(&staging);
+        return Err(error);
+    }
+    if let Err(error) = fs::rename(&staging, path) {
+        eprintln!(
+            "matrix rename failed staging={} path={} error={error}",
+            staging.display(),
+            path.display()
+        );
+        let _ = remove_capture_lock_staging(&staging);
+        if error.kind() == std::io::ErrorKind::AlreadyExists {
+            return Err("capture matrix lock exists".to_owned());
+        }
+        return Err(error.to_string());
+    }
+    Ok(())
+}
+
 fn acquire_capture_matrix_lock(shots: &Path) -> Result<CaptureMatrixLock, String> {
     let path = shots.join(".capture-matrix.lock");
     let owner_path = path.join("owner");
@@ -191,43 +428,17 @@ fn acquire_capture_matrix_lock(shots: &Path) -> Result<CaptureMatrixLock, String
             .map_err(|error| format!("cannot create capture lock owner token: {error}"))?
             .as_nanos()
     );
-    for attempt in 0..2 {
-        match fs::create_dir(&path) {
+    cleanup_orphaned_capture_staging(shots)?;
+    for attempt in 0..3 {
+        match publish_capture_matrix_lock(&path, &owner) {
             Ok(()) => {
-                let mut file = OpenOptions::new()
-                    .write(true)
-                    .create_new(true)
-                    .open(&owner_path)
-                    .map_err(|error| {
-                        let _ = fs::remove_dir(&path);
-                        format!(
-                            "cannot create capture matrix lock owner {}: {error}",
-                            rel(&owner_path)
-                        )
-                    })?;
-                file.write_all(owner.as_bytes()).map_err(|error| {
-                    let _ = fs::remove_file(&owner_path);
-                    let _ = fs::remove_dir(&path);
-                    format!(
-                        "cannot write capture matrix lock owner {}: {error}",
-                        rel(&owner_path)
-                    )
-                })?;
-                file.sync_all().map_err(|error| {
-                    let _ = fs::remove_file(&owner_path);
-                    let _ = fs::remove_dir(&path);
-                    format!(
-                        "cannot sync capture matrix lock owner {}: {error}",
-                        rel(&owner_path)
-                    )
-                })?;
                 return Ok(CaptureMatrixLock {
                     path,
                     owner_path,
                     owner,
                 });
             }
-            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists && attempt == 0 => {
+            Err(error) if attempt < 2 && error == "capture matrix lock exists" => {
                 let metadata = fs::symlink_metadata(&path).map_err(|inspect| {
                     format!(
                         "cannot inspect capture matrix lock {}: {inspect}",
@@ -240,24 +451,7 @@ fn acquire_capture_matrix_lock(shots: &Path) -> Result<CaptureMatrixLock, String
                         rel(&path)
                     ));
                 }
-                let owner_metadata = fs::symlink_metadata(&owner_path).map_err(|inspect| {
-                    format!(
-                        "cannot inspect capture matrix lock owner {}: {inspect}",
-                        rel(&owner_path)
-                    )
-                })?;
-                if owner_metadata.file_type().is_symlink() || !owner_metadata.is_file() {
-                    return Err(format!(
-                        "cannot prove capture matrix lock is stale: {}",
-                        rel(&path)
-                    ));
-                }
-                let existing = fs::read_to_string(&owner_path).map_err(|read| {
-                    format!(
-                        "cannot read capture matrix lock owner {}: {read}",
-                        rel(&owner_path)
-                    )
-                })?;
+                let existing = read_capture_lock_owner(&owner_path)?;
                 let Some((pid, _token)) = existing.trim().split_once(':') else {
                     return Err(format!(
                         "capture matrix lock owner is invalid: {}",
@@ -273,18 +467,14 @@ fn acquire_capture_matrix_lock(shots: &Path) -> Result<CaptureMatrixLock, String
                         rel(&path)
                     ));
                 }
-                fs::remove_file(&owner_path).map_err(|remove| {
+                let quarantine = capture_lock_quarantine(&path);
+                fs::rename(&path, &quarantine).map_err(|remove| {
                     format!(
-                        "cannot recover stale capture matrix lock owner {}: {remove}",
-                        rel(&owner_path)
-                    )
-                })?;
-                fs::remove_dir(&path).map_err(|remove| {
-                    format!(
-                        "cannot recover stale capture matrix lock {}: {remove}",
+                        "cannot quarantine stale capture matrix lock {}: {remove}",
                         rel(&path)
                     )
                 })?;
+                remove_capture_lock_directory(&quarantine)?;
             }
             Err(error) => {
                 return Err(format!(
