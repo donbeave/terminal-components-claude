@@ -1,5 +1,7 @@
 //! `TablePro` binary entry point and terminal option parsing.
 
+use std::io::Write;
+
 use tui_next::{ColorLevel, Theme};
 
 struct Options {
@@ -65,17 +67,17 @@ fn parse_args() -> Result<Option<Options>, String> {
     }))
 }
 
-fn print_help() {
-    println!(
-        "tablepro — terminal database workbench\n\n\
-         USAGE: tablepro [--theme junie|paper] [--color truecolor|256|16|none] [--connect NAME]\n\n\
-         Keys: Ctrl+O quick open · Ctrl+T new query · Ctrl+R run · Ctrl+Y history · ? help · Ctrl+Q quit"
-    );
+fn print_help() -> std::io::Result<()> {
+    const HELP: &str = "tablepro — terminal database workbench\n\n\
+        USAGE: tablepro [--theme junie|paper] [--color truecolor|256|16|none] [--connect NAME]\n\n\
+        Keys: Ctrl+O quick open · Ctrl+T new query · Ctrl+R run · Ctrl+Y history · ? help · Ctrl+Q quit\n";
+    let mut stdout = std::io::stdout().lock();
+    stdout.write_all(HELP.as_bytes())
 }
 
 fn main() -> std::io::Result<()> {
     let Some(options) = parse_args().map_err(std::io::Error::other)? else {
-        print_help();
+        print_help()?;
         return Ok(());
     };
     tablepro_app::run_with(options.theme, options.connect.as_deref())

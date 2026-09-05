@@ -3,20 +3,6 @@
 //! Database semantics stay in application-owned adapters; terminal behavior
 //! is reached only through the public `tui-next` facade.
 #![forbid(unsafe_code)]
-#![cfg_attr(
-    test,
-    allow(
-        clippy::indexing_slicing,
-        clippy::unwrap_used,
-        clippy::expect_used,
-        clippy::panic,
-        clippy::arithmetic_side_effects,
-        clippy::too_many_lines,
-        clippy::module_name_repetitions,
-        reason = "deterministic application tests use direct assertions"
-    )
-)]
-
 pub mod connections;
 pub mod db;
 pub mod domain;
@@ -64,6 +50,10 @@ mod tablepro {
     }
 
     #[test]
+    #[allow(
+        clippy::panic,
+        reason = "the branch proves malformed fixture parsing fails"
+    )]
     fn view_grid_is_read_only_with_a_reason() {
         let catalog = db::Catalog::acme_prod();
         let statement = match sql::parse("SELECT status FROM orders LIMIT 3") {
@@ -110,6 +100,10 @@ mod tablepro {
     }
 
     #[test]
+    #[allow(
+        clippy::panic,
+        reason = "the branch proves malformed fixture parsing fails"
+    )]
     fn query_safety_gate_preserves_safe_mode_policy() {
         let select = match sql::parse("SELECT * FROM orders") {
             Ok(statement) => statement,

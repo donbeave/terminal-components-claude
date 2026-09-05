@@ -1444,6 +1444,11 @@ mod tests {
     use super::*;
 
     #[test]
+    #[allow(
+        clippy::unwrap_used,
+        clippy::indexing_slicing,
+        reason = "fixed SQL fixture"
+    )]
     fn splits_and_finds_statement_at_cursor() {
         let src = "SELECT 1;\n\nSELECT * FROM orders -- ; in comment\nWHERE status = 'a;b';\nDELETE FROM x";
         let s = split_statements(src);
@@ -1457,6 +1462,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::panic, clippy::unwrap_used, reason = "fixed SQL fixture")]
     fn parses_select_with_predicates_order_limit() {
         let st = parse("select id, status from public.orders o where status = 'pending' and total_amount >= 100 order by created_at desc limit 50").unwrap();
         let Statement::Select(s) = st else { panic!() };
@@ -1468,6 +1474,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::unwrap_used, reason = "fixed SQL fixture")]
     fn classifies_like_tablepro() {
         use crate::db::SafeMode as L;
         let p = |s: &str| parse(s).unwrap();
@@ -1528,6 +1535,12 @@ mod tests {
     }
 
     #[test]
+    #[allow(
+        clippy::indexing_slicing,
+        clippy::panic,
+        clippy::unwrap_used,
+        reason = "fixed SQL fixture"
+    )]
     fn runs_filtered_sorted_select() {
         let cat = Catalog::acme_prod();
         let Statement::Select(s) = parse(
@@ -1552,6 +1565,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::panic, clippy::unwrap_used, reason = "fixed SQL fixture")]
     fn errors_are_specific() {
         let cat = Catalog::acme_prod();
         let Statement::Select(s) = parse("SELECT nope FROM orders").unwrap() else {
@@ -1573,6 +1587,12 @@ mod tests {
     }
 
     #[test]
+    #[allow(
+        clippy::indexing_slicing,
+        clippy::panic,
+        clippy::unwrap_used,
+        reason = "fixed SQL fixture"
+    )]
     fn explain_builds_tree() {
         let cat = Catalog::acme_prod();
         let Statement::Select(s) =

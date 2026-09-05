@@ -424,7 +424,7 @@ impl TableProApp {
     /// Create and activate a query tab.
     pub fn new_query(&mut self, query: impl Into<String>) -> usize {
         let query = query.into();
-        self.query = query.clone();
+        self.query.clone_from(&query);
         self.query_state = TextInputState::default();
         let index = self.workbench.new_query(query);
         self.surface = Surface::QueryEditing;
@@ -839,7 +839,7 @@ impl App for TableProApp {
                     });
                     if matches!(planned, Some(Ok(()))) {
                         self.surface = Surface::ExplainPlan;
-                        self.status = "Explain plan ready".to_owned();
+                        "Explain plan ready".clone_into(&mut self.status);
                     }
                     response |= Response::changed();
                 }
@@ -1172,6 +1172,11 @@ pub fn run() -> std::io::Result<()> {
 }
 
 /// Start `TablePro` with an explicit theme and optional initial connection.
+///
+/// # Errors
+///
+/// Returns an invalid-input error when `connect` names no configured
+/// connection, or the terminal setup/runtime I/O error from `tui_next`.
 pub fn run_with(theme: tui_next::Theme, connect: Option<&str>) -> std::io::Result<()> {
     let mut app = TableProApp::default();
     if let Some(name) = connect {
