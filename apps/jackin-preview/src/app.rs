@@ -717,8 +717,9 @@ impl App {
         let chosen = continue_button.activated();
         let mut result = continue_button.erase();
         if chosen {
+            let previous_step = self.prelude.step();
             self.prelude.advance_flow();
-            if self.prelude.step() >= 5 {
+            if previous_step >= 5 {
                 if self.prelude.duplicate() {
                     self.status = Some(format!(
                         "A workspace named {} already exists",
