@@ -9,6 +9,7 @@ import hashlib
 import json
 import os
 import re
+import secrets
 import stat
 import subprocess
 import sys
@@ -142,6 +143,60 @@ def ensure_not_symlink(path: Path, label: str) -> None:
         fail(f"cannot inspect {label} {path}: {error}")
 
 
+def open_trusted_directory(path: Path, label: str) -> int:
+    """Open every directory component without following any symlink.
+
+    A leaf-only O_NOFOLLOW check is insufficient: an attacker can replace an
+    ancestor after a check and redirect a later open/rename. Walking from the
+    root with directory descriptors pins each component used by the caller.
+    """
+    nofollow = getattr(os, "O_NOFOLLOW", None)
+    if nofollow is None:
+        fail(f"cannot safely open {label} without O_NOFOLLOW")
+    if not path.is_absolute():
+        fail(f"{label} must be an absolute path: {path}")
+    directory_flag = getattr(os, "O_DIRECTORY", 0)
+    flags = os.O_RDONLY | directory_flag | nofollow
+    descriptor = os.open(os.sep, flags)
+    try:
+        for component in path.parts[1:]:
+            if component in {"", ".", ".."}:
+                os.close(descriptor)
+                descriptor = -1
+                fail(f"{label} contains an unsafe path component: {path}")
+            child = os.open(component, flags, dir_fd=descriptor)
+            metadata = os.fstat(child)
+            if not stat.S_ISDIR(metadata.st_mode):
+                os.close(child)
+                os.close(descriptor)
+                descriptor = -1
+                fail(f"{label} is not a directory: {path}")
+            os.close(descriptor)
+            descriptor = child
+    except OSError as error:
+        if descriptor >= 0:
+            os.close(descriptor)
+        fail(f"cannot open trusted {label} {path}: {error}")
+    return descriptor
+
+
+def create_temporary_at(directory: int, prefix: str) -> tuple[int, str]:
+    """Create a mode-0600 temporary regular file below a pinned directory."""
+    nofollow = getattr(os, "O_NOFOLLOW", None)
+    if nofollow is None:
+        fail("cannot safely create temporary capture state without O_NOFOLLOW")
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | nofollow
+    for _ in range(32):
+        name = f".{prefix}.{os.getpid()}.{secrets.token_hex(8)}.tmp"
+        try:
+            return os.open(name, flags, 0o600, dir_fd=directory), name
+        except FileExistsError:
+            continue
+        except OSError as error:
+            fail(f"cannot create temporary capture state {name}: {error}")
+    fail(f"cannot create a unique temporary capture state for {prefix}")
+
+
 def load_json(path: Path) -> Any:
     try:
         return json.loads(read_regular_text(path, "JSON state"))
@@ -150,61 +205,49 @@ def load_json(path: Path) -> Any:
 
 
 def write_json(path: Path, value: Any) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    ensure_not_symlink(path, "JSON state")
+    directory = open_trusted_directory(path.parent, "JSON parent directory")
     temporary_name: str | None = None
     try:
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            encoding="utf-8",
-            dir=path.parent,
-            prefix=f".{path.name}.",
-            suffix=".tmp",
-            delete=False,
-        ) as stream:
-            temporary_name = stream.name
+        descriptor, temporary_name = create_temporary_at(directory, path.name)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
             os.chmod(stream.fileno(), 0o600)
             json.dump(value, stream, indent=2, sort_keys=True)
             stream.write("\n")
             stream.flush()
             os.fsync(stream.fileno())
-        os.replace(temporary_name, path)
+        os.replace(temporary_name, path.name, src_dir_fd=directory, dst_dir_fd=directory)
+        os.fsync(directory)
         temporary_name = None
     finally:
         if temporary_name is not None:
             try:
-                os.unlink(temporary_name)
+                os.unlink(temporary_name, dir_fd=directory)
             except FileNotFoundError:
                 pass
+        os.close(directory)
 
 
 def write_text_atomic(path: Path, value: str) -> None:
     """Write a small state value without following a destination symlink."""
-    ensure_not_symlink(path, "capture state")
+    directory = open_trusted_directory(path.parent, "capture state parent directory")
     temporary_name: str | None = None
     try:
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            encoding="utf-8",
-            dir=path.parent,
-            prefix=f".{path.name}.",
-            suffix=".tmp",
-            delete=False,
-        ) as stream:
-            temporary_name = stream.name
+        descriptor, temporary_name = create_temporary_at(directory, path.name)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
             os.chmod(stream.fileno(), 0o600)
             stream.write(value)
             stream.flush()
             os.fsync(stream.fileno())
-        ensure_not_symlink(path, "capture state")
-        os.replace(temporary_name, path)
+        os.replace(temporary_name, path.name, src_dir_fd=directory, dst_dir_fd=directory)
+        os.fsync(directory)
         temporary_name = None
     finally:
         if temporary_name is not None:
             try:
-                os.unlink(temporary_name)
+                os.unlink(temporary_name, dir_fd=directory)
             except FileNotFoundError:
                 pass
+        os.close(directory)
 
 
 def open_stderr(path: Path) -> Any:
