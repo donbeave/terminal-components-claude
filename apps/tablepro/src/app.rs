@@ -30,6 +30,9 @@ const FORM: ActionKey = ActionKey::custom("tablepro.form");
 const HELP: ActionKey = ActionKey::custom("tablepro.help");
 const SAFE_MODE: ActionKey = ActionKey::custom("tablepro.safe-mode");
 const MAXIMIZE: ActionKey = ActionKey::custom("tablepro.maximize");
+const EXPLAIN: ActionKey = ActionKey::custom("tablepro.explain");
+const FILTER: ActionKey = ActionKey::custom("tablepro.filter");
+const TAB_LIST: ActionKey = ActionKey::custom("tablepro.tab-list");
 const CONNECTIONS: Id = Id::root("tablepro.connections.list");
 const CONNECTIONS_PANEL: Id = Id::root("tablepro.connections.panel");
 const EXPLORER: Id = Id::root("tablepro.workbench.explorer.list");
@@ -187,6 +190,21 @@ fn keymap() -> KeyMap {
             KeyPhase::Bubble,
             Chord::with(KeyCode::Char('l'), KeyModifiers::CONTROL),
             SAFE_MODE,
+        )
+        .bind(
+            KeyPhase::Bubble,
+            Chord::with(KeyCode::Char('x'), KeyModifiers::ALT),
+            EXPLAIN,
+        )
+        .bind(
+            KeyPhase::Bubble,
+            Chord::key(KeyCode::Char('f')),
+            FILTER,
+        )
+        .bind(
+            KeyPhase::Bubble,
+            Chord::with(KeyCode::Char('g'), KeyModifiers::CONTROL),
+            TAB_LIST,
         )
         .bind(KeyPhase::Bubble, Chord::key(KeyCode::Char('z')), MAXIMIZE)
         .bind(
@@ -454,6 +472,12 @@ impl TableProApp {
                     message: error.message,
                 };
                 self.status = outcome_message(&out);
+                let message = self
+                    .status
+                    .strip_prefix("Query rejected: ")
+                    .map(str::to_owned);
+                self.record_query_error(message.as_deref());
+                self.surface = Surface::ErrorResult;
                 return out;
             }
         };
@@ -470,6 +494,9 @@ impl TableProApp {
                     summary: format!("{} is denied in Read-Only mode", risk.action),
                 };
                 self.status = outcome_message(&out);
+                let message = self.status.clone();
+                self.record_query_error(Some(&message));
+                self.surface = Surface::ErrorResult;
                 out
             }
             crate::sql::Decision::Confirm { deliberate } => {
@@ -479,6 +506,8 @@ impl TableProApp {
                     summary: format!("{} · {}", risk.action, risk.scope),
                 };
                 self.status = outcome_message(&out);
+                self.record_query_error(None);
+                self.surface = Surface::SafetyDialogTypedAck;
                 out
             }
             crate::sql::Decision::Run => {
@@ -487,6 +516,12 @@ impl TableProApp {
                         message: "The demo executor only runs SELECT statements".to_owned(),
                     };
                     self.status = outcome_message(&out);
+                    let message = self
+                        .status
+                        .strip_prefix("Query rejected: ")
+                        .map(str::to_owned);
+                    self.record_query_error(message.as_deref());
+                    self.surface = Surface::ErrorResult;
                     return out;
                 };
                 match crate::sql::run_select(&self.catalog, &select) {
@@ -499,6 +534,8 @@ impl TableProApp {
                         self.result = ResultGrid::from_result(&result);
                         self.grid_state = GridState::default();
                         self.status = outcome_message(&out);
+                        self.record_query_result();
+                        self.surface = Surface::ResultsGrid;
                         out
                     }
                     Err(error) => {
@@ -506,10 +543,34 @@ impl TableProApp {
                             message: error.message,
                         };
                         self.status = outcome_message(&out);
+                        let message = self
+                            .status
+                            .strip_prefix("Query rejected: ")
+                            .map(str::to_owned);
+                        self.record_query_error(message.as_deref());
+                        self.surface = Surface::ErrorResult;
                         out
                     }
                 }
             }
+        }
+    }
+    fn record_query_result(&mut self) {
+        let query = self.query.clone();
+        let result = self.result.clone();
+        if let Some(crate::tabs::Tab::Query(tab)) = self.workbench.active_mut() {
+            tab.query = query;
+            tab.result = Some(result);
+            tab.error = None;
+        }
+    }
+    fn record_query_error(&mut self, message: Option<&str>) {
+        let query = self.query.clone();
+        let message = message.map(str::to_owned);
+        if let Some(crate::tabs::Tab::Query(tab)) = self.workbench.active_mut() {
+            tab.query = query;
+            tab.error = message;
+            tab.result = None;
         }
     }
     fn column_specs(
@@ -774,9 +835,34 @@ impl App for TableProApp {
                     self.surface = Surface::HistoryTab;
                     response |= Response::changed();
                 }
+                c if c == EXPLAIN => {
+                    let catalog = self.workbench.catalog.clone();
+                    let planned = self
+                        .workbench
+                        .active_mut()
+                        .and_then(|tab| match tab {
+                            crate::tabs::Tab::Query(query) => Some(query.explain(&catalog)),
+                            _ => None,
+                        });
+                    if matches!(planned, Some(Ok(()))) {
+                        self.surface = Surface::ExplainPlan;
+                        self.status = "Explain plan ready".to_owned();
+                    }
+                    response |= Response::changed();
+                }
                 c if c == STRUCTURE => {
                     let _ = self.workbench.toggle_structure();
                     self.surface = Surface::StructureView;
+                    response |= Response::changed();
+                }
+                c if c == FILTER => {
+                    if self.workbench.active_table().is_some() {
+                        self.surface = Surface::FilterEditor;
+                        response |= Response::changed();
+                    }
+                }
+                c if c == TAB_LIST => {
+                    self.surface = Surface::TabListPicker;
                     response |= Response::changed();
                 }
                 c if c == FORM => {
