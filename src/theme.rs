@@ -331,6 +331,9 @@ impl Theme {
             success,
             info
         );
+        if level == ColorLevel::Ansi16 {
+            repair_ansi16_light_text(&mut t);
+        }
         t
     }
 
@@ -694,6 +697,32 @@ fn downgrade(c: Color, level: ColorLevel) -> Color {
     }
 }
 
+/// Keep semantic text legible when a light theme enters ANSI16. The small
+/// palette's `Gray`/`White` entries are bright enough to disappear on a light
+/// canvas, so the secondary-to-disabled text ladder uses `DarkGray` there.
+/// Accent foreground remains untouched: `text_on_accent` must stay bright on
+/// the accent surface.
+fn repair_ansi16_light_text(theme: &mut Theme) {
+    let Color::Rgb(r, g, b) = theme.canvas else {
+        return;
+    };
+    let luminance = (r as u32 * 299 + g as u32 * 587 + b as u32 * 114) / 1000;
+    if luminance < 128 {
+        return;
+    }
+    for foreground in [
+        &mut theme.text_secondary,
+        &mut theme.text_muted,
+        &mut theme.text_faint,
+        &mut theme.text_ghost,
+        &mut theme.disabled,
+    ] {
+        if matches!(*foreground, Color::Gray | Color::White) {
+            *foreground = Color::DarkGray;
+        }
+    }
+}
+
 fn nearest_256(r: u8, g: u8, b: u8) -> u8 {
     let step = |v: u8| -> u8 { ((v as u32 * 5 + 127) / 255) as u8 };
     let cube = 16 + 36 * step(r) + 6 * step(g) + step(b);
@@ -772,6 +801,17 @@ mod tests {
             Theme::for_theme(ThemeKind::Paper, ColorLevel::Ansi16).level,
             ColorLevel::Ansi16
         );
+    }
+
+    #[test]
+    fn ansi16_paper_text_ladder_stays_contrasting() {
+        let paper = Theme::for_theme(ThemeKind::Paper, ColorLevel::Ansi16);
+
+        assert_eq!(paper.text_muted, Color::DarkGray);
+        assert_eq!(paper.text_faint, Color::DarkGray);
+        assert_eq!(paper.text_ghost, Color::DarkGray);
+        assert_eq!(paper.disabled, Color::DarkGray);
+        assert_eq!(paper.text_on_accent, Color::White);
     }
 
     #[test]
