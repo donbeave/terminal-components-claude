@@ -1,6 +1,6 @@
 # F03: immutable Settings failure through the full application
 
-Status: the failure is reproduced; its product-compatibility disposition awaits user direction. This is diagnostic evidence, not a refactored implementation or an approved post-failure baseline.
+Status: the failure is reproduced; disposition **`oracle_crash_archived_safe_continuation_required`** approved 2026-09-15 (ADJ-09 extension). Pre-crash frames match oracle; refactor requires safe continuation; no post-failure oracle frame may be invented.
 
 ## Source and boundary
 

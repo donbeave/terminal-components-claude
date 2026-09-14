@@ -1,0 +1,30 @@
+finding_id	title	task_ids	proof_owners	adjudication_status	source_report_section
+BD-JT-01	control-shaped paint does not own source actions	TASK-058	TP-004;TP-006	integrated	branch-diff-jackin-tablepro.md#BD-JT-01
+BD-JT-02	conversion and validation changed source outcomes	TASK-058	TP-008;TP-009;TP-011	integrated	branch-diff-jackin-tablepro.md#BD-JT-02
+BD-JT-03	surface names and bound keys overstate implemented flows	TASK-059;TASK-060;TASK-061;TASK-062;TASK-063		integrated	branch-diff-jackin-tablepro.md#BD-JT-03
+BD-JT-04	history fixture and displayed vocabulary were reduced	TASK-061;TASK-063		integrated	branch-diff-jackin-tablepro.md#BD-JT-04
+BD-JT-05	database fixture migration largely preserves source	TASK-062		integrated	branch-diff-jackin-tablepro.md#BD-JT-05
+BD-JT-06	dormant filter evaluator cannot become the parity implementation	TASK-060;TASK-063	TP-039;TP-040;TP-041;TP-042	integrated	branch-diff-jackin-tablepro.md#BD-JT-06
+BD-JT-07	Picker paste compatibility has more than one underlying owner	TASK-059;TASK-060;TASK-061;TASK-063	ADJ-09	pending	branch-diff-jackin-tablepro.md#BD-JT-07
+BD-JT-08	surviving test names hide deleted journeys	TASK-005;TASK-061;TASK-062;TASK-063;TASK-064;TASK-067;TASK-073		integrated	branch-diff-jackin-tablepro.md#BD-JT-08
+BD-JT-09	preserve the new ownership tests without inheriting their UX expansions	TASK-060;TASK-061		pending	branch-diff-jackin-tablepro.md#BD-JT-09
+BD-JT-10	domain preservation does not imply World policy preservation	TASK-051;TASK-053;TASK-054;TASK-055;TASK-056	JA-026;JA-027;JA-028;JA-029;JA-045;JA-048;JA-057	integrated	branch-diff-jackin-tablepro.md#BD-JT-10
+BD-JT-11	extracted diff fixture quietly removes hunks and source text	TASK-056	JA-060	integrated	branch-diff-jackin-tablepro.md#BD-JT-11
+BD-JT-12	account precedence extraction drops effective-set policy and explanations	TASK-051;TASK-052;TASK-054;TASK-055	JA-023;JA-045;JA-048	integrated	branch-diff-jackin-tablepro.md#BD-JT-12
+BD-JT-13	PTY model preserves boot, rewrites interactive transcripts and deadlines	TASK-055	JA-050	integrated	branch-diff-jackin-tablepro.md#BD-JT-13
+BD-JT-14	timing constants survived; choreography did not	TASK-051;TASK-054;TASK-055;TASK-056	JA-002;JA-003;JA-040;JA-041;JA-062	integrated	branch-diff-jackin-tablepro.md#BD-JT-14
+BD-JT-15	service-backed modal flows replaced by hardcoded branches	TASK-051;TASK-052;TASK-053;TASK-054	JA-012;JA-013;JA-014;JA-015;JA-032;JA-034;JA-037;JA-038	integrated	branch-diff-jackin-tablepro.md#BD-JT-15
+BD-JT-16	keyed component events discarded by application selection shortcuts	TASK-053	JA-020;JA-022;JA-024	integrated	branch-diff-jackin-tablepro.md#BD-JT-16
+BD-JT-17	captured operations exist, but live app still substitutes first workspace	TASK-051;TASK-053;TASK-054;TASK-055		integrated	branch-diff-jackin-tablepro.md#BD-JT-17
+BD-JT-18	frozen screenshot painting masks a different interactive composition	TASK-051;TASK-053;TASK-055	JA-005;JA-006;JA-016;JA-017;JA-046	integrated	branch-diff-jackin-tablepro.md#BD-JT-18
+BD-JT-19	dirty-exit labels and effects are inverted; source branches absent	TASK-055;TASK-056	JA-059	integrated	branch-diff-jackin-tablepro.md#BD-JT-19
+BD-JT-20	live UI omits behavior even where isolated models support it	TASK-053;TASK-055;TASK-056		integrated	branch-diff-jackin-tablepro.md#BD-JT-20
+BD-JT-21	HardCases launch plans have executable producers	TASK-051;TASK-054	JA-005;JA-006;JA-007;JA-008;JA-009;JA-010;JA-011;JA-043	integrated	branch-diff-jackin-tablepro.md#BD-JT-21
+BD-JT-22	retained performance row names do not prove retained workloads	TASK-055;TASK-067		integrated	branch-diff-jackin-tablepro.md#BD-JT-22
+BD-JT-23	migrated tests sometimes ratify lost behavior	TASK-004;TASK-051;TASK-053;TASK-054;TASK-056;TASK-057		integrated	branch-diff-jackin-tablepro.md#BD-JT-23
+BD-JT-24	global settings requires real scoped state, not selected labels	TASK-053	JA-026;JA-027;JA-028;JA-029	integrated	branch-diff-jackin-tablepro.md#BD-JT-24
+BD-JT-25	Usage, Cockpit and Inspect carry independent scroll/focus/error contracts	TASK-052;TASK-054;TASK-056	JA-039;JA-060	integrated	branch-diff-jackin-tablepro.md#BD-JT-25
+BD-JT-26	shared Config source has explicit non-atomic compatibility branches	TASK-053	JA-016;JA-017;JA-018;JA-019;JA-020;JA-021;JA-022;JA-023;JA-024;JA-025;JA-026;JA-027;JA-028;JA-029	pending	branch-diff-jackin-tablepro.md#BD-JT-26
+BD-JT-27	global account operations are not the reduced generic account list	TASK-052	JA-030;JA-031;JA-032;JA-033;JA-034;JA-035;JA-036;JA-037;JA-038;JA-039	integrated	branch-diff-jackin-tablepro.md#BD-JT-27
+BD-JT-28	Capsule's actual mode routing differs from its priority comment	TASK-055;TASK-056	JA-050;JA-051;JA-054;JA-056	pending	branch-diff-jackin-tablepro.md#BD-JT-28
+BD-JT-29	shell restoration must retain real arbitration and event-specific ownership	TASK-051;TASK-052;TASK-053;TASK-054;TASK-055;TASK-056	JA-001;JA-002;JA-003;JA-004	pending	branch-diff-jackin-tablepro.md#BD-JT-29

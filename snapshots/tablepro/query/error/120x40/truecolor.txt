@@ -37,4 +37,4 @@
  │                           │ │                                                                                      │
  ╰───────────────────────────╯ ╰──────────────────────────────────────────────────────────────────────────────────────╯
 
-  EDIT   Ctrl+R Run  Alt+R Run all  Ctrl+Space Complete  Esc Done                               Connected to Production
+ Enter Edit  Ctrl+R Run  Alt+R Run all  Ctrl+X Explain  / Find  Tab Next                        Connected to Production

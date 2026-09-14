@@ -4,11 +4,11 @@
  ━━━━━━━━━━━━━━────────────────────────────────────────────────────────────────────────────────────────────────────────
  ╭─ Explorer ─────── public ─╮ ╭─ Query 1 ─────────────────────────────────────────────────────────────────────────  ─╮
  │                           │ │   ›  1 DELETE FROM orders                                                            │
- │   Filter objects          │ │                    ╭────────────────────────────────────────────╮                    │
- │  ▾ D acme_prod            │ │                    │▎T orders               public · 1.2 M rows │                    │
- │    ▾ S public             │ │                    │ T order_items          public · 3.8 M rows │                    │
- │      ▾ Tables             │ │                    │ V order_totals_by_day  public · 1.5 k rows │                    │
- │        ▸ T organizat╭────────────────────────────────────────────────────────────────────────╮╯                    │
+ │   Filter objects          │ │                                                                                      │
+ │  ▾ D acme_prod            │ │                                                                                      │
+ │    ▾ S public             │ │                                                                                      │
+ │      ▾ Tables             │ │                                                                                      │
+ │        ▸ T organizat╭────────────────────────────────────────────────────────────────────────╮                     │
  │        ▸ T customers│                                                                        │                     │
  │        ▸ T products │  This query may permanently modify or delete data                      │                     │
  │        ▸ T orders   │                                                                        │                     │

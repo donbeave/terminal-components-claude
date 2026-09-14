@@ -8,7 +8,7 @@ Read-only remote checks on 2026-09-11 reconfirmed:
 
 - Terminal-components main `7b27732a8c3c131760ec3438f641cb3c11343a42`, investigation checkout `2e2401393c47360741ebd321679de08982dca50a` (then Holla), annotated tag object `a643909d9a782adaf0aa1e3357710a5ed3f24443` (then `holla-fable-2026-09-10`; live tag `visual-baseline` is `5e533943`), and peeled historical freeze `02f5294bfdbf38004cc49130d0aff1d01f31434c`.
 - Task-format remote main and installed `taskfmt 0.2.0` both identify `52d9f1eb7721f409bc47beb9fced7997b5c13ede`.
-- Tui-snap upstream main remains `5036cf87e621e6beb66deffe3224abdbefc955cb`. Its [required PR](https://github.com/donbeave/tui-snap/pull/1) remains open, non-draft and mergeable at reviewed head `883d03f19d890bbbf27468798db78b04e85297ac`; no merge was performed.
+- Tui-snap upstream main is `0a2e490802b7b048cd96349c6af860f8a3a05c3d` (2026-09-15). [PR #1](https://github.com/donbeave/tui-snap/pull/1) merged at reviewed head `883d03f19d890bbbf27468798db78b04e85297ac`; terminal-components pins the current tip in `Cargo.toml`.
 
 ## Executed checks
 

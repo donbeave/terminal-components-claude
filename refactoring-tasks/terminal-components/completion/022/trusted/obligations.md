@@ -154,9 +154,9 @@ Each clause below retains its exact source and disposition. Accepted requirement
 
 - Source: 215990ef;abb480ac;c9661f6c;64add0ea;812bad84;02f5294b; IMPROVEMENTS_PLAN.md;docs/improvements/f06-preserve-datagrid-cursor-identity-through-local-sort.md
 - Requirement: Grid display sort preserves logical cursor/edit/selection identity
-- Disposition: later_open; current current_main_mapping_required
-- Remaining proof: Sort changes order without retargeting row state
-- Gates: Grid sort identity
+- Disposition: deferred_not_selected_oracle_preserved; current historical_proposal_not_current_product_gate
+- Remaining proof: Deferred proposal not selected; preserve oracle grid.rs:1178-1188 local-sort order and resulting cursor/range on reachable TablePro query grids; modern Grid retains stable-key machinery
+- Gates: Source-qualified deferred disposition and actual post-sort cursor/range trajectory; no proposed-behavior PASS claim
 - Origin: docs/refactoring-plan/historical-obligations.tsv:137; global semantic anchor; supplemental clauses retained
 
 ### HIST:F07

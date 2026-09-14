@@ -147,9 +147,9 @@ Each clause below retains its exact source and disposition. Accepted requirement
 
 - Source: 215990ef;abb480ac;c9661f6c;64add0ea;812bad84;02f5294b; IMPROVEMENTS_PLAN.md;docs/improvements/f17-empty-allocations-emit-nothing.md
 - Requirement: Empty allocations paint/register nothing
-- Disposition: later_open; current current_main_mapping_required
-- Remaining proof: Zero/tiny nested containment with sentinel surroundings
-- Gates: Component containment
+- Disposition: deferred_oracle_stray_paint_preserved_architectural_containment_retained; current historical_proposal_not_current_product_gate
+- Remaining proof: Architectural zero/tiny containment required on shared components; preserve oracle Showcase Buttons matrix header paint at pages/buttons.rs:151-159 where source emitted outside strict height bounds
+- Gates: Separate generic containment proof from exact source stray-header frames where emitted
 - Origin: docs/refactoring-plan/historical-obligations.tsv:151; global semantic anchor; supplemental clauses retained
 
 ### HIST:EARLY-AMEND-001

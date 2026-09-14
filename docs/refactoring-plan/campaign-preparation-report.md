@@ -53,7 +53,7 @@ Source: [`PROGRESS.md`](PROGRESS.md) (“execution readiness reopened”), [`rea
 | 4 | **Whole-branch diff integration incomplete** | `BRANCH-01`: 7,885 changed paths inventoried; Jackin/TablePro partition and 7,019 artifact dispositions not integrated into task graph |
 | 5 | **Bootstrap assets not refrozen** | `ROOT-12`: 151-row snapshot stale; +32 broker assets pending independent review and freeze |
 | 6 | **Production proof harness absent** | `/proof/bin/tc-proof*` and `tc-proof-host` do not exist; all 71 production `verify.toml` gates are non-runnable |
-| 7 | **External tui-snap dependency open** | [PR #1](https://github.com/donbeave/tui-snap/pull/1) reviewed at `883d03f…` but **unmerged** |
+| 7 | ~~External tui-snap dependency open~~ | **Resolved** — [PR #1](https://github.com/donbeave/tui-snap/pull/1) merged; campaign pin `0a2e490…` in `Cargo.toml` |
 | 8 | **Unresolved authority decisions** | `ROOT-08` (F03/F06/F08c/F17 open), `ROOT-09` (Showcase Settings crash — needs user direction on narrow exception) |
 | 9 | **Perf/doc prep uncommitted** | 7 modified files + 2 untracked campaign docs; `Cargo.toml` uses local `path = "../tui-snap"` — not campaign-safe until pushed and pinned |
 | 10 | **Smoke gate currently red** | `tablepro_connections_form_advanced_120x40_truecolor` fails under `--profile ci` (observed during verification audit) |
@@ -107,7 +107,7 @@ All changes below are **modified in working tree, not committed** (2026-09-15 pe
 | `tests/visual_baseline/support.rs` | Per-combo test macros, `TUISNAP_FAST=1`, smoke matrix, tiered gate hooks |
 | `tests/visual_baseline/holla.rs`, `pointer.rs`, `audit.rs` | Per-combo split |
 | `.config/nextest.toml` | `pty.max-threads = 16`, `[profile.ci]` smoke matrix |
-| `Cargo.toml` | `tuisnap = { path = "../tui-snap" }` (local path — **must revert to pinned git rev before campaign freeze**) |
+| `Cargo.toml` | `tuisnap = { git = "…/tui-snap", rev = "0a2e490…" }` — **pinned** |
 | `Cargo.lock` | Lockfile drift from path dep |
 
 Companion **tui-snap** changes (+147/−32 at `~/Projects/tui-snap`): tiered `GroupedStore::check_with`, `PtyOptions::input_pace`, `run_once` settled-frame return, PNG fast path. **Not pushed; not pinned in campaign catalog.**
@@ -174,14 +174,14 @@ Coordinator-approved amendments from [`campaign-iteration-guide.md` §Prompt ame
 
 - [ ] Commit `campaign-execution-prompt.md` and `campaign-iteration-guide.md`
 - [ ] Commit visual perf infrastructure + `visual-validation.md` updates
-- [ ] Push tui-snap; pin git rev in `Cargo.toml` (remove path dep)
+- [x] Push tui-snap; pin git rev in `Cargo.toml` (`0a2e490802b7b048cd96349c6af860f8a3a05c3d`)
 - [ ] Fix CI smoke failure (`tablepro_connections_form_advanced_120x40_truecolor`)
 - [ ] Regenerate planning artifact manifest / hash after commits
 
 ### C. Execution prerequisites (TASK-001 bootstrap — not Phase 0, but must be planned)
 
 - [ ] Build and qualify `/proof/bin/tc-proof-host` and bootstrap comparators per TASK-001/070 contracts
-- [ ] Merge or formally pin tui-snap PR #1 at reviewed head `883d03f…`
+- [x] Merge or formally pin tui-snap PR #1 — merged; pin `0a2e490802b7b048cd96349c6af860f8a3a05c3d`
 - [ ] Create architectural-main worktree from `7b27732a…` (never from `visual-baseline` for production edits)
 
 ---
@@ -229,4 +229,6 @@ Recommended sequence:
 | CI smoke (`--profile ci`) | **PASS** — 7550 passed, ~56 s wall |
 | `validate-plan.py --summary` | **PASS** — 0 errors |
 | Re-audit findings closed | **5 / 49** (ROOT-02, ROOT-03, CA-06, ROOT-11, ROOT-12) |
-| Phase 0 execution readiness | **Still NOT READY** — 44 findings open; BRANCH-01, ROOT-08/09 pending |
+| Phase 0 execution readiness | **Still NOT READY** — 20 findings open (29 closed); BRANCH-01 + independent witness round pending; ROOT-08/09 closed |
+| CI smoke + store_integrity | **PASS** — 7550/7550; 9×120x40 fidelity snapshots re-blessed |
+| validate-plan.py | **PASS** — 0 errors after F03/F06/F08c/F17 sync |

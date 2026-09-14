@@ -10,7 +10,7 @@ The additional whole-main-versus-Holla review has an exact 7,885-path inventory 
 
 ## Phase 0 planning checkpoint (2026-09-15)
 
-Phase 0 cross-artifact validators are green in the working tree: `python3 docs/refactoring-plan/evidence/validate-plan.py --summary` passes with zero errors; `assemble-plan.py` and `derive-task-graph.py` report no stale projection; DEC ADJ-14 owners bind TASK-013/015/068 in traceability; all 73 AGENTS protocols match the canonical hash; bootstrap assets are refrozen (202 rows; all six `freeze-bootstrap-assets.py --check` groups pass). Five of 49 [re-audit findings](reaudit-findings.tsv) are closed on this evidence; BRANCH-01, ROOT-08/09 authority decisions and independent witness reviews remain open. Campaign prep bundle (docs, perf, visual-validation.md) is ready but **not yet committed**.
+Phase 0 cross-artifact validators are green in the working tree: `python3 docs/refactoring-plan/evidence/validate-plan.py --summary` passes with zero errors; `assemble-plan.py` and `derive-task-graph.py` report no stale projection; DEC ADJ-14 owners bind TASK-013/015/068 in traceability; all 73 AGENTS protocols match the canonical hash; bootstrap assets are refrozen (202 rows; all six `freeze-bootstrap-assets.py --check` groups pass). CI visual smoke (`--profile ci`) passes 7550/7550. **28 of 49** [re-audit findings](reaudit-findings.tsv) are closed; ROOT-08/09 authority (F03/F06/F08c/F17) recorded in ADJ-09 extension. BRANCH-01 integration, independent witness reviews, and seven `pending`-evidence rows remain open. Campaign execution (`tc-proof-host`, TASK-001+) is still future work.
 
 ## Pinned authority
 
@@ -45,7 +45,7 @@ The [derived graph](task-graph.md) currently has maximum depth 35, 24 equally de
 
 ## Verification and external tool evidence
 
-The identified reusable tui-snap gaps have an actual [PR #1](https://github.com/donbeave/tui-snap/pull/1). The independent [tool review](tuisnap-review.md) approves the scoped head `883d03f19d890bbbf27468798db78b04e85297ac`, tree `dadbaa70facc317cfabb52f0374c1f3cdceb46a1`; the recorded PR was open and unmerged. [Verification investigation](verification.md) distinguishes real direct/PTY/tool tests from future full-oracle captures.
+The identified reusable tui-snap gaps were closed by merged [PR #1](https://github.com/donbeave/tui-snap/pull/1) (reviewed head `883d03f19d890bbbf27468798db78b04e85297ac`). The campaign pins `0a2e490802b7b048cd96349c6af860f8a3a05c3d` on `donbeave/tui-snap` main, which includes that merge plus tiered grouped checks and PTY pacing used by visual-baseline smoke. [Verification investigation](verification.md) distinguishes real direct/PTY/tool tests from future full-oracle captures.
 
 The prior comparator, host, runner and actual-Rust preparation under [evidence](evidence/) has recorded independent review in [executed verification](planning-verification.md). [Bootstrap assets](bootstrap-assets.tsv) now record 202 frozen rows across six groups (proof, runner, flow, architecture, style-timing, broker); all pass `freeze-bootstrap-assets.py --check`. Source-policy, actual style-time qualification and corrected flow inputs still require independent review beyond the artifact-integrity gate. Current qualified-source and timing work is linked through [the finding register](reaudit-findings.tsv).
 

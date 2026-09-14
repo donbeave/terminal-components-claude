@@ -117,9 +117,9 @@ Each clause below retains its exact source and disposition. Accepted requirement
 
 - Source: 215990ef;abb480ac;c9661f6c;64add0ea;812bad84;02f5294b; IMPROVEMENTS_PLAN.md;docs/improvements/f08c-ctrl-shift-home-end.md
 - Requirement: Ctrl+Shift+Home/End extend selection according to editor contract
-- Disposition: later_open; current current_main_mapping_required
-- Remaining proof: Modifier matrix and selection anchor integrity
-- Gates: Editor modified keys
+- Disposition: deferred_not_selected_oracle_preserved; current historical_proposal_not_current_product_gate
+- Remaining proof: Deferred proposal not selected; preserve oracle field_common.rs:78-79 non-extending Ctrl+Home/End routing when Shift present; preserve separate Shift+Home/End and Ctrl+Shift+Left/Right branches
+- Gates: Source-qualified deferred disposition and actual modifier routing trajectory; per-app binding configuration at shared seam permitted
 - Origin: docs/refactoring-plan/historical-obligations.tsv:141; global semantic anchor; supplemental clauses retained
 
 ### HIST:F10

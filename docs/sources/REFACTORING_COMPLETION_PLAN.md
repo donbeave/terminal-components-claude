@@ -31,10 +31,11 @@ Measured locally and against remote references on 2026-09-11:
 | Main/`visual-baseline` merge base | `cc14dd6beae526884aabdf897e309be837b4f504` |
 | Current task-format main and installed CLI | `52d9f1eb7721f409bc47beb9fced7997b5c13ede` |
 | Tui-snap upstream main before required repairs | `5036cf87e621e6beb66deffe3224abdbefc955cb` |
-| Reviewed tui-snap PR #1 head | `883d03f19d890bbbf27468798db78b04e85297ac` |
+| Reviewed tui-snap PR #1 head (merged) | `883d03f19d890bbbf27468798db78b04e85297ac` |
 | Reviewed tui-snap tree | `dadbaa70facc317cfabb52f0374c1f3cdceb46a1` |
+| Campaign tui-snap pin (`Cargo.toml` git rev) | `0a2e490802b7b048cd96349c6af860f8a3a05c3d` |
 
-[Tui-snap PR #1](https://github.com/donbeave/tui-snap/pull/1) is open and unmerged; its remote head matches the reviewed commit above. Reference acquisition must pin that head, not a moving PR branch. The final verification contract must also bind tool source, lockfiles, binary, terminal engine, profile, font, adapters, scenario manifest and reference source.
+[Tui-snap PR #1](https://github.com/donbeave/tui-snap/pull/1) merged at the reviewed head above; the campaign pins current main tip `0a2e490…`, which includes that merge plus grouped-store and performance gates used by visual-baseline smoke. Reference acquisition must pin the catalog rev, not a moving branch. The final verification contract must also bind tool source, lockfiles, binary, terminal engine, profile, font, adapters, scenario manifest and reference source.
 
 ## 4. Repository and branch topology
 

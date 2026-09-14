@@ -2,7 +2,27 @@
 
 This register evaluates all twenty items in [docs/sources/PLANNING_GOAL.md §22](../sources/PLANNING_GOAL.md). It tracks planning readiness, not completion of the future refactoring. Investigations can be evidence-complete while verification qualification or final independent acceptance remains incomplete.
 
-Current overall assessment: **reopened; the table below records the previous acceptance pass, not current execution readiness**. A renewed source-first, line-by-line audit has identified additional scope and contract gaps. See [the re-audit register](reaudit-plan.md). All twenty conditions require renewed current evidence after repairs. Qualified preparation is not a claim that the future production harness or refactored applications already pass.
+Current overall assessment: **reopened; closer to READY on mechanical gates but still NOT READY overall**. A renewed source-first, line-by-line audit has identified additional scope and contract gaps. See [the re-audit register](reaudit-plan.md). All twenty conditions require renewed current evidence after repairs. Qualified preparation is not a claim that the future production harness or refactored applications already pass.
+
+## Current §22 tally (2026-09-15 verification round)
+
+| Status | Count | Notes |
+| --- | ---: | --- |
+| **Proven** (current affirmative evidence) | **10** | §22.1, §22.5, §22.6, §22.9, §22.10, §22.12, §22.13, §22.14, §22.15, §22.19 |
+| **Unproven** (open re-audit work or failed gate) | **10** | §22.2, §22.3, §22.4, §22.7, §22.8, §22.11, §22.16, §22.17, §22.18, §22.20 |
+
+Re-audit register: **28 closed / 21 open** ([`reaudit-findings.tsv`](reaudit-findings.tsv); empty `remaining` = closed).
+
+### Phase 0 mechanical gates (this round)
+
+| Gate | Result |
+| --- | --- |
+| `validate-plan.py --summary` | **PASS** — `error_count: 0`, 647 historical prose sections, 3243 traceability edges |
+| `assemble-plan.py` / `derive-task-graph.py` | **PASS** — idempotent (`written: false`, `changed: []`); depth 35, 24 longest paths |
+| `taskfmt project lint terminal-components` | **PASS** — 73/73 packages, 0 errors |
+| `freeze-bootstrap-assets.py --check` (all 6 groups) | **PASS** — 202 bootstrap assets, 0 changed |
+| `cargo nextest run -E 'test(store_integrity)'` | **FAIL** — 18 stale snapshot names not in suite inventory |
+| `cargo nextest run --profile ci --run-ignored only -E 'binary(visual_baseline)'` | **PASS** — 7550/7550 (~110 s) |
 
 | §22 item | Required proof | Previous pass assessment and evidence — not current readiness |
 | --- | --- | --- |
@@ -14,7 +34,7 @@ Current overall assessment: **reopened; the table below records the previous acc
 | 6 | Four apps inventoried against oracle | Investigation complete: [Showcase](showcase.md), [Holla](holla.md), [Jackin](jackin.md), [TablePro](tablepro.md). |
 | 7 | Important visible states/flows inventoried | Proven. [361 scenarios](application-parity.tsv), 84 derived Jackin/TablePro identities and 35 named Holla/shell contributions have complete source/owner/proof bindings; [parity rereview](review-parity-repairs.md) accepts staging and native/resized coverage. |
 | 8 | Deterministic visual/behavioral regression detection | Proven at planning boundary. [Executed verification](planning-verification.md), [verifier rereview](review-verifier-repairs.md), [bootstrap review](bootstrap-review.md) and [Rust qualification](review-rust-qualification.md) establish independently qualified, frozen acceptance mechanisms. Full application captures remain prerequisite outputs. |
-| 9 | Tui-snap gaps resolved or actual PR dependency | Evidence complete for identified tool gaps. [PR #1](https://github.com/donbeave/tui-snap/pull/1) exists; [independent tool review](tuisnap-review.md) approves scoped head `883d03f19d890bbbf27468798db78b04e85297ac`. This is not approval of the separate project harness. |
+| 9 | Tui-snap gaps resolved or actual PR dependency | **Proven.** [PR #1](https://github.com/donbeave/tui-snap/pull/1) merged; campaign pins `0a2e490802b7b048cd96349c6af860f8a3a05c3d` (includes reviewed head `883d03f19d890bbbf27468798db78b04e85297ac`). [Independent tool review](tuisnap-review.md) and CI smoke (7550/7550) apply. This is not approval of the separate project harness. |
 | 10 | All architecture obligations mapped to tasks | Proven. [Traceability](traceability-components.tsv) covers 32 ARCH, 54 COMP and eight decisions; registry non-frame classification and actual architecture witnesses passed [rereview](review-contract-repairs.md). |
 | 11 | All important parity obligations mapped to automation | Proven. [Application matrix](application-parity.tsv), exact source-derived contributions and [parity rereview](review-parity-repairs.md) preserve all intact parents and their valid automated closing owners. |
 | 12 | Every implementation task follows current task-format | Proven. All 73 packages pass pinned canonical lint with zero errors/warnings, including final TASK-072 AC-009/CHK-011. [Format identity](task-format.md) was remotely reconfirmed. |

@@ -35,7 +35,7 @@ These rows summarize required work, not permission to omit the detailed contract
 
 Source compatibility does not automatically override accepted modern generic APIs. Source-specific Select navigation, Steps presentation/actions, Grid sort and click behavior, editing chords and explicit color selection require narrow shared policies and consumer configuration. Preserve generic defaults unless a separately reviewed decision changes them.
 
-An actual immutable-oracle crash was reproduced in Showcase Settings after removing selected environment entries and extending selection. A successful post-crash baseline cannot be invented. Safe continuation requires an explicit authority decision; until then this branch remains unresolved. Other deferred source proposals are not automatically accepted refactoring work.
+An actual immutable-oracle crash was reproduced in Showcase Settings after removing selected environment entries and extending selection. A successful post-crash baseline cannot be invented. Disposition **`oracle_crash_archived_safe_continuation_required`** (ADJ-09 extension, approved 2026-09-15): pre-crash frames match oracle; refactor requires safe continuation without weakening identity APIs. Other deferred source proposals are not automatically accepted refactoring work.
 
 Universal allocation or timing promises must match measurable behavior. Long transient grapheme fragments require bounded-by-content storage; borrowed-input guarantees remain separate. Timing qualification and a real production performance pass are distinct. Failed or invalid measurements remain visible.
 
@@ -45,7 +45,7 @@ Universal allocation or timing promises must match measurable behavior. Long tra
 - [Components A](branch-diff-components-a.md): complete 41-path source review.
 - [Components B](branch-diff-components-b.md): complete 35-path source review.
 - [Holla](branch-diff-holla.md): complete 86-path source review.
-- [Jackin and TablePro](branch-diff-jackin-tablepro.md): ongoing combined review; no whole-partition completion claim here.
+- [Jackin and TablePro](branch-diff-jackin-tablepro.md): source review complete; integration in progress via [findings ledger](branch-diff-findings-jackin-tablepro.tsv) and [read ledger](branch-diff-jackin-tablepro-read-ledger.tsv).
 - [Exact inventory](branch-diff-inventory.tsv) and [artifact decode census](branch-artifact-census.json): coverage inputs, not acceptance certificates.
 - [Re-audit plan](reaudit-plan.md): remaining completion conditions and independent ownership.
 

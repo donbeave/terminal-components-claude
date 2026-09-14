@@ -246,9 +246,9 @@ Each clause below retains its exact source and disposition. Accepted requirement
 
 - Source: 215990ef;abb480ac;c9661f6c;64add0ea;812bad84;02f5294b; IMPROVEMENTS_PLAN.md;docs/improvements/f03-atomic-listbox-mutation.md
 - Requirement: Collection mutation atomically reconciles items/checks/cursor/chosen/range anchor/scroll
-- Disposition: later_open; current current_main_mapping_required
-- Remaining proof: Actual Settings delete then Shift+Up plus insert/delete endpoint properties
-- Gates: List and Settings identity
+- Disposition: oracle_crash_archived_safe_continuation_required; current historical_crash_not_product_parity_gate
+- Remaining proof: Oracle delete-then-Shift+Up panics at list.rs:99; pre-crash frames match oracle; refactor requires safe continuation without weakening identity APIs; no post-failure oracle frame
+- Gates: Source-qualified crash archive plus safe-continuation witness; SC-SETTINGS-ENV does not cover crashing trajectory
 - Origin: docs/refactoring-plan/historical-obligations.tsv:134; global semantic anchor; supplemental clauses retained
 
 ### HIST:F05

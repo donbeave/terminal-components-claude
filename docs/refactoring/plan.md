@@ -6,7 +6,7 @@
 
 **Completion is reopened; execution readiness is NOT currently accepted.** The 73-task catalog passed its recorded checks, but the source-first, line-by-line re-audit reopened on 2026-09-11 identified scope and contract gaps (`docs/sources/REFACTORING_COMPLETION_PLAN.md` header; `docs/refactoring-plan/reaudit-plan.md`). The previous completion audit and verification record are historical evidence, not acceptance. The 151-row frozen asset manifest (`bootstrap-assets.tsv`) is stale and must be resealed only after independent review. The production refactor and the production verification harness have **not** been implemented or executed.
 
-Active boundary: no terminal-components production refactor, task execution, integration branch, commit, merge or publication is authorized. The only permitted external implementation is the tui-snap dependency, which is done but unmerged: PR #1 head `883d03f19d890bbbf27468798db78b04e85297ac`, a hard prerequisite of reference qualification.
+Active boundary: no terminal-components production refactor, task execution, integration branch, commit, merge or publication is authorized. The tui-snap dependency is merged and pinned at `0a2e490802b7b048cd96349c6af860f8a3a05c3d` (includes reviewed PR #1 head `883d03f19d890bbbf27468798db78b04e85297ac`).
 
 The re-audit is organized as seven task partitions (001–008/070–072, 009–020, 021–031/073, 032–039, 040–050, 051–064, 065–069) plus cross-cutting history and a coordinator, each with exact coverage and independent recheck rules (`reaudit-plan.md`). Findings and dispositions live in `reaudit-findings.tsv`; material work remains open until repaired bytes, all source/task joins, executable qualifiers and the final manifest are independently checked. A parallel whole-branch review (`branch-continuation-proposal.md`, exact inventory 7,885 changed paths) maps required continuation areas to existing task owners — it routes changes into the existing task graph, not a competing rewrite.
 
@@ -19,7 +19,8 @@ The re-audit is organized as seven task partitions (001–008/070–072, 009–0
 | Planning checkout visual-baseline | `2e2401393c47360741ebd321679de08982dca50a` |
 | Main/visual-baseline merge base | `cc14dd6beae526884aabdf897e309be837b4f504` |
 | task-format main + installed CLI | `52d9f1eb7721f409bc47beb9fced7997b5c13ede` |
-| tui-snap reviewed PR #1 head | `883d03f19d890bbbf27468798db78b04e85297ac` (tree `dadbaa70facc317cfabb52f0374c1f3cdceb46a1`) |
+| tui-snap reviewed PR #1 head (merged) | `883d03f19d890bbbf27468798db78b04e85297ac` (tree `dadbaa70facc317cfabb52f0374c1f3cdceb46a1`) |
+| tui-snap campaign pin | `0a2e490802b7b048cd96349c6af860f8a3a05c3d` |
 
 Topology: main and visual-baseline have 774 and 38 commits outside the merge base respectively. Main is a virtual workspace (`junie-tui`, `junie-tui-testing`, `xtask`, four app packages) and already contains the prior integration merged as PR #1; the oracle retains the old root library and `src/bin` applications (`docs/sources/REFACTORING_COMPLETION_PLAN.md` §3–4).
 

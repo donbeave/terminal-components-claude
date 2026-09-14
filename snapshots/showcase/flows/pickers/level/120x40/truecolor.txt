@@ -22,7 +22,7 @@
    Diff
    Data grid
    Chips & selects
-▎› Pickers
+ › Pickers
    Chrome
 
    Screens
@@ -37,4 +37,4 @@
 
 
 
- ↑ ↓ Move  Enter Open  Tab Into page  q Quit                                                     Chose Safe Mode (Full)
+ Enter Open  Tab Next                                                                            Chose Safe Mode (Full)

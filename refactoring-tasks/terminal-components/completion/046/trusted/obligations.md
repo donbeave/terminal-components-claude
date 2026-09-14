@@ -28,8 +28,8 @@ The following rows are complete primary ownership, not partial journeys. This ta
 
 - **fixture:** disk-cleanup
 - **sizes:** 80x24,100x30,120x40,160x50
-- **actions:** NEW(disk-cleanup,Paused,40); DRAW; TICKS(10); DRAW; repeat fresh run
-- **checkpoints:** initial full cells/cursor/focus/hits; unchanged after ticks; repeat byte identity; all four palettes
+- **actions:** NEW(disk-cleanup,Paused,40); DRAW; TICKS(10); DRAW; repeat fresh run; independently launch the same scenario/motion/frame through normal production CLI/lib/World constructor under holla-shell-construction-contract.md; capture source-qualified executable opening and cleanup
+- **checkpoints:** initial full cells/cursor/focus/hits; unchanged after ticks; repeat byte identity; all four palettes; canonical scenario constructor genuinely succeeds; no ScenarioUnavailable or substitute world; full launch closes only at this parent owner
 - **oracle_source:** src/bin/holla/scenario.rs:100; tools/holla_shots.sh:14
 - **existing_evidence:** app_tests.rs::every_scenario_renders_at_every_size_without_panicking; app_tests_flows.rs::every_scenario_is_deterministic_at_a_frame
 - **component_dependencies:** shell/theme/layout/fixture-specific
@@ -39,8 +39,8 @@ The following rows are complete primary ownership, not partial journeys. This ta
 
 - **fixture:** parity-delete-safety
 - **sizes:** 80x24,100x30,120x40,160x50
-- **actions:** NEW(parity-delete-safety,Paused,40); DRAW; TICKS(10); DRAW; repeat fresh run
-- **checkpoints:** initial full cells/cursor/focus/hits; unchanged after ticks; repeat byte identity; all four palettes
+- **actions:** NEW(parity-delete-safety,Paused,40); DRAW; TICKS(10); DRAW; repeat fresh run; independently launch the same scenario/motion/frame through normal production CLI/lib/World constructor under holla-shell-construction-contract.md; capture source-qualified executable opening and cleanup
+- **checkpoints:** initial full cells/cursor/focus/hits; unchanged after ticks; repeat byte identity; all four palettes; canonical scenario constructor genuinely succeeds; no ScenarioUnavailable or substitute world; full launch closes only at this parent owner
 - **oracle_source:** src/bin/holla/scenario.rs:100; tools/holla_shots.sh:14
 - **existing_evidence:** app_tests.rs::every_scenario_renders_at_every_size_without_panicking; app_tests_flows.rs::every_scenario_is_deterministic_at_a_frame
 - **component_dependencies:** shell/theme/layout/fixture-specific
@@ -50,8 +50,8 @@ The following rows are complete primary ownership, not partial journeys. This ta
 
 - **fixture:** parity-cleanup-results
 - **sizes:** 80x24,100x30,120x40,160x50
-- **actions:** NEW(parity-cleanup-results,Paused,40); DRAW; TICKS(10); DRAW; repeat fresh run
-- **checkpoints:** initial full cells/cursor/focus/hits; unchanged after ticks; repeat byte identity; all four palettes
+- **actions:** NEW(parity-cleanup-results,Paused,40); DRAW; TICKS(10); DRAW; repeat fresh run; independently launch the same scenario/motion/frame through normal production CLI/lib/World constructor under holla-shell-construction-contract.md; capture source-qualified executable opening and cleanup
+- **checkpoints:** initial full cells/cursor/focus/hits; unchanged after ticks; repeat byte identity; all four palettes; canonical scenario constructor genuinely succeeds; no ScenarioUnavailable or substitute world; full launch closes only at this parent owner
 - **oracle_source:** src/bin/holla/scenario.rs:100; tools/holla_shots.sh:14
 - **existing_evidence:** app_tests.rs::every_scenario_renders_at_every_size_without_panicking; app_tests_flows.rs::every_scenario_is_deterministic_at_a_frame
 - **component_dependencies:** shell/theme/layout/fixture-specific
