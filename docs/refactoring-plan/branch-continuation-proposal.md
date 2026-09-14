@@ -45,8 +45,9 @@ Universal allocation or timing promises must match measurable behavior. Long tra
 - [Components A](branch-diff-components-a.md): complete 41-path source review.
 - [Components B](branch-diff-components-b.md): complete 35-path source review.
 - [Holla](branch-diff-holla.md): complete 86-path source review.
-- [Jackin and TablePro](branch-diff-jackin-tablepro.md): source review complete; integration in progress via [findings ledger](branch-diff-findings-jackin-tablepro.tsv) and [read ledger](branch-diff-jackin-tablepro-read-ledger.tsv).
+- [Jackin and TablePro](branch-diff-jackin-tablepro.md): source review complete; **29/29 findings integrated** via [findings ledger](branch-diff-findings-jackin-tablepro.tsv), ADJ-18–21, and `jt-branch-corrections.md` supplements TASK-051–064.
 - [Exact inventory](branch-diff-inventory.tsv) and [artifact decode census](branch-artifact-census.json): coverage inputs, not acceptance certificates.
+- [Artifact disposition table](branch-diff-artifact-disposition.tsv): task-owner bindings for all 7,019 generated paths and surviving exporter/caller scopes (planning complete; not acceptance).
 - [Re-audit plan](reaudit-plan.md): remaining completion conditions and independent ownership.
 
 Final handoff must update every affected task, scope, dependency, canonical source row and proof branch, independently recheck the repaired contracts, and finish the remaining whole-file reads. This document remains a working synthesis until that work is complete.

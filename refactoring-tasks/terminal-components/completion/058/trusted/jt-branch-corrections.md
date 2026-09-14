@@ -8,7 +8,7 @@ TASK-005 must materialize every named branch below into distinct immutable actio
 
 Quoted PASTE payloads use JSON escapes; decode each once into the indicated bytes, rather than typing literal backslashes.
 
-These obligations are source-inspected planning branches for TASK-058, not executed or sealed baseline evidence. Pending ADJ-09 paste-recipient adjudication in BD-JT-07 and the separately owned surface/command families in BD-JT-03 remain unchanged by this supplement. No result from those pending items qualifies the branches below.
+These obligations are source-inspected planning branches for TASK-058, not executed or sealed baseline evidence. ADJ-09 TablePro Picker-under-modal paste in BD-JT-07 and the separately owned surface/command families in BD-JT-03 remain owned by TASK-059–063 supplements; this file closes only BD-JT-01/02 and the Connections/Form portions of BD-JT-03. No result from those sibling bindings qualifies the branches below.
 
 ## JT-CONNECTION-ACTIONS: separate control ownership — full owner TASK-058
 

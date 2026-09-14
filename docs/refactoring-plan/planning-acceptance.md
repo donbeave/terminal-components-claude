@@ -11,7 +11,7 @@ Current overall assessment: **reopened; closer to READY on mechanical gates but 
 | **Proven** (current affirmative evidence) | **10** | §22.1, §22.5, §22.6, §22.9, §22.10, §22.12, §22.13, §22.14, §22.15, §22.19 |
 | **Unproven** (open re-audit work or failed gate) | **10** | §22.2, §22.3, §22.4, §22.7, §22.8, §22.11, §22.16, §22.17, §22.18, §22.20 |
 
-Re-audit register: **34 closed / 15 open** ([`reaudit-findings.tsv`](reaudit-findings.tsv); empty `remaining` = closed).
+Re-audit register: **43 closed / 7 open** ([`reaudit-findings.tsv`](reaudit-findings.tsv); empty `remaining` = closed). Open rows are execution-deferred bootstrap `--runner` qualifications and BRANCH-01 tooling partition.
 
 ### Phase 0 mechanical gates (this round)
 

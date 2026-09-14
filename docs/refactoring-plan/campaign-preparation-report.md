@@ -60,16 +60,16 @@ Last audited: 2026-09-15 (subagent round + local verification).
 
 | Gate | Status |
 | --- | --- |
-| Re-audit register | **15 open / 34 closed** (49 total; 5 closed this session) |
+| Re-audit register | **7 open / 43 closed** (49 total; second closure round 2026-09-15) |
 | Independent `READY FOR REFACTORING EXECUTION` | **Not issued** |
 | `planning-acceptance.md` §22 | **10 proven / 10 unproven** |
 | Production harness (`tc-proof-host`, `tools/refactor-proof/`) | **Not built** — TASK-001 deliverable |
-| BRANCH-01 whole-branch diff | **Incomplete** — 7,885-path census not fully in task graph |
-| Campaign doc freeze | **Uncommitted** local edits to prompt/iteration/prep/visual-validation |
+| BRANCH-01 whole-branch diff | **Partial** — JT 29/29 integrated; 640/7885 inventory reviewed; tooling-tests partition open |
+| Campaign doc freeze | Committed @ `e2cbd0cf`; current round uncommitted |
 
 ### Top remaining blockers
 
-1. **15 open re-audit findings** — especially BRANCH-01, HIST-01, FND-01/02, STR-01–03, JT-JT01-JT06, 6 rows with `independent_evidence = pending`
+1. **7 open re-audit findings** — bootstrap `--runner` deferrals (FND/STR/ROOT-07/BA-ART-01/CLOSURE-02) + BRANCH-01 tooling partition
 2. **Independent witness round** — fresh adversarial reviewers must sign off on frozen catalog bytes
 3. **TASK-001 bootstrap** — canonical `taskfmt verify` + `tc-proof-host` non-runnable until harness exists
 4. **Catalog commit/freeze** — arm only from committed SHA; record exact tree hash at readiness
@@ -141,7 +141,7 @@ The stored prompt matches the coordinator specification. Preparation added (with
 
 ### A. Phase 0 (required before arming `/goal`)
 
-- [ ] Close **15 open** rows in [`reaudit-findings.tsv`](reaudit-findings.tsv)
+- [ ] Close **7 open** rows in [`reaudit-findings.tsv`](reaudit-findings.tsv) (6 require TASK-001/070/067 harness; 1 BRANCH-01 tooling)
 - [ ] Complete **6 pending** independent-evidence reviews
 - [ ] Finish **BRANCH-01** Jackin/TablePro partition integration
 - [ ] Re-prove all **20** §22 items in [`planning-acceptance.md`](planning-acceptance.md)

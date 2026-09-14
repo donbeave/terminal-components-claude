@@ -8,6 +8,8 @@ There are 1,214 complete five-format frame sets: PNG, ANSI, text, HTML and curso
 
 This is full byte/format/relationship inspection, not a claim that a person visually reviewed every raster or manually read every repeated frame cell. No historical recipe was executed, no image was regenerated, no live VT replay occurred, and no frame received oracle acceptance. The three Markdown bodies were read; generated table/recipe fields were parsed and checked across every record rather than treating a truncated terminal listing as a full read.
 
+Task-owner disposition for every aggregate artifact scope and surviving exporter/caller path is bound in [`branch-diff-artifact-disposition.tsv`](branch-diff-artifact-disposition.tsv). Independent bounded rereview of this partition and the census claims is recorded in [`branch-diff-history.md`](branch-diff-history.md#independent-bounded-artifact-report-rereview). Planning review for BA-ART-02 and BA-ART-03 is complete once that table and the census are present; execution witnesses remain with TASK-003/007/008/069/070 and TASK-001 as listed in the table.
+
 ## Complete relationship checks
 
 `branch-artifact-relationships.json` records all checks and all differences, including harmless serialization differences. Exact results:
@@ -30,12 +32,16 @@ Main `baseline/before/MANIFEST.md` names `0cd1bf7` in its generated header but `
 
 The old README explicitly warns that some PNG fonts lack CJK/emoji coverage. The old baseline NOTES record an earlier Container-info crash, undeliverable legacy Ctrl+backslash, unwired prefix and states captured only in progress. Those are useful historical limitations, not instructions to reintroduce old defects or infer completed later states. The newer immutable-oracle Settings crash is a separate reproduced finding and authority decision.
 
-TASK-003 preserves historical files/provenance as archival evidence and independently generates source-qualified current oracle baselines. TASK-007/008 disposition original recipe/test identities; full app owners close their actual reached routes. TASK-069 must not accept the historical `required` recipe flag, dirty capture, matching PNG hash or prior review string as a fresh completion receipt.
+TASK-003 preserves historical files/provenance as archival evidence and independently generates source-qualified current oracle baselines. TASK-007/008 disposition original recipe/test identities; full app owners close their actual reached routes. TASK-069 must not accept the historical `required` recipe flag, dirty capture, matching PNG hash or prior review string as a fresh completion receipt. Exact scope-to-owner bindings are in `branch-diff-artifact-disposition.tsv`.
 
 ## BA-ART-03: preserve canonical rendering improvements, not scalar exporters
 
-The tooling partition independently confirms main's surviving ANSI exporters regress from Holla's shared cell-grid path: scalar `len`/width logic mismeasures combining/wide text and fails clipping. Historical HTML/PNG byte equality cannot validate those algorithms. Keep the accepted canonical cell/rendering direction and qualified renderer boundary; explicitly retire inaccurate legacy exporters from acceptance or route their live callers through the qualified grid. Do not copy old Holla scripts wholesale or claim all PNGs are faithful because decoding succeeded. Exact executable-source findings and responsible script scopes belong to the tooling report.
+The tooling partition independently confirms main's surviving ANSI exporters regress from Holla's shared cell-grid path: scalar `len`/width logic mismeasures combining/wide text and fails clipping. Historical HTML/PNG byte equality cannot validate those algorithms. Keep the accepted canonical cell/rendering direction and qualified renderer boundary; explicitly retire inaccurate legacy exporters from acceptance or route their live callers through the qualified grid. Do not copy old Holla scripts wholesale or claim all PNGs are faithful because decoding succeeded. Exact executable-source findings, caller scopes and proof ownership are in [`reaudit-branch-tooling-tests.md`](reaudit-branch-tooling-tests.md) (BT02) and [`branch-diff-artifact-disposition.tsv`](branch-diff-artifact-disposition.tsv).
 
 ## Porting decision
 
 Do not port generated images, guard/lock files, logs or dirty historical captures as new baselines. Preserve recoverable historical evidence and its exact source references; finish main's controlled capture and canonical comparison paths. Carry forward any source-qualified interaction requirement through existing task/scenario ownership, not through unexecuted archival recipes. This partition establishes artifact integrity, limitations and use disposition only; current product behavior and visual parity remain separately unproved.
+
+## Planning review status
+
+BA-ART-02 and BA-ART-03 planning review is complete: full 7,019-path census (`branch-artifact-census.json`, `branch-artifact-relationships.json`), independent bounded rereview (`branch-diff-history.md`), and task-owner disposition table (`branch-diff-artifact-disposition.tsv`). This does not authorize oracle acceptance, recipe replay, or scalar-exporter proof. BA-ART-01 mixed-generation rejection remains a separate TASK-001/002/003/070 execution obligation.
