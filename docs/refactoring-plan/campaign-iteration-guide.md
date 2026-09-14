@@ -35,9 +35,8 @@ cargo nextest list --run-ignored only -E 'binary(visual_baseline) & test(showcas
 | **Edit loop** (per task) | Targeted filter + `TUISNAP_FAST=1` | Affected app/module/scenario only | seconds–few minutes |
 | **Ordinary regression** | `cargo nextest run` | ~544 non-ignored tests (no PTY captures) | ~1–3 min |
 | **PR / CI smoke** | `cargo nextest run --profile ci --run-ignored only -E 'binary(visual_baseline)'` | ~302 captures (120×40 truecolor only) | **~1–2 min** |
-| **Nightly / pre-acceptance** | `TUISNAP_FAST=1 cargo nextest run --run-ignored only -E 'binary(visual_baseline)'` | Full 7,550 combos; tiered gate skips PNG/HTML when `.ansi`+`.txt` match | **~30–45 min** |
-| **Pre-release fidelity** | `cargo nextest run --run-ignored only -E 'binary(visual_baseline)'` | Full matrix; every combo renders PNG/HTML | **~45–60 min** (current tree); **~2 h** legacy pre-per-combo path |
-| **Task acceptance / integration boundary** | Same as nightly (fast) or fidelity (final) | Full suite — **mandatory** | see above |
+| **Nightly speed feedback** | `TUISNAP_FAST=1 cargo nextest run --run-ignored only -E 'binary(visual_baseline)'` | Full 7,550 combos; tiered gate skips PNG/HTML when `.ansi`+`.txt` match | **~30–45 min** |
+| **Task acceptance / pre-release fidelity** | `cargo nextest run --run-ignored only -E 'binary(visual_baseline)'` | Full matrix; every combo renders PNG/HTML at fidelity timing | **~45–60 min** (current tree); **~2 h** legacy pre-per-combo path |
 
 \*Measured on a 16-thread PTY pool (2026-09-15 benchmarks on `visual-baseline`). CI runners with fewer cores may take longer; smoke remains ≪ full matrix.
 
@@ -75,22 +74,26 @@ cargo nextest run --profile ci --run-ignored only -E 'binary(visual_baseline)'
 
 ---
 
-## 3. Nightly / full gate
+## 3. Full matrix gates
 
-Full acceptance and closure boundaries require the complete matrix:
+**Task acceptance and closure** require the **fidelity** full matrix (no `TUISNAP_FAST`):
 
 ```sh
-# Recommended nightly / task-acceptance (tiered gate — skips PNG/HTML when ansi+txt match)
-TUISNAP_FAST=1 cargo nextest run --run-ignored only -E 'binary(visual_baseline)'
-
-# Pre-release / maximum fidelity (full PNG/HTML every combo)
 cargo nextest run --run-ignored only -E 'binary(visual_baseline)'
+```
+
+Optional **nightly speed feedback** (not a substitute for acceptance):
+
+```sh
+TUISNAP_FAST=1 cargo nextest run --run-ignored only -E 'binary(visual_baseline)'
 ```
 
 | Mode | Behaviour | Timing |
 | --- | --- | --- |
 | `TUISNAP_FAST=1` | 100 ms settle, 0 ms step pacing, tiered grouped gate (`full_render: false`) | **~30–45 min** |
-| Default (legacy path) | 400 ms settle, 120 ms pacing, full PNG/HTML gate every combo | **~45–60 min** current tree; **~2 h** on pre-per-combo / pre-fast infrastructure |
+| Default (fidelity) | 400 ms settle, 120 ms pacing, full PNG/HTML gate every combo | **~45–60 min** current tree; **~2 h** on pre-per-combo / pre-fast infrastructure |
+
+**FAST vs fidelity snapshots:** committed `snapshots/` are blessed at **fidelity** timing. `TUISNAP_FAST=1` can therefore report `cells-differ` on timing-sensitive flows (animation, duration labels, wheel settle) even when fidelity passes. Measured on `623a1a59`: **7350/7550 PASS** under FAST; **200 FAIL** across 11 flow families (~194 snapshot drift, ~6 parallel-capture timeouts that pass in isolation). Do **not** re-bless snapshots to match FAST unless explicitly adopting FAST as the new oracle; use targeted FAST filters during edit loops and fidelity for acceptance.
 
 Heavy flows (long `wait:` needles, e.g. `holla_flows_docker_done`) dominate single-combo time (~15–20 s); fast mode only trims settle/pacing/render overhead there.
 
@@ -104,13 +107,13 @@ cargo nextest run --run-ignored only --ignore-default-filter -E 'test(rebuild_re
 
 ## 4. When the prompt says “mandatory full visual gate”
 
-In [Campaign execution prompt](campaign-execution-prompt.md), **“mandatory full visual gate”** means:
+In [Campaign execution prompt](campaign-execution-prompt.md), **“mandatory full visual gate”** means the **fidelity** full matrix:
 
 ```sh
-cargo nextest run --run-ignored only -E 'binary(visual_baseline)'   # full matrix
-# or, for acceptance speed with equivalent ansi/txt coverage:
-TUISNAP_FAST=1 cargo nextest run --run-ignored only -E 'binary(visual_baseline)'
+cargo nextest run --run-ignored only -E 'binary(visual_baseline)'
 ```
+
+Use `TUISNAP_FAST=1` only for **targeted edit-loop filters** (§1) or optional nightly speed feedback (§3). It is **not** equivalent to the mandatory acceptance gate when snapshots are fidelity-blessed.
 
 **Required at:**
 
@@ -166,7 +169,7 @@ Use after production changes unless canonical host verification already proves a
 
 | Variable | When set | Effect |
 | --- | --- | --- |
-| **`TUISNAP_FAST=1`** | Local iteration, nightly full gate, task acceptance (recommended) | 100 ms settle; 0 ms inter-step pacing; tiered grouped gate — skips PNG/HTML render when `.ansi` and `.txt` both match ([`GroupedCheckOptions { full_render: false }`](../../tests/visual_baseline/support.rs)). |
+| **`TUISNAP_FAST=1`** | Local iteration, optional nightly speed feedback | 100 ms settle; 0 ms inter-step pacing; tiered grouped gate — skips PNG/HTML render when `.ansi` and `.txt` both match ([`GroupedCheckOptions { full_render: false }`](../../tests/visual_baseline/support.rs)). Not equivalent to acceptance when snapshots are fidelity-blessed (§3). |
 | **`TUISNAP_MATRIX=smoke`** | PR CI or manual smoke | Restricts matrix expansion to **120×40 truecolor** only. Equivalent to `--profile ci` (which sets `NEXTEST_PROFILE=ci` → same hook). |
 | **`TUISNAP_BLESS=1`** | Host bless/regeneration workflows only | Matrix runners continue after combo failure so all actuals are written before panicking. **Candidates must never set this**; executors must never bless. |
 | **`NEXTEST_PROFILE=ci`** | Set by `--profile ci` | Enables smoke matrix via `smoke_matrix()` in support.rs. |
@@ -182,19 +185,11 @@ See [visual-validation.md](../../refactoring-tasks/visual-validation.md).
 
 ---
 
-## Prompt amendments (coordinator review)
+## Prompt amendments (applied 2026-09-15)
 
-Exact locations in [campaign-execution-prompt.md](campaign-execution-prompt.md) that should reference this guide:
+All coordinator amendments below are **applied** in [campaign-execution-prompt.md](campaign-execution-prompt.md):
 
-| Location | Current text (summary) | Recommended amendment |
-| --- | --- | --- |
-| **`# Visual regression is a hard fail-closed gate`** — paragraph before the mandatory full visual gate block (~L519–525) | “run targeted feedback first if useful, then the mandatory full visual gate” with only the full-suite command | Add: “See [Campaign iteration guide](campaign-iteration-guide.md). During edit loops use targeted filters + `TUISNAP_FAST=1` (§1); run the mandatory full gate only at acceptance/integration boundaries (§4).” Split the code block into **iteration** vs **acceptance** commands. |
-| Same section — after “Also retain ordinary regression coverage” (~L527–532) | `cargo nextest run` only | Add note that default nextest excludes PTY captures (~544 tests, ~1–3 min); link §6. |
-| Same section — closure bullets (~L548–554) | “complete … visual closure” / “rerun the complete visual suite” | Clarify: full matrix with `TUISNAP_FAST=1` minimum; fidelity (no fast) before TASK-069 / merge readiness. |
-| **`# Parallelism`** — post-sibling integration (~L211) | “applicable visual regression checks” | Replace with: “visual checks per [iteration guide](campaign-iteration-guide.md) §4 for the combined impacted surface; full matrix if any sibling touched cross-app rendering.” |
-| **`# Failure / repair loop`** — step 8 (~L341) | “rerun the applicable functional and visual gates” | Cross-link §4: targeted visual while repairing; full gate before re-freeze and fresh verifier. |
-| **`# Mandatory per-task agent protocol` → IMPLEMENTER** (~L273) | “ordinary local tests for feedback” | Add bullet: may run targeted `TUISNAP_FAST=1` visual filters; must not claim acceptance from them. |
-| **`# Definition of done`** — visual bullet (~L802) | “visual baseline has zero unintended differences” | Footnote: proven by full-suite command in §3/§4, not smoke alone. |
-| **`# Final report`** — visual result line (~L838) | “full visual-baseline result” | Require reporting exact command, env (`TUISNAP_FAST`, profile), and tier (smoke / fast full / fidelity). |
-
-**Header cross-link (applied):** the execution prompt’s visual-regression section should link here at first mention (see edit in `campaign-execution-prompt.md`).
+- Visual regression: iteration vs acceptance split; link to this guide; targeted `TUISNAP_FAST=1` edit loops; **fidelity-only** mandatory full gate at boundaries.
+- Closure bullets: fidelity full matrix at app closures and TASK-069 (not FAST full matrix).
+- IMPLEMENTER: targeted visual filters allowed for feedback, not acceptance.
+- Final report: require command, env, and tier (smoke / fast full / fidelity).

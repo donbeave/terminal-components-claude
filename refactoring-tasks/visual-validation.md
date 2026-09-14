@@ -24,8 +24,8 @@ run `tuisnap accept`.
 | **Edit loop** | `TUISNAP_FAST=1` + targeted `-E` filter | Affected app/scenario only | Per production edit during a task |
 | **Ordinary regression** | `cargo nextest run` | ~544 non-ignored tests (no PTY captures) | After production changes |
 | **PR / CI smoke** | `--profile ci --run-ignored only -E 'binary(visual_baseline)'` | ~302 captures (120×40 truecolor) | Pull-request automation |
-| **Acceptance / closure** | `TUISNAP_FAST=1 cargo nextest run --run-ignored only -E 'binary(visual_baseline)'` | Full 7,550 combos (tiered gate) | Task acceptance, integration boundaries, chain closures |
-| **Pre-release fidelity** | `cargo nextest run --run-ignored only -E 'binary(visual_baseline)'` | Full matrix; PNG/HTML every combo | TASK-069 / merge readiness |
+| **Nightly speed feedback** | `TUISNAP_FAST=1 cargo nextest run --run-ignored only -E 'binary(visual_baseline)'` | Full 7,550 combos (tiered gate) | Optional; may drift vs fidelity-blessed snapshots on timing-sensitive flows |
+| **Acceptance / closure** | `cargo nextest run --run-ignored only -E 'binary(visual_baseline)'` | Full matrix; PNG/HTML every combo | Task acceptance, integration boundaries, chain closures, TASK-069 |
 
 Smoke and targeted filters do **not** substitute for the mandatory full gate at acceptance boundaries.
 
@@ -45,11 +45,11 @@ TUISNAP_FAST=1 cargo nextest run --run-ignored only \
 # PR / CI smoke (~302 captures, ~1–2 min)
 cargo nextest run --profile ci --run-ignored only -E 'binary(visual_baseline)'
 
-# acceptance / nightly — full matrix, tiered gate (~30–45 min)
-TUISNAP_FAST=1 cargo nextest run --run-ignored only -E 'binary(visual_baseline)'
-
-# pre-release fidelity — full PNG/HTML every combo (~45–60 min)
+# acceptance / closure — full matrix at fidelity timing (~45–60 min)
 cargo nextest run --run-ignored only -E 'binary(visual_baseline)'
+
+# optional nightly speed feedback — full matrix, tiered gate (~30–45 min)
+TUISNAP_FAST=1 cargo nextest run --run-ignored only -E 'binary(visual_baseline)'
 ```
 
 Example filters (see iteration guide §5):

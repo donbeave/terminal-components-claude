@@ -1,6 +1,8 @@
 # Campaign execution prompt
 
-Stored for **campaign preparation** on **2026-09-15**. This file freezes the canonical `/goal` prompt for executing the terminal-components refactoring campaign against the pinned catalog on `visual-baseline`. Do not edit planning contracts or task packages during campaign execution without explicit replanning.
+Stored for **campaign preparation** on **2026-09-15**; refreshed **2026-09-15** on branch `visual-baseline` @ `623a1a59` (tag `visual-baseline` remains frozen at `4a79c0a2`). This file freezes the canonical `/goal` prompt for executing the terminal-components refactoring campaign against the pinned catalog. Do not edit planning contracts or task packages during campaign execution without explicit replanning.
+
+**Fast iteration:** edit-loop visual tiers and targeted filters are in [Campaign iteration guide](campaign-iteration-guide.md) (mandatory addendum — not a relaxation of acceptance).
 
 **Frozen catalog references:** task packages under `refactoring-tasks/terminal-components/completion/`, planning artifacts under `docs/refactoring-plan/`, and source contracts under `docs/sources/`. See [Campaign executor adaptation](campaign-executor-protocol.md), [Planning progress](PROGRESS.md), and [Proof contract](proof-contract.md).
 
@@ -52,8 +54,10 @@ Expected current identities are:
 
 * architectural `main` starting point:
   `7b27732a8c3c131760ec3438f641cb3c11343a42`
-* current frozen `visual-baseline` branch/tag planning tree:
+* frozen annotated tag `visual-baseline` (peeled commit — do not move):
   `4a79c0a2d40fca46fc406b77157ce3b3f12ec16b`
+* current planning branch `visual-baseline` catalog tip (verify at arm time; may be ahead of tag):
+  `623a1a5985ad08baa99dfa397500927a35db2074` (as of 2026-09-15 prep)
 * immutable product-experience oracle referenced by the task contracts:
   `02f5294bfdbf38004cc49130d0aff1d01f31434c`
 * task-format authority:
@@ -65,7 +69,7 @@ Treat these identities as serving different purposes.
 
 The immutable product oracle defines the expected product experience.
 
-The frozen `visual-baseline` tree/tag contains planning contracts, visual evidence, task packages and supporting baseline infrastructure.
+The frozen `visual-baseline` tag pins the immutable oracle-era baseline; the planning branch carries the live task catalog, visual evidence, task packages and supporting baseline infrastructure. Record the exact catalog SHA when arming the campaign.
 
 Do not substitute one authority for another.
 
@@ -536,11 +540,14 @@ Pick `<filter>` from [Campaign iteration guide](campaign-iteration-guide.md) §5
 **Acceptance / integration boundary (mandatory full gate):**
 
 ```sh
-# Recommended: full matrix with tiered gate (~30–45 min)
-TUISNAP_FAST=1 cargo nextest run --run-ignored only -E 'binary(visual_baseline)'
-
-# Pre-release / merge readiness: full PNG/HTML every combo (~45–60 min)
+# Full matrix at fidelity timing (~45–60 min) — required for acceptance
 cargo nextest run --run-ignored only -E 'binary(visual_baseline)'
+```
+
+Optional nightly speed feedback (not a substitute for acceptance when snapshots are fidelity-blessed):
+
+```sh
+TUISNAP_FAST=1 cargo nextest run --run-ignored only -E 'binary(visual_baseline)'
 ```
 
 Also retain ordinary regression coverage:
@@ -568,11 +575,11 @@ If evidence indicates the frozen expected output itself is genuinely defective, 
 
 After every accepted task that can affect product rendering or interaction, preserve the full visual result with its task receipt.
 
-At application-chain closures (`039`, `050`, `057`, `064`) run the complete required application oracle/PTY and visual closure — full matrix with `TUISNAP_FAST=1` minimum (see [Campaign iteration guide](campaign-iteration-guide.md) §3–§4).
+At application-chain closures (`039`, `050`, `057`, `064`) run the complete required application oracle/PTY and visual closure — **fidelity** full matrix (see [Campaign iteration guide](campaign-iteration-guide.md) §3–§4).
 
-At cross-application joins and final closure, rerun the complete visual suite again.
+At cross-application joins and final closure, rerun the complete fidelity visual suite again.
 
-Before TASK-069 and merge readiness, run fidelity full gate (no `TUISNAP_FAST`) so every combo renders PNG/HTML.
+Before TASK-069 and merge readiness, run the same fidelity full gate so every combo renders PNG/HTML.
 
 The final tree must have zero unexpected visual differences.
 

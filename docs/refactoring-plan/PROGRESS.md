@@ -10,7 +10,7 @@ The additional whole-main-versus-Holla review has an exact 7,885-path inventory 
 
 ## Phase 0 planning checkpoint (2026-09-15)
 
-Phase 0 cross-artifact validators are green in the working tree: `python3 docs/refactoring-plan/evidence/validate-plan.py --summary` passes with zero errors; `assemble-plan.py` and `derive-task-graph.py` report no stale projection; DEC ADJ-14 owners bind TASK-013/015/068 in traceability; all 73 AGENTS protocols match the canonical hash; bootstrap assets are refrozen (202 rows; all six `freeze-bootstrap-assets.py --check` groups pass). CI visual smoke (`--profile ci`) passes 7550/7550. **28 of 49** [re-audit findings](reaudit-findings.tsv) are closed; ROOT-08/09 authority (F03/F06/F08c/F17) recorded in ADJ-09 extension. BRANCH-01 integration, independent witness reviews, and seven `pending`-evidence rows remain open. Campaign execution (`tc-proof-host`, TASK-001+) is still future work.
+Phase 0 cross-artifact validators are green in the working tree: `python3 docs/refactoring-plan/evidence/validate-plan.py --summary` passes with zero errors; `assemble-plan.py` and `derive-task-graph.py` report no stale projection; DEC ADJ-14 owners bind TASK-013/015/068 in traceability; all 73 AGENTS protocols match the canonical hash; bootstrap assets are refrozen (202 rows; all six `freeze-bootstrap-assets.py --check` groups pass). CI visual smoke (`--profile ci`) passes 7550/7550 (~87 s). **34 of 49** [re-audit findings](reaudit-findings.tsv) are closed; ROOT-08/09 authority (F03/F06/F08c/F17) recorded in ADJ-09 extension; SC-S01-S13, HO-H01-H03, RRA-03, JTR-03-JTR-06, and BA-FMT planning slices closed 2026-09-15. BRANCH-01 integration, independent witness reviews, and six `pending`-evidence rows remain open. Campaign execution (`tc-proof-host`, TASK-001+) is still future work. Working branch tip: `623a1a59` (5 commits ahead of tag `4a79c0a2`).
 
 ## Pinned authority
 
@@ -21,7 +21,7 @@ Recorded source inspection on 2026-09-11:
 | Immutable UI/UX oracle pin (then peeled `holla-fable-2026-09-10`; live tag `visual-baseline` is `4a79c0a2`) | `02f5294bfdbf38004cc49130d0aff1d01f31434c` |
 | Annotated tag object recorded 2026-09-11 | `a643909d9a782adaf0aa1e3357710a5ed3f24443` |
 | Architectural main inspected | `7b27732a8c3c131760ec3438f641cb3c11343a42` |
-| Investigation checkout (then `holla`; live checkout is `visual-baseline`) | `2e2401393c47360741ebd321679de08982dca50a` |
+| Planning branch tip (`visual-baseline`; verify with `git rev-parse HEAD`) | `623a1a5985ad08baa99dfa397500927a35db2074` (2026-09-15) |
 | Current-format source and installed CLI inspected | `52d9f1eb7721f409bc47beb9fced7997b5c13ede` |
 
 These are recorded campaign pins, not a claim that mutable remote branches have been freshly rechecked on every status update. The oracle governs behavior; main governs retained architecture. [History](history.md), [authority reconciliation](history-ledger-reconciliation.md) and [task-format inspection](task-format.md) explain their different roles.
@@ -33,11 +33,11 @@ These are recorded campaign pins, not a claim that mutable remote branches have 
 - Four independent audits and the joined matrix retain 361 base APP scenarios: [Showcase](showcase.md), [Holla](holla.md), [Jackin](jackin.md), [TablePro](tablepro.md), [application parity](application-parity.tsv). The current re-audit repaired source-inconsistent actions, focus, tick, geometry and paste assertions while preserving parent IDs. TablePro cell selection/click repair and full current integration proof remain in progress.
 - Important corrected facts remain explicit: Holla exists as a migrated app, not a missing binary; main has 11 worlds versus 34 oracle worlds. Dynamic-disabled capture cancellation already exists on main and its twelve focused tests pass; remaining overlap proof is distinct. Passing historical/app logic tests is not complete new-oracle parity.
 
-The earlier synchronized assembly contained 1,162 source IDs and 3,181 trace edges. Those totals are historical: new decisions, source-qualified owners and named contributions are being added. Final projection, graph and complete source/payload joins remain pending active-author handoffs; a self-consistent join alone cannot establish source completeness.
+The current synchronized assembly contains **1,170** source IDs and **3,243** trace edges (`validate-plan.py --summary`, 2026-09-15). New decisions, source-qualified owners and named contributions continue to land. Final projection, graph and complete source/payload joins remain pending active-author handoffs; a self-consistent join alone cannot establish source completeness.
 
 ## Catalog and execution graph
 
-The [task index](task-index.tsv) contains 73 bounded canonical packages under [completion](../../refactoring-tasks/terminal-components/completion/README.md). Current taskfmt project lint passes all 73; canonical schemas and AGENTS provenance are preserved. Packages specify requirements, typed acceptance, check argv, dependencies and writable/forbidden scope. Lint establishes format consistency, not trustworthy execution or semantic completeness.
+The [task index](task-index.tsv) contains 73 bounded canonical packages under [completion](../../refactoring-tasks/terminal-components/completion/README.md). Current taskfmt project lint passes all 73 when invoked with pinned `--config …/experiment.toml --projects-root …/refactoring-tasks`; canonical schemas and AGENTS provenance are preserved. Packages specify requirements, typed acceptance, check argv, dependencies and writable/forbidden scope. Lint establishes format consistency, not trustworthy execution or semantic completeness.
 
 The [derived graph](task-graph.md) currently has maximum depth 35, 24 equally deepest paths and zero unordered writable-scope overlaps. TASK-066 depends on TASK-065; no stale soft lock replaces that dependency. [Machine graph](task-graph.json) records actual predecessor data. Real dependency receipts, preparation accounting and candidate-observer authority require separate proof because an acyclic TOML graph alone cannot prove them.
 
