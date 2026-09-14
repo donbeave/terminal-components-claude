@@ -412,6 +412,11 @@ class Fixture:
         require(type(report["outputs"]) is dict and type(report["observation_digests"]) is list and
                 all(type(item) is str for item in report["observation_digests"]), "result types")
         require(report["observation_digests"] == [sha(canonical(event)) for event in self.events], "forged observation")
+        # Python value equality aliases JSON booleans, integers and floats.
+        # Bind the submitted observation bytes, not merely equal Python values.
+        if "observations" in report["outputs"]:
+            require(canonical(report["outputs"]["observations"]) == canonical(self.events),
+                    "forged observation bytes")
         return result.returncode, report
 
     def validate(self, result, category):
@@ -431,7 +436,7 @@ class Fixture:
             if self.operation == "account-tests":
                 expected_outputs.update(unresolved_tests=["test_future"], closed_contributions=["tiny-shell.route"],
                                         unresolved_scenarios=["tiny-shell"])
-            require(report["outputs"] == expected_outputs, "outputs differ from protected execution or stage accounting")
+            require(canonical(report["outputs"]) == canonical(expected_outputs), "outputs differ from protected execution or stage accounting")
             for event in self.events:
                 if self.operation == "close":
                     require(len(event["evidence"]) == 4 and all(row["status"] == "passed" for row in event["evidence"]), "closure evidence")
@@ -470,9 +475,9 @@ class Fixture:
             if self.operation == "oracle":
                 require(self.events[0]["payload"] == self.events[1]["payload"], "oracle repeat")
         elif self.operation == "required":
-            require(not self.events and report["outputs"] == {"members": self.expected_members}, "finite expansion")
+            require(not self.events and canonical(report["outputs"]) == canonical({"members": self.expected_members}), "finite expansion")
         else:
-            require(not self.events and report["outputs"] == {"validated": True}, "preflight result")
+            require(not self.events and canonical(report["outputs"]) == canonical({"validated": True}), "preflight result")
 
 
 def run_case(runner, row):

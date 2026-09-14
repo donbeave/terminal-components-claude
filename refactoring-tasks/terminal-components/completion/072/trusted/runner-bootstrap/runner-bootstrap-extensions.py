@@ -401,7 +401,7 @@ class ExtendedFixture(B.Fixture):
             require(len(self.events) == 1, "negative omitted actual execution")
         else:
             require(code == 0 and report["status"] == "passed" and report["category"] is None, "positive result")
-            require(report["outputs"] == self.verify_observed(), "protected result mismatch")
+            require(canonical(report["outputs"]) == canonical(self.verify_observed()), "protected result mismatch")
 
 
 def cases():

@@ -427,8 +427,8 @@ Each clause below retains its exact source and disposition. Accepted requirement
 - Source: a1759b2a §64; COMPONENT_ARCHITECTURE.md;REFACTORING_STATE.md where cited
 - Requirement: Conformance PointerGesture default Click; Grid DoubleClick; single click Moved, double/Enter Activated key
 - Disposition: accepted_mechanism_product_gesture_superseded_by_current_oracle; current not independently verified in this source ledger; join architecture-matrix.tsv and {showcase,tablepro,jackin,holla}-scenarios.tsv; source disposition is not completion
-- Remaining proof: Current product gesture is superseded by oracle02f5294b grid.rs1322-1344: same-current-cell completed click edits when editable or activates when read-only; different-cell click moves. Retain gesture metadata and keyed identity/selection separation; no universal single-click-Moved requirement
-- Gates: Current/different cell x editable/read-only completed-click trajectories, keyboard, cancellation, reorder; gesture metadata uses actual component contract
+- Remaining proof: For the DataGrid policy only, oracle02f5294b grid.rs1322-1344/542-578 supersedes the historical product gesture: current-cell completed click calls begin_edit when globally editable, whose read_only-column/pending-deleted-row guards refuse with Consumed and no action/edit/mutation; globally noneditable Grid activates; different-cell click moves. Retain gesture metadata, keyed identity/selection separation and accepted modern default; DataTable row/cell policies are independently source-qualified, not overridden by this DataGrid rule
+- Gates: DataGrid current/different cell x globally editable/noneditable x read_only-column/pending-deleted-row isolated trajectories, keyboard, cancellation and reorder; retain modern-default/DataTable policy controls and actual gesture metadata
 - Origin: docs/refactoring-plan/history-late-obligations.tsv:23; retained supplemental source clause; exact equivalent/refinement/supersession groups in history-ledger-reconciliation.md
 
 ### HIST:HL-69-REVEAL

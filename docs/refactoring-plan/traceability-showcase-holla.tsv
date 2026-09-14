@@ -292,6 +292,15 @@ APP	SC-SETTINGS-ENV	TASK-069	R-001	AC-001	CHK-004	integration	replay all applica
 APP	SC-SHELL-ALL-PAGES	TASK-002	R-001	AC-001	CHK-004	baseline	capture and seal exact oracle expansion before application repair
 APP	SC-SHELL-ALL-PAGES	TASK-039	R-001	AC-001	CHK-004	primary	restore exact scenario clauses through live public components; whole-app expansion closes only after all application slices
 APP	SC-SHELL-ALL-PAGES	TASK-069	R-001	AC-001	CHK-004	integration	replay all applications on final integrated tree
+APP	SC-SHELL-CLI-GRAMMAR	TASK-002	R-001	AC-001	CHK-004	baseline	capture and seal exact oracle CLI grammar stdout/stderr/exit/terminal-restoration before application repair
+APP	SC-SHELL-CLI-GRAMMAR	TASK-032	R-001	AC-001	CHK-006	primary	Prove exact SC-SHELL-CLI-GRAMMAR argv/env/process observations through owned shell contribution and PTY gates; parent full closure retained at TASK-039
+APP	SC-SHELL-CLI-GRAMMAR	TASK-039	R-001	AC-001	CHK-004	primary	restore exact scenario clauses through live public components; whole-app expansion closes only after all application slices
+APP	SC-SHELL-CLI-GRAMMAR	TASK-069	R-001	AC-001	CHK-004	integration	replay all applications on final integrated tree
+APP	SC-SHELL-CLI-COLOR-ENV	TASK-002	R-001	AC-001	CHK-004	baseline	capture and seal exact oracle CLI color/env default and override observations before application repair
+APP	SC-SHELL-CLI-COLOR-ENV	TASK-009	R-002	AC-002	CHK-006	primary	Shared terminal launch policy preserves authored capability meet while explicit Requested bypasses ambient detection per ADJ-17
+APP	SC-SHELL-CLI-COLOR-ENV	TASK-032	R-001	AC-001	CHK-006	primary	Prove exact SC-SHELL-CLI-COLOR-ENV host env/default/override and redirected-startup observations through owned shell gates
+APP	SC-SHELL-CLI-COLOR-ENV	TASK-039	R-001	AC-001	CHK-004	primary	restore exact scenario clauses through live public components; whole-app expansion closes only after all application slices
+APP	SC-SHELL-CLI-COLOR-ENV	TASK-069	R-001	AC-001	CHK-004	integration	replay all applications on final integrated tree
 APP	SC-TASK-RUN	TASK-002	R-001	AC-001	CHK-004	baseline	capture and seal exact oracle expansion before application repair
 APP	SC-TASK-RUN	TASK-036	R-001	AC-001	CHK-004	primary	restore exact scenario clauses through live public components
 APP	SC-TASK-RUN	TASK-039	R-001	AC-001	CHK-004	preservation	replay complete application union with zero unresolved application identities

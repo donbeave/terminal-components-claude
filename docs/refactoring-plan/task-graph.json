@@ -613,6 +613,7 @@
         "Cargo.toml",
         "Cargo.lock",
         "crates/tui/Cargo.toml",
+        "crates/tui/src/lib.rs",
         "crates/tui/src/runtime.rs",
         "crates/tui/src/runtime/session.rs",
         "crates/tui/src/runtime/time.rs",
@@ -631,6 +632,8 @@
       "key": "C-RUNTIME",
       "title": "Restore runtime focus capture and publication behavior",
       "writable_paths": [
+        "crates/tui/src/event.rs",
+        "crates/tui/src/keymap.rs",
         "crates/tui/src/runtime.rs",
         "crates/tui/src/runtime/typing.rs",
         "crates/tui/src/focus.rs",
@@ -679,6 +682,7 @@
       "title": "Restore logical grapheme display copy and editor grammar",
       "writable_paths": [
         "crates/tui/src/ui/paint.rs",
+        "crates/tui/src/ui/mod.rs",
         "crates/tui/src/text",
         "crates/tui/tests/completion_013.rs"
       ]
@@ -765,6 +769,8 @@
       "key": "C-CHOICES",
       "title": "Restore controlled choices Select and mono label geometry",
       "writable_paths": [
+        "crates/tui/src/lib.rs",
+        "crates/tui/src/components/mod.rs",
         "crates/tui/tests/conformance.rs",
         "crates/tui/src/components/form.rs",
         "crates/tui/src/components/choice.rs",
@@ -797,6 +803,10 @@
       "key": "C-COLLECTIONS",
       "title": "Restore keyed collection selection navigation and fades",
       "writable_paths": [
+        "crates/tui/src/lib.rs",
+        "crates/tui/src/components/mod.rs",
+        "crates/tui/src/theme/recipe.rs",
+        "crates/tui/src/theme/builtin/mod.rs",
         "apps/showcase/src/pages/chips.rs",
         "crates/tui/tests/conformance.rs",
         "crates/tui/src/components/list.rs",
@@ -863,6 +873,7 @@
       "key": "C-PICKERS",
       "title": "Restore picker chains filters and completion ownership",
       "writable_paths": [
+        "apps/showcase/src/pages/pickers.rs",
         "crates/tui/src/components/filter_list.rs",
         "crates/tui/src/components/picker.rs",
         "crates/tui/src/components/picker_chain.rs",
@@ -881,6 +892,8 @@
       "key": "C-CODE",
       "title": "Restore code editing readonly selection and diagnostics",
       "writable_paths": [
+        "crates/tui/src/text/editor.rs",
+        "crates/tui/src/text/buffer.rs",
         "crates/tui/src/components/code.rs",
         "crates/tui/tests/completion_025.rs"
       ]
@@ -1101,6 +1114,8 @@
       "title": "Restore Showcase collection demonstration journeys",
       "writable_paths": [
         "apps/showcase/src/pages/overview.rs",
+        "apps/showcase/src/pages/author.rs",
+        "apps/showcase/src/pages/mod.rs",
         "apps/showcase/src/pages/lists.rs",
         "apps/showcase/src/pages/trees.rs",
         "apps/showcase/src/pages/sidebars.rs",
@@ -1148,7 +1163,22 @@
         "apps/holla/src/screens/mod.rs",
         "apps/holla/src/screens/context.rs",
         "apps/holla/src/screens/dialogs.rs",
-        "apps/holla/tests/completion_040.rs"
+        "apps/holla/tests/completion_040.rs",
+        "apps/holla/src/clock.rs",
+        "apps/holla/src/scenario.rs",
+        "apps/holla/src/sim/world.rs",
+        "apps/holla/src/domain/fixtures.rs",
+        "apps/holla/src/app/historical_tests.rs",
+        "apps/holla/src/dispatch.rs",
+        "apps/holla/src/screens/activity.rs",
+        "apps/holla/src/screens/home.rs",
+        "apps/holla/src/screens/plan.rs",
+        "apps/holla/src/screens/plan_gate.rs",
+        "apps/holla/src/sim/catalogue.rs",
+        "apps/holla/src/sim/pg.rs",
+        "apps/holla/src/sim/plans.rs",
+        "apps/holla/tests/perf.rs",
+        "apps/holla/tests/visual.rs"
       ]
     },
     "TASK-041": {
