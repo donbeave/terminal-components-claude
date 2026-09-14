@@ -220,11 +220,13 @@ Recommended sequence:
 
 **Honest status:** Campaign **documentation and perf infrastructure are drafted but not committed**. Phase 0 **planning validators mostly fail**. Prompt amendments **are applied in working-tree copies**. Execution **is not ready**.
 
-### Follow-up (2026-09-15, post-subagent)
+### Follow-up (2026-09-15, committed)
 
 | Action | Status |
 | --- | --- |
-| `cargo check --test visual_baseline` | **PASS** (dead-code warnings on bless-only helpers suppressed) |
-| `store_integrity` | **PASS** (~0.3 s) |
-| tui-snap tiered-gate changes | **Uncommitted** in `~/Projects/tui-snap`; `Cargo.toml` uses temporary `path = "../tui-snap"` |
-| Commit prep artifacts | **Pending** — awaiting explicit commit request |
+| Prep bundle + Phase 0 validators + snapshots | **Committed** — `32c238e1`, `c5384043`, `f395f284` on `visual-baseline` |
+| tui-snap tiered-gate | **Pushed** — `0a2e490`; pinned in `Cargo.toml` |
+| CI smoke (`--profile ci`) | **PASS** — 7550 passed, ~56 s wall |
+| `validate-plan.py --summary` | **PASS** — 0 errors |
+| Re-audit findings closed | **5 / 49** (ROOT-02, ROOT-03, CA-06, ROOT-11, ROOT-12) |
+| Phase 0 execution readiness | **Still NOT READY** — 44 findings open; BRANCH-01, ROOT-08/09 pending |
