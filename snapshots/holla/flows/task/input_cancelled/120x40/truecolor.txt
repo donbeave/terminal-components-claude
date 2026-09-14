@@ -2,7 +2,7 @@
 
   Here    deploy the release ! ×
  ────────━━━━━━━━━━━━━━━━━━━━━━━━━─────────────────────────────────────────────────────────────────────────────────────
-  deploy the release · failed · 1 s · exit 2                                                  here · /srv/app · devbox
+  deploy the release · failed · 0 s · exit 2                                                  here · /srv/app · devbox
   $ ./deploy.sh · started by Deploy the release
 
  ╭─ output ─────────────────────────────────────────────────────────────────────────────────────────────── following ─╮
@@ -36,5 +36,5 @@
  │                                                                                                                    │
  ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
- /srv/app                                       ! exit 2 · 1 s                                       truecolor · 120×40
+ /srv/app                                       ! exit 2 · 0 s                                       truecolor · 120×40
               ↑↓ Scroll  f Follow  / Find  y Copy  r Restart  x Close  Esc Here    ! deploy the release failed · exit 2
