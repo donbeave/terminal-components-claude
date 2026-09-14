@@ -20,7 +20,7 @@ use std::time::Duration;
 use tuisnap::pty::{Scroll, Session};
 
 use crate::pointer::wheel_below;
-use crate::support::{self, Case, Color, HOLLA};
+use crate::support::{Case, Color, HOLLA};
 
 // ---------------------------------------------------------------- concept --
 
@@ -472,7 +472,7 @@ crate::baseline_case!(holla_flows_child_query_120x40_truecolor => Case::new("hol
 // h_flow_system: a query with no matches leaves an empty preview; the
 // `Cancelled` status comes from leaving gate 1 (the legacy chain typed
 // `blocking`, opened the blocker page, then appended `resources`).
-crate::baseline_case!(holla_flows_query_empty_preview_120x40_truecolor => Case::new("holla/flows/query/empty_preview/120x40/truecolor", HOLLA, &["--scenario", "remote-host", "--motion", "paused", "--frame", "40"], 120, 40, Color::Truecolor, "holla❯").sends(&["type:restart payments", "enter", "wait:gate 1 of 2", "escape", "escape", "type:blocking", "enter", "wait:Who is blocking", "escape", "type:resources", "wait:No matches for"]));
+crate::baseline_case!(holla_flows_query_empty_preview_120x40_truecolor => Case::new("holla/flows/query/empty_preview/120x40/truecolor", HOLLA, &["--scenario", "remote-host", "--motion", "paused", "--frame", "40"], 120, 40, Color::Truecolor, "holla❯").sends(&["type:restart payments", "enter", "wait:gate 1 of 2", "escape", "escape", "sleep:200", "type:blocking", "enter", "wait:Who is blocking", "escape", "sleep:200", "type:resources", "wait:No matches for"]));
 // h_flow_remote_query: the remote query typed, not yet run.
 crate::baseline_case!(holla_flows_remote_query_120x40_truecolor => Case::new("holla/flows/remote/query/120x40/truecolor", HOLLA, &["--scenario", "remote-host", "--motion", "paused", "--frame", "40"], 120, 40, Color::Truecolor, "holla❯").sends(&["type:restart payments"]));
 // h_flow_port_snapshot: the args flow's end state — Ctrl+S takes the
@@ -609,12 +609,8 @@ fn wheel_down(s: &mut Session, needle: &str, notches: u32) {
     }
 }
 
-#[test]
-#[ignore = "visual baseline capture; run with --ignored"]
-fn holla_fade_trust_body_wheel_matrix() {
-    // The trust definition is the scrollable body (review.rs TRUST_BODY);
-    // two notches put the fade at its top edge.
-    let case = Case::new(
+crate::baseline_case_live!(
+    holla_fade_trust_body_wheel_matrix => Case::new(
         "holla/fade/trust_body_wheel/120x40/truecolor",
         HOLLA,
         &["--scenario", "parity-custom-actions", "--motion", "reduced"],
@@ -627,23 +623,18 @@ fn holla_fade_trust_body_wheel_matrix() {
         "type:Deploy preview",
         "enter",
         "wait:Trust ~/work/team/.holla.toml?",
-    ]);
-    support::run_canonical_live(&case, |s, variant| {
+    ]),
+    |s, variant| {
         if variant.rows <= 24 {
             wheel_down(s, "Trust scope", 2);
         } else {
             wheel_down(s, "id = \"deploy.preview\"", 2);
         }
-    });
-}
+    }
+);
 
-#[test]
-#[ignore = "visual baseline capture; run with --ignored"]
-fn holla_fade_cleanup_list_wheel_matrix() {
-    // The 18 insight categories overflow the list at 120x40; the wheel
-    // target is a row that appears only in the list (never in the detail
-    // panel, which mirrors the selected category).
-    let case = Case::new(
+crate::baseline_case_live!(
+    holla_fade_cleanup_list_wheel_matrix => Case::new(
         "holla/fade/cleanup_list_wheel/120x40/truecolor",
         HOLLA,
         &["--scenario", "parity-insights", "--motion", "reduced"],
@@ -656,26 +647,18 @@ fn holla_fade_cleanup_list_wheel_matrix() {
         "type:Review cleanup candidates",
         "enter",
         "wait:18 categories",
-    ]);
-    support::run_canonical_live(&case, |s, case| {
-        // Rows are clickable children and shadow the list's scroll region in
-        // hit_scroll's topmost-wins lookup, so the wheel lands on the blank
-        // line below the needle (no child region there) instead.
+    ]),
+    |s, case| {
         if case.rows <= 24 {
             wheel_below(s, "Xcode DerivedData", 2);
         } else {
             wheel_below(s, "Yarn cache", 2);
         }
-    });
-}
+    }
+);
 
-#[test]
-#[ignore = "visual baseline capture; run with --ignored"]
-fn holla_fade_executor_burst_end_matrix() {
-    // 4500 lines in sixteen ticks: the retention panel states the drop and
-    // the tail sits at the bottom; after the burst nothing animates, so the
-    // settle captures the exact end frame (h_fade_burst's successor).
-    let case = Case::new(
+crate::baseline_case_live!(
+    holla_fade_executor_burst_end_matrix => Case::new(
         "holla/fade/executor_burst-end/120x40/truecolor",
         HOLLA,
         &["--scenario", "parity-executor", "--motion", "reduced"],
@@ -688,6 +671,6 @@ fn holla_fade_executor_burst_end_matrix() {
         "type:Emit a burst",
         "enter",
         "wait:500 earlier lines dropped",
-    ]);
-    support::run_canonical_live(&case, |_, _| ());
-}
+    ]),
+    |_, _| ()
+);

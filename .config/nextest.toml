@@ -6,8 +6,8 @@
 # HTML report: `cargo nextest run --run-ignored only --ignore-default-filter -E 'test(rebuild_review_html)'`
 
 [test-groups]
-# Real TUI binaries in PTYs; cap concurrency so boot does not starve.
-pty = { max-threads = 8 }
+# Real TUI binaries in PTYs; per-combo tests saturate this pool in parallel.
+pty = { max-threads = 16 }
 
 [profile.default]
 fail-fast = false
@@ -19,21 +19,17 @@ default-filter = "not test(rebuild_review_html)"
 [[profile.default.overrides]]
 filter = "binary(visual_baseline)"
 test-group = "pty"
-# Audit matrices run 25 PTYs in one test; 4×60s killed them under load.
-slow-timeout = { period = "60s", terminate-after = 10 }
-
-[[profile.default.overrides]]
-filter = '''
-  test(scrolling)
-  or test(tablepro_audit)
-  or test(holla_audit)
-  or test(jackin_audit)
-  or test(showcase_audit)
-  or test(terminal_default)
-  or test(docker_done)
-'''
-threads-required = 2
+# One PTY per combo test; 60s is enough for a single capture.
+slow-timeout = { period = "60s", terminate-after = 4 }
 
 [profile.ci]
 fail-fast = false
 slow-timeout = { period = "60s", terminate-after = 10 }
+default-filter = "not test(rebuild_review_html)"
+
+# PR CI: smoke matrix (120×40 truecolor). support.rs enables it when
+# NEXTEST_PROFILE=ci or TUISNAP_MATRIX=smoke is set in the workflow.
+[[profile.ci.overrides]]
+filter = "binary(visual_baseline)"
+test-group = "pty"
+slow-timeout = { period = "60s", terminate-after = 4 }

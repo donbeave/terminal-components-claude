@@ -2,6 +2,8 @@
 
 The package AGENTS.md files preserve the byte-canonical task-format template at `52d9f1eb7721f409bc47beb9fced7997b5c13ede`, with task-ID substitution only. This campaign adaptation is an explicit package requirement. It supersedes the template's executor-authoritative ordered-check/full-verification sequence and its `--progress ""` invocation, not task/v5, verify/v2, task-meta/v1 or final progress validation.
 
+Operator-facing execution: [Campaign execution prompt](campaign-execution-prompt.md) (frozen task catalog handoff) and [Campaign iteration guide](campaign-iteration-guide.md) (visual gate tiers and targeted filters).
+
 The executor owns candidate edits and claimed progress, not trusted contexts, result authority, source freeze, taskfmt configuration or integration. It may run ordinary compiler/tests as advisory feedback using its own temporary outputs. Such local checks must not use production expected bundles, impersonate `/proof/bin`, create accepted receipts, or count as the canonical checks. No progress-disabled invocation authorizes completion or integration.
 
 ## Initial bootstrap exception

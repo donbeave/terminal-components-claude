@@ -2417,7 +2417,7 @@ dependencies = [
 [[package]]
 name = "termlens"
 version = "0.9.0"
-source = "git+https://github.com/donbeave/tui-snap?rev=2d43458ad2bc37d76653c22d56e61ee74512d893#2d43458ad2bc37d76653c22d56e61ee74512d893"
+source = "git+https://github.com/donbeave/tui-snap?rev=0a2e490802b7b048cd96349c6af860f8a3a05c3d#0a2e490802b7b048cd96349c6af860f8a3a05c3d"
 dependencies = [
  "insta",
  "libc",
@@ -2582,7 +2582,7 @@ dependencies = [
 [[package]]
 name = "tuisnap"
 version = "0.2.0"
-source = "git+https://github.com/donbeave/tui-snap?rev=2d43458ad2bc37d76653c22d56e61ee74512d893#2d43458ad2bc37d76653c22d56e61ee74512d893"
+source = "git+https://github.com/donbeave/tui-snap?rev=0a2e490802b7b048cd96349c6af860f8a3a05c3d#0a2e490802b7b048cd96349c6af860f8a3a05c3d"
 dependencies = [
  "anyhow",
  "base64 0.23.1",

@@ -36,7 +36,7 @@ Relationship: **not a merge task**. `holla-fable` is the historical reference; `
 | CLI `--help` content | Rich scenario/key reference | Auto-generated clap help only | **HOLLA_FABLE_BETTER** | **Ported** | Restored via `after_help()` on all four binaries; `Scenario::CONCEPT`/`PARITY` public again |
 | `Scenario::CONCEPT` export | Public const | Test-only `PARITY` | **HOLLA_FABLE_BETTER** | **Ported** | `src/bin/holla/scenario.rs` |
 | `examples/cells.rs` | Grapheme JSON reference | Removed | **OBSOLETE** | Intentionally removed | Superseded by tuisnap; no restore |
-| `shots/` visual baseline | 4,666 PNG files + bash harness | `snapshots/` + Rust `tests/visual_baseline/` | **HOLLA_BETTER** | Kept | `store_integrity` passes; 303 PTY captures |
+| `shots/` visual baseline | 4,666 PNG files + bash harness | `snapshots/` + Rust `tests/visual_baseline/` | **HOLLA_BETTER** | Kept | `store_integrity` passes; 7,550 per-combo PTY tests (one process each) |
 | App behavioral coverage | None | 68+ `app_tests_coverage` tests | **HOLLA_BETTER** | Kept | `docs/baseline/app-test-coverage-report.md` |
 | Docs organization | Root-level scatter | Structured `docs/` tree | **HOLLA_BETTER** | Kept | `docs/traceability.md` maps retired paths |
 | HP01–HP23 product parity | Documented gaps | Same simulation scope | **NEEDS_EMPIRICAL (unchanged)** | Deferred product work | `docs/parity/holla-parity-matrix.md` — not in scope of branch tip diff |
@@ -60,7 +60,7 @@ Relationship: **not a merge task**. `holla-fable` is the historical reference; `
 | `cargo fmt --all -- --check` | pass |
 | `cargo check --all-targets --all-features` | pass |
 | `cargo clippy --all-targets --all-features -- -D warnings` | pass |
-| `cargo nextest run` | 545 passed, 303 skipped (ignored PTY captures) |
+| `cargo nextest run` | 544 passed, 7,550 skipped (ignored per-combo PTY captures) |
 | `store_integrity` | pass |
 | All four binaries build | pass |
 

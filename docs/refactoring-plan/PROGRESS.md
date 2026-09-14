@@ -8,13 +8,17 @@ No terminal-components production refactoring, campaign task execution, integrat
 
 The additional whole-main-versus-Holla review has an exact 7,885-path inventory and a [working continuation proposal](branch-continuation-proposal.md). Foundation, component and Holla source partitions are fully read; other partitions and canonical repairs remain active. The [artifact report](branch-diff-artifacts.md) covers all 7,019 generated paths, including 17 cross-representation time-state discrepancies, without claiming manual raster review or oracle acceptance.
 
+## Phase 0 planning checkpoint (2026-09-15)
+
+Phase 0 cross-artifact validators are green in the working tree: `python3 docs/refactoring-plan/evidence/validate-plan.py --summary` passes with zero errors; `assemble-plan.py` and `derive-task-graph.py` report no stale projection; DEC ADJ-14 owners bind TASK-013/015/068 in traceability; all 73 AGENTS protocols match the canonical hash; bootstrap assets are refrozen (202 rows; all six `freeze-bootstrap-assets.py --check` groups pass). Five of 49 [re-audit findings](reaudit-findings.tsv) are closed on this evidence; BRANCH-01, ROOT-08/09 authority decisions and independent witness reviews remain open. Campaign prep bundle (docs, perf, visual-validation.md) is ready but **not yet committed**.
+
 ## Pinned authority
 
 Recorded source inspection on 2026-09-11:
 
 | Authority | Commit |
 | --- | --- |
-| Immutable UI/UX oracle pin (then peeled `holla-fable-2026-09-10`; live tag `visual-baseline` is `5e533943`) | `02f5294bfdbf38004cc49130d0aff1d01f31434c` |
+| Immutable UI/UX oracle pin (then peeled `holla-fable-2026-09-10`; live tag `visual-baseline` is `4a79c0a2`) | `02f5294bfdbf38004cc49130d0aff1d01f31434c` |
 | Annotated tag object recorded 2026-09-11 | `a643909d9a782adaf0aa1e3357710a5ed3f24443` |
 | Architectural main inspected | `7b27732a8c3c131760ec3438f641cb3c11343a42` |
 | Investigation checkout (then `holla`; live checkout is `visual-baseline`) | `2e2401393c47360741ebd321679de08982dca50a` |
@@ -43,7 +47,7 @@ The [derived graph](task-graph.md) currently has maximum depth 35, 24 equally de
 
 The identified reusable tui-snap gaps have an actual [PR #1](https://github.com/donbeave/tui-snap/pull/1). The independent [tool review](tuisnap-review.md) approves the scoped head `883d03f19d890bbbf27468798db78b04e85297ac`, tree `dadbaa70facc317cfabb52f0374c1f3cdceb46a1`; the recorded PR was open and unmerged. [Verification investigation](verification.md) distinguishes real direct/PTY/tool tests from future full-oracle captures.
 
-The prior comparator, host, runner and actual-Rust preparation under [evidence](evidence/) has recorded independent review in [executed verification](planning-verification.md). The former [151 frozen asset rows](bootstrap-assets.tsv) are now a stale snapshot: source-policy, actual style-time and corrected flow inputs are being extended and independently reviewed. They must not be resealed merely to make a hash check pass. Current qualified-source and timing work is linked through [the finding register](reaudit-findings.tsv).
+The prior comparator, host, runner and actual-Rust preparation under [evidence](evidence/) has recorded independent review in [executed verification](planning-verification.md). [Bootstrap assets](bootstrap-assets.tsv) now record 202 frozen rows across six groups (proof, runner, flow, architecture, style-timing, broker); all pass `freeze-bootstrap-assets.py --check`. Source-policy, actual style-time qualification and corrected flow inputs still require independent review beyond the artifact-integrity gate. Current qualified-source and timing work is linked through [the finding register](reaudit-findings.tsv).
 
 Numeric oracle traces, immutable complete capture bundles and accepted production-runner receipts are future prerequisite outputs. Their hashes must be produced and independently accepted, never fabricated during planning.
 
@@ -51,6 +55,6 @@ Numeric oracle traces, immutable complete capture bundles and accepted productio
 
 The prior reviewers covered [architecture](review-architecture-final.md), [UI/UX parity](review-parity-final.md), [task decomposition](review-dag-final.md), [verification](review-verification-final.md) and [integration safety](review-integration-final.md). All 18 findings in [that historical register](review-findings.tsv) have recorded closure. The current [source-first register](reaudit-findings.tsv) contains additional findings and is not closed by those earlier reviews.
 
-Latest history synchronization covers all 620 canonical clauses and 1,108 historical edges. The independent source-clause reading is complete; new whole-branch findings and owner/proof changes still require integration. Prior all-73 lint/idempotency results and newer focused package lints are recorded separately, not claimed as a current final aggregate pass. The complete artifact-integrity gate still fails on intentionally unrefrozen repaired assets and active-author drift; no current all-artifact PASS or final manifest is claimed.
+Latest history synchronization covers all 620 canonical clauses and 1,108 historical edges. The independent source-clause reading is complete; new whole-branch findings and owner/proof changes still require integration. Prior all-73 lint/idempotency results and newer focused package lints are recorded separately, not claimed as a current final aggregate pass. The complete artifact-integrity gate (`validate-plan.py --summary`) **passes** in the current working tree (2026-09-15); that does not close independent witness reviews, whole-branch integration or production harness readiness.
 
 The previous planning pass recorded all twenty acceptance conditions as met. The expanded re-audit must establish them again against current artifacts and source evidence before this goal can complete. Future production harness implementation, oracle capture/sealing, refactoring, integration and merge approval remain separate gated work; none was executed during planning.
