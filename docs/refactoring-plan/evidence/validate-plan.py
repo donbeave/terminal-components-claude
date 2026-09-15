@@ -15,6 +15,17 @@ from collections import Counter
 from pathlib import Path
 
 
+TC_PROOF_OPERATIONS = frozenset({
+    "preflight", "required", "oracle", "capture", "compare",
+    "account-tests", "architecture", "close",
+})
+TC_PROOF_ORACLE_NAMESPACES = frozenset({"showcase", "holla", "jackin", "tablepro", "components"})
+TC_PROOF_CAPTURE_LANES = frozenset({"direct", "pty"})
+VERIFY_CHECK_PHASES = frozenset({"precondition", "focused", "regression", "lint", "gate"})
+VERIFY_CHECK_REQUIRED = frozenset({"id", "phase", "argv", "expected", "requirements", "acceptance"})
+CHECK_ID_PATTERN = re.compile(r"^CHK-\d{3}$")
+
+
 class Audit:
     def __init__(self, root: Path):
         self.root = root
@@ -160,6 +171,69 @@ class Audit:
             self.require(task_id not in deps, f"Self dependency: {task_id}")
             self.require(set(deps) <= set(indexed), f"Missing dependency target: {task_id}")
         return tasks, dependencies
+
+    def catalog_argv_smoke(self) -> None:
+        """Dry-run verify.toml argv structure without invoking /proof/bin/tc-proof."""
+        catalog = self.root / "refactoring-tasks/terminal-components/completion"
+        tc_proof_checks = 0
+        for verify_path in sorted(catalog.glob("*/verify.toml")):
+            relative = verify_path.relative_to(self.root)
+            try:
+                data = tomllib.loads(verify_path.read_text())
+            except (OSError, tomllib.TOMLDecodeError) as error:
+                self.errors.append(f"Unreadable verify argv smoke: {relative}: {error}")
+                continue
+            task_id = data.get("task_id", "")
+            self.require(data.get("schema") == "verify/v2", f"Unsupported verify schema: {relative}")
+            self.require(bool(task_id), f"Missing verify task_id: {relative}")
+            self.require(task_id == f"TASK-{verify_path.parent.name}", f"Verify task_id mismatch: {relative}")
+            seen_ids: set[str] = set()
+            for check in data.get("checks", []):
+                check_id = check.get("id", "")
+                self.require(bool(CHECK_ID_PATTERN.fullmatch(check_id)), f"Invalid check id: {relative}:{check_id}")
+                self.require(check_id not in seen_ids, f"Duplicate check id: {relative}:{check_id}")
+                seen_ids.add(check_id)
+                self.require(set(check) >= VERIFY_CHECK_REQUIRED, f"Missing check fields: {relative}:{check_id}")
+                phase = check.get("phase", "")
+                self.require(phase in VERIFY_CHECK_PHASES, f"Unknown check phase: {relative}:{check_id}:{phase}")
+                argv = check.get("argv", [])
+                self.require(isinstance(argv, list) and bool(argv), f"Empty argv: {relative}:{check_id}")
+                self.require(all(isinstance(argument, str) and argument for argument in argv),
+                             f"Blank argv segment: {relative}:{check_id}")
+                expected = check.get("expected", {})
+                self.require(isinstance(expected, dict) and "exit" in expected,
+                             f"Missing expected exit: {relative}:{check_id}")
+                for field in ("requirements", "acceptance"):
+                    values = check.get(field, [])
+                    self.require(isinstance(values, list) and bool(values), f"Empty {field}: {relative}:{check_id}")
+                if argv[0] != "/proof/bin/tc-proof":
+                    continue
+                tc_proof_checks += 1
+                self.require(len(argv) >= 2, f"Missing tc-proof operation: {relative}:{check_id}")
+                operation = argv[1]
+                self.require(operation in TC_PROOF_OPERATIONS,
+                             f"Unknown tc-proof operation: {relative}:{check_id}:{operation}")
+                self.require("--context" in argv, f"Missing tc-proof context: {relative}:{check_id}")
+                position = argv.index("--context") + 1
+                self.require(position < len(argv), f"Dangling tc-proof --context: {relative}:{check_id}")
+                expected_context = f"/run/tc-proof/contexts/{check_id}.json"
+                self.require(argv[position] == expected_context,
+                             f"Context check id mismatch: {relative}:{check_id}")
+                if operation == "oracle":
+                    self.require("--namespace" in argv, f"Missing oracle namespace: {relative}:{check_id}")
+                    namespace_position = argv.index("--namespace") + 1
+                    self.require(namespace_position < len(argv)
+                                 and argv[namespace_position] in TC_PROOF_ORACLE_NAMESPACES,
+                                 f"Invalid oracle namespace: {relative}:{check_id}")
+                elif operation == "capture":
+                    self.require("--lane" in argv, f"Missing capture lane: {relative}:{check_id}")
+                    lane_position = argv.index("--lane") + 1
+                    self.require(lane_position < len(argv) and argv[lane_position] in TC_PROOF_CAPTURE_LANES,
+                                 f"Invalid capture lane: {relative}:{check_id}")
+                else:
+                    self.require("--namespace" not in argv, f"Unexpected oracle namespace: {relative}:{check_id}")
+                    self.require("--lane" not in argv, f"Unexpected capture lane: {relative}:{check_id}")
+        self.counts["catalog_argv_smoke_tc_proof_checks"] = tc_proof_checks
 
     def historical_prose(self, sources: dict, tasks: dict) -> None:
         """Check redundant prose without making it the ownership inventory."""
@@ -525,6 +599,7 @@ def main() -> int:
     graph = {}
     if not arguments.inventory_only:
         tasks, dependencies = audit.catalog()
+        audit.catalog_argv_smoke()
         audit.historical_prose(sources, tasks)
         audit.frozen_assets()
         graph = audit.graph(dependencies)
