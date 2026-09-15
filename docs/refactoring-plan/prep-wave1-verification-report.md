@@ -3,7 +3,7 @@
 **Branch:** `prep-wave1-verify` (isolated from `visual-baseline`)  
 **Parent:** `63cf451d` (`visual-baseline` planning tip before probe)  
 **Date:** 2026-09-15  
-**Purpose:** Implement Wave 1 items 1–5 as a **readiness probe** — verify the prep plan is actionable and gates stay green. **No TASK execution, no production Rust, no `/goal` arming.**
+**Purpose:** Implement Wave 1 (READINESS-01–06 + WITNESS-01) as a **readiness probe** — verify the prep plan is actionable and gates stay green. **No TASK execution, no production Rust, no `/goal` arming without operator authorization.**
 
 ---
 
@@ -13,10 +13,10 @@
 | --- | --- |
 | **Is Wave 1 prep plan actionable?** | **Yes** — 157 files changed; all mechanical gates green |
 | **Are READINESS-01–04 closed on this branch?** | **Yes** (verified below) |
-| **Is the catalog fully ready for `READY FOR REFACTORING EXECUTION`?** | **Yes (Wave 1 complete)** — see [`READY-FOR-REFACTORING-EXECUTION.md`](READY-FOR-REFACTORING-EXECUTION.md) on branch tip |
-| **Safe to arm campaign `/goal` from this branch?** | **No** — merge probe results to `visual-baseline` after review; complete remaining Wave 1 first |
+| **Is the catalog fully ready for `READY FOR REFACTORING EXECUTION`?** | **Yes (Wave 1 complete)** — see [`READY-FOR-REFACTORING-EXECUTION.md`](READY-FOR-REFACTORING-EXECUTION.md) |
+| **Safe to arm campaign `/goal` from this branch?** | **Catalog-ready** — requires operator explicit authorization per READY doc; tag `visual-baseline` unmoved |
 
-**One-line:** Partial Wave 1 probe **PASS**; full execution authorization **NOT YET**.
+**One-line:** Wave 1 **PASS**; execution readiness **ISSUED** on `prep-wave1-verify` (catalog SHA `3cd8196c`).
 
 ---
 
@@ -47,32 +47,46 @@
 
 ---
 
-## Spot-checks (partition C closure)
+## Spot-checks (partitions C / D / E)
+
+### Partition C — coordinator / trusted bindings
 
 | Check | Result |
 | --- | --- |
 | `grep W-042-JUMP-SUBMIT completion/031/trusted/` | **Absent** (only exclusion prose in README/source-witnesses) |
 | `grep W-021-07 completion/008/trusted/` | **Present** in obligations, disposition TSV, external-test scope |
 | `branch-host-projection.tsv` row count | **12** (10 branch + W-031-10/11) |
-| CAMPAIGN_AGENTS prohibits `--progress ""` | **Yes** — line 10 |
+
+### Partition D — verification / bootstrap
+
+| Check | Result |
+| --- | --- |
+| `CAMPAIGN_AGENTS.md` copies under `completion/*/` | **73/73** |
+| `trusted/check-context-templates/CHK-*.json` | **73/73** (WITNESS-01 machine-bound via `accounting-mode-bindings.tsv`) |
+| CAMPAIGN_AGENTS prohibits `--progress ""` | **Yes** |
 | Symlink CAMPAIGN_AGENTS | **Rejected by taskfmt** — identical copies used instead |
+| `validate-plan.py` accounting bindings | **PASS** — 0 errors |
+
+### Partition E — TASK-069 integration / close
+
+| Check | Result |
+| --- | --- |
+| `069/trusted/coordinator-review-contract.md` | **Present** — human review decoupled from CHK-007 |
+| `069/trusted/host-context/` templates | **CHK-001, CHK-005, CHK-007** + spec |
+| CHK-007 forbids human review fields | **Yes** — per coordinator-review-contract |
+| Snapshots digest (frozen oracle) | **Unchanged** — `d3f40027…` |
 
 ---
 
-## Remaining blockers before `READY FOR REFACTORING EXECUTION`
+## Remaining execution prerequisites (post-issuance)
 
-From [`pre-execution-preparation-plan.md`](pre-execution-preparation-plan.md) and [`review-readiness-final.md`](review-readiness-final.md):
-
-| ID | Severity | Status on this branch |
+| ID | Severity | Status |
 | --- | --- | --- |
-| WITNESS-01 | P1 | **Open** — preparation/production mode not machine-bound |
-| READINESS-05 | P1 | **Open** — TASK-069 human review ↔ CHK-007 |
-| READINESS-06 | P2 | **Open** — fidelity visual + merge-readiness host contexts |
-| READINESS-08 | P2 | **Open** — runner index on 071/072 |
-| INT-03 | P2 | **Open** — freeze isolation qualification corpus |
-| `tc-proof-host` | Expected | **Absent** — TASK-001 deliverable |
-| Operator authorization | Required | **Not issued** |
-| Witness spot-check C/D/E post-full-Wave-1 | Required | **Partial** — C spot-check pass on probe |
+| Wave 1 (READINESS-01–06, WITNESS-01) | P0 | **Closed** |
+| READINESS-08 | P2 | **Open** — runner index on 071/072 (Wave 2, non-blocking) |
+| INT-03 | P2 | **Open** — host isolation fixture corpus (Wave 2, non-blocking) |
+| `tc-proof-host` | Expected | **Absent** — TASK-001 deliverable on architectural `main` |
+| Operator authorization to arm `/goal` | Required | **Not issued** |
 
 ---
 
@@ -81,16 +95,14 @@ From [`pre-execution-preparation-plan.md`](pre-execution-preparation-plan.md) an
 | Branch | Role |
 | --- | --- |
 | `visual-baseline` | Planning oracle branch; unchanged by probe (stays @ `63cf451d` until merge decision) |
-| `prep-wave1-verify` | **This probe** — Wave 1 partial implementation + verification evidence |
+| `prep-wave1-verify` | **Wave 1 complete** + [`READY-FOR-REFACTORING-EXECUTION.md`](READY-FOR-REFACTORING-EXECUTION.md) issued |
 
-**Recommended merge path:** Complete remaining Wave 1 on `prep-wave1-verify` (or follow-up branch) → spot-check partitions D/E → issue `READY FOR REFACTORING EXECUTION` on merged SHA → optionally fast-forward `visual-baseline` planning tip.
+**Recommended merge path:** Optionally fast-forward `visual-baseline` planning tip to catalog SHA `3cd8196c` (operator decision). Tag `visual-baseline` remains frozen @ `4a79c0a2`.
 
-**Do not:** arm campaign `/goal`, dispatch TASK-001, or treat this probe as full execution readiness.
+**Do not:** arm campaign `/goal` or dispatch TASK-001 without operator explicit authorization.
 
 ---
 
 ## Conclusion
 
-The preparation plan is **correct and executable**. Implementing READINESS-01–04 plus validate-plan enforcement keeps all gates green and closes partition **C** coordinator overclaims.
-
-**Full execution readiness requires:** WITNESS-01 + READINESS-05–06 (Wave 1 remainder), Wave 2 hardening, fresh witness spot-check, explicit `READY FOR REFACTORING EXECUTION` issuance, then TASK-001 on architectural `main`.
+Wave 1 is **complete**. Partitions **C, D, and E** spot-check **PASS**. Mechanical gates green @ catalog SHA `3cd8196c`. Execution readiness issued — next step is operator authorization, then TASK-001 bootstrap on architectural `main`.
