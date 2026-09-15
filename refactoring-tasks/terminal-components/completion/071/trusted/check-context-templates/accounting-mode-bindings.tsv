@@ -4,9 +4,9 @@ TASK-003	CHK-005	preparation	source-derived	False	False
 TASK-004	CHK-005	preparation	source-derived	False	False
 TASK-005	CHK-005	preparation	source-derived	False	False
 TASK-006	CHK-005	preparation	source-derived	False	False
-TASK-007	CHK-003	preparation	production	False	False
-TASK-007	CHK-004	preparation	production	False	False
-TASK-007	CHK-005	preparation	production	False	False
+TASK-007	CHK-003	preparation	source-derived	False	False
+TASK-007	CHK-004	preparation	source-derived	False	False
+TASK-007	CHK-005	preparation	source-derived	False	False
 TASK-008	CHK-003	preparation	post-migration	False	False
 TASK-008	CHK-004	preparation	post-migration	False	False
 TASK-008	CHK-005	preparation	post-migration	False	False

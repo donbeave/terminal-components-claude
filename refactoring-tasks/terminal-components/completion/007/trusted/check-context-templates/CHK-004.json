@@ -5,7 +5,7 @@
   "qualification": {
     "mode": "preparation",
     "family": "accounting",
-    "register_kind": "production",
+    "register_kind": "source-derived",
     "requires_inventory_receipt": false,
     "requires_disposition_receipt": false
   }

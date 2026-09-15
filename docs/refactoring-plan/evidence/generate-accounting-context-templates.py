@@ -11,7 +11,7 @@ COMPLETION = ROOT / "refactoring-tasks/terminal-components/completion"
 CANONICAL = COMPLETION / "071/trusted/check-context-templates"
 
 PREPARATION_TASKS = {f"TASK-{n:03d}" for n in range(2, 9)}
-PREPARATION_SOURCE = {f"TASK-{n:03d}" for n in range(2, 7)}
+PREPARATION_SOURCE = {f"TASK-{n:03d}" for n in range(2, 8)}
 POST_MIGRATION = {"TASK-008"}
 
 
