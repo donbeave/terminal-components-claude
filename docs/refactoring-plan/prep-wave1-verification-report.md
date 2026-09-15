@@ -109,7 +109,7 @@
 
 | Branch | Role |
 | --- | --- |
-| `visual-baseline` | Planning oracle branch @ `4f26ba3f` (READINESS-08 tip; Wave 2 on `prep-wave1-verify`) |
+| `visual-baseline` | Planning oracle branch @ `98fdd8d5` (READINESS-08 tip; Wave 2 on `prep-wave1-verify`) |
 | `prep-wave1-verify` | **Wave 1 + Wave 2 complete** + [`READY-FOR-REFACTORING-EXECUTION.md`](READY-FOR-REFACTORING-EXECUTION.md) issued @ `4f26ba3f` |
 
 **Tag policy:** Frozen tag `visual-baseline` remains @ `4a79c0a2` (peeled; unmoved). Branch `visual-baseline` tracks catalog tip separately from the frozen tag.
