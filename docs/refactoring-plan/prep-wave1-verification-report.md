@@ -16,7 +16,7 @@
 | **Is the catalog fully ready for `READY FOR REFACTORING EXECUTION`?** | **Yes (Wave 1 + Wave 2 complete)** — see [`READY-FOR-REFACTORING-EXECUTION.md`](READY-FOR-REFACTORING-EXECUTION.md) |
 | **Safe to arm campaign `/goal` from this branch?** | **Catalog-ready** — requires operator explicit authorization per READY doc; tag `visual-baseline` unmoved |
 
-**One-line:** Wave 1 **PASS**; Wave 2 hardening **PASS** (IW-02/03 closed, INT-03 deferred); execution readiness **ISSUED** on `prep-wave1-verify` (catalog SHA `98fdd8d5`).
+**One-line:** Wave 1 **PASS**; Wave 2 hardening **PASS** (IW-02/03 closed, INT-03 deferred); execution readiness **ISSUED** on `prep-wave1-verify` (catalog SHA `4f26ba3f`).
 
 ---
 
@@ -109,8 +109,8 @@
 
 | Branch | Role |
 | --- | --- |
-| `visual-baseline` | Planning oracle branch @ `98fdd8d5` (READINESS-08 tip; Wave 2 on `prep-wave1-verify`) |
-| `prep-wave1-verify` | **Wave 1 + Wave 2 complete** + [`READY-FOR-REFACTORING-EXECUTION.md`](READY-FOR-REFACTORING-EXECUTION.md) issued @ `98fdd8d5` |
+| `visual-baseline` | Planning oracle branch @ `4f26ba3f` (READINESS-08 tip; Wave 2 on `prep-wave1-verify`) |
+| `prep-wave1-verify` | **Wave 1 + Wave 2 complete** + [`READY-FOR-REFACTORING-EXECUTION.md`](READY-FOR-REFACTORING-EXECUTION.md) issued @ `4f26ba3f` |
 
 **Tag policy:** Frozen tag `visual-baseline` remains @ `4a79c0a2` (peeled; unmoved). Branch `visual-baseline` tracks catalog tip separately from the frozen tag.
 
@@ -120,4 +120,4 @@
 
 ## Conclusion
 
-Wave 1 is **complete**; Wave 2 hardening **closed** (IW-02, IW-03); INT-03 **deferred** to TASK-001+ production host. Partitions **C, D, and E** spot-check **PASS**. Mechanical gates green @ catalog SHA `98fdd8d5`. Execution readiness issued — next step is operator authorization, then TASK-001 bootstrap on architectural `main` per [`task-001-bootstrap-plan.md`](task-001-bootstrap-plan.md).
+Wave 1 is **complete**; Wave 2 hardening **closed** (IW-02, IW-03); INT-03 **deferred** to TASK-001+ production host. Partitions **C, D, and E** spot-check **PASS**. Mechanical gates green @ catalog SHA `4f26ba3f`. Execution readiness issued — next step is operator authorization, then TASK-001 bootstrap on architectural `main` per [`task-001-bootstrap-plan.md`](task-001-bootstrap-plan.md).

@@ -2,9 +2,9 @@
 
 **Issued:** 2026-09-15  
 **Branch:** `prep-wave1-verify`  
-**Catalog commit:** `98fdd8d5` on branch `prep-wave1-verify` (verify with `git rev-parse HEAD`)  
+**Catalog commit:** `4f26ba3f` on branch `prep-wave1-verify` (verify with `git rev-parse HEAD`)  
 **Parent planning tip:** `1a873cff` → Wave 2 bootstrap work (IW-02/03 + TASK-001 plan) on this branch  
-**Planning branch `visual-baseline`:** `98fdd8d5` — READINESS-08 tip (Wave 2 on `prep-wave1-verify`; verify with `git rev-parse refs/heads/visual-baseline`)  
+**Planning branch `visual-baseline`:** `4f26ba3f` — READINESS-08 tip (Wave 2 on `prep-wave1-verify`; verify with `git rev-parse refs/heads/visual-baseline`)  
 **Product oracle:** `02f5294bfdbf38004cc49130d0aff1d01f31434c`  
 **Architectural main:** `7b27732a8c3c131760ec3438f641cb3c11343a42`  
 **Task-format authority:** `52d9f1eb7721f409bc47beb9fced7997b5c13ede`  
