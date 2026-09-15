@@ -21,7 +21,7 @@ Recorded source inspection on 2026-09-11:
 | Immutable UI/UX oracle pin (then peeled `holla-fable-2026-09-10`; live tag `visual-baseline` is `4a79c0a2`) | `02f5294bfdbf38004cc49130d0aff1d01f31434c` |
 | Annotated tag object recorded 2026-09-11 | `a643909d9a782adaf0aa1e3357710a5ed3f24443` |
 | Architectural main inspected | `7b27732a8c3c131760ec3438f641cb3c11343a42` |
-| Planning branch tip (`visual-baseline`; verify with `git rev-parse HEAD`) | `a3e8e356cca62950a37c82ca9e3f53dd9e497e83` (2026-09-15) |
+| Planning branch tip (`visual-baseline`; verify with `git rev-parse HEAD`) | `84742bf6` (2026-09-15; verify with `git rev-parse HEAD`) |
 | Current-format source and installed CLI inspected | `52d9f1eb7721f409bc47beb9fced7997b5c13ede` |
 
 These are recorded campaign pins, not a claim that mutable remote branches have been freshly rechecked on every status update. The oracle governs behavior; main governs retained architecture. [History](history.md), [authority reconciliation](history-ledger-reconciliation.md) and [task-format inspection](task-format.md) explain their different roles.

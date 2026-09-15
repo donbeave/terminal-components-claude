@@ -1,7 +1,7 @@
 # Campaign arming readiness — prompt analysis (2026-09-15)
 
 **Purpose:** Prepare for arming `/goal` from [`campaign-execution-prompt.md`](campaign-execution-prompt.md) **without** starting production work.  
-**Catalog tip (last known):** `a3e8e356` on `visual-baseline` (tag peeled `4a79c0a2` unmoved; branch **9 commits ahead**).  
+**Catalog tip (last known):** `84742bf6` on `visual-baseline` (tag peeled `4a79c0a2` unmoved; branch **9 commits ahead**).  
 **Method:** Subagent audit + local command benchmarks (re-run 2026-09-15) + doc cross-check.
 
 ---

@@ -1,6 +1,6 @@
 # Campaign execution prompt
 
-Stored for **campaign preparation** on **2026-09-15**; re-verified **2026-09-15** on branch `visual-baseline` @ `a3e8e356` (tag `visual-baseline` peeled commit remains frozen at `4a79c0a2`). This file freezes the canonical `/goal` prompt for executing the terminal-components refactoring campaign against the pinned catalog. Do not edit planning contracts or task packages during campaign execution without explicit replanning.
+Stored for **campaign preparation** on **2026-09-15**; re-verified **2026-09-15** on branch `visual-baseline` @ `84742bf6` (tag `visual-baseline` peeled commit remains frozen at `4a79c0a2`). This file freezes the canonical `/goal` prompt for executing the terminal-components refactoring campaign against the pinned catalog. Do not edit planning contracts or task packages during campaign execution without explicit replanning.
 
 **Coordinator paste (2026-09-15):** a verbatim coordinator-supplied body was analyzed and merged here. The paste implied a full 7,550-combo visual matrix on every production edit; the stored body **amends** that with tiered gates in [Campaign iteration guide](campaign-iteration-guide.md) (edit-loop targeted `TUISNAP_FAST=1` filters vs fidelity full matrix at acceptance boundaries only). **Arm from this file, not the unamended paste.**
 
@@ -61,7 +61,7 @@ Expected current identities are:
 * frozen annotated tag `visual-baseline` (peeled commit — do not move):
   `4a79c0a2d40fca46fc406b77157ce3b3f12ec16b`
 * current planning branch `visual-baseline` catalog tip (verify at arm time; may be ahead of tag):
-  `a3e8e356cca62950a37c82ca9e3f53dd9e497e83` (verify at arm time with `git rev-parse HEAD`)
+  `84742bf6` (verify at arm time with `git rev-parse HEAD`)
 * immutable product-experience oracle referenced by the task contracts:
   `02f5294bfdbf38004cc49130d0aff1d01f31434c`
 * task-format authority:
