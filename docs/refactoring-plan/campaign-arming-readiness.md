@@ -93,7 +93,7 @@ All Rust validation uses **`cargo nextest`**, never `cargo test`.
 ## Recommended next step (this preparation goal)
 
 1. **Commit** this readiness doc + any prompt header updates (if not already on tip).
-2. **Run §22.17 witness round** (parallel independent subagents on frozen catalog @ arm SHA).
+2. Execute **Wave 1** repairs per [`pre-execution-preparation-plan.md`](pre-execution-preparation-plan.md) (READINESS-01–06, WITNESS-01, CAMPAIGN_AGENTS).
 3. **When green:** arm `/goal` copying body from `campaign-execution-prompt.md` only; record SHA in campaign ledger.
 
 **This session does not arm the campaign or dispatch TASK-001.**

@@ -88,6 +88,7 @@ See [`planning-acceptance.md`](planning-acceptance.md) for per-item evidence.
 
 ## Recommended next steps
 
-1. ~~Fresh adversarial witness round → `review-readiness-final.md`~~ **Done** @ `3213fce2`; repair READINESS-01–05 and spot-check.
+1. ~~Fresh adversarial witness round → `review-readiness-final.md`~~ **Done** @ `3213fce2`.
+2. Execute **Wave 1** catalog repairs → [`pre-execution-preparation-plan.md`](pre-execution-preparation-plan.md); spot-check partitions C/D/E.
 2. Commit and hash-freeze campaign docs at closure SHA.
 3. Build TASK-001 harness before arming campaign execution (explicit authorization required).

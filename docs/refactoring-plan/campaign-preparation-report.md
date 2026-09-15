@@ -167,7 +167,7 @@ The stored prompt matches the coordinator specification. Preparation added (with
 ## 8. Recommended next step
 
 1. **Commit campaign prep docs** (prompt, iteration guide, prep report, `visual-validation.md`) — removes ambiguity before catalog freeze.
-2. **Repair READINESS-01–05** — coordinator/TASK-031/008 trusted bindings, INT-02, preparation mode, TASK-069 overclaims ([`review-readiness-final.md`](review-readiness-final.md)).
+2. Execute **Wave 1** from [`pre-execution-preparation-plan.md`](pre-execution-preparation-plan.md) — consolidated repair spec for all rejected partitions.
 3. **When Phase 0 green:** arm `/goal` from committed `campaign-execution-prompt.md`; first production work is TASK-001 bootstrap on architectural-main worktree.
 
 **Do not start the campaign goal in this preparation session.**
