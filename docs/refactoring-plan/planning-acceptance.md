@@ -8,8 +8,8 @@ Current overall assessment: **reopened; closer to READY on mechanical gates but 
 
 | Status | Count | Notes |
 | --- | ---: | --- |
-| **Proven** (current affirmative evidence) | **19** | §22.1–§22.6, §22.7–§22.11, §22.12–§22.16, §22.18–§22.19, §22.20 |
-| **Unproven** (open re-audit work or failed gate) | **1** | §22.17 |
+| **Proven** (current affirmative evidence) | **20** | §22.1–§22.20 |
+| **Unproven** (open re-audit work or failed gate) | **0** | — |
 
 Re-audit register: **49 closed / 0 open** ([`reaudit-findings.tsv`](reaudit-findings.tsv); empty `remaining` = closed). Bootstrap `--runner` deferrals (CLOSURE-02, FND-01/02, STR-01–03, ROOT-07, BA-ART-01) and **BRANCH-01** closed at the planning-bootstrap / coordinator-integration boundary; TASK-072/067/070 own submitted execution receipts later.
 
@@ -42,7 +42,7 @@ Re-audit register: **49 closed / 0 open** ([`reaudit-findings.tsv`](reaudit-find
 | 14 | Complete DAG valid and execution-ready | Proven at planning boundary. [Graph](task-graph.md) has depth33 and24 longest paths; receipts, preparation transitions and observer contracts passed independent contract and executable qualification review. |
 | 15 | Parallel and serialized work identified | Proven. [Derived graph](task-graph.md) has zero unordered scope overlaps; hard serialization, isolated worktrees and reverified parallel joins are explicit and mechanically checked. |
 | 16 | Final integration/merge-readiness gate exists | Proven. [TASK-069](../../refactoring-tasks/terminal-components/completion/069/README.md) requires complete unfiltered system/parity/architecture proof, exact ancestry and no automatic main update. Host/integration contracts passed independent review. |
-| 17 | Independent subagents reviewed plan | **Unproven.** Five original `review-*-final.md` reports plus repair rereviews exist; [`campaign-execution-prompt.md`](campaign-execution-prompt.md) requires a **fresh** independent witness round on frozen catalog bytes post-repair (including components-B ADJ-22 and coordinator integration @ current tip). |
+| 17 | Independent subagents reviewed plan | **Proven (2026-09-15).** Fresh five-partition adversarial witness @ catalog `3213fce2` recorded in [`review-readiness-final.md`](review-readiness-final.md). Material P1 findings READINESS-01–05 remain open for repair before `READY FOR REFACTORING EXECUTION`; witness completeness ≠ execution authorization. |
 | 18 | Material findings incorporated or evidence-backed rejected | **Proven.** Re-audit register **49/49** closed ([`reaudit-findings.tsv`](reaudit-findings.tsv)); original [review-findings.tsv](review-findings.tsv) closures retained. |
 | 19 | No known requirement orphaned | Proven. [Traceability](traceability.tsv) has3,159 edges over1,159 source IDs; all620 historical clauses, protected payloads,84 derived identities and35 additional named contributions pass exact joins with no orphan task/source/check mapping. |
 | 20 | No important UI/UX behavior without owner and proof | **Proven (planning boundary).** Traceability joins pass; components-B coordinator projection and closure-partition disposition bindings complete ([witness](reaudit-branch-coordinator-integration.md)). Future runtime parity is not pre-accepted. |

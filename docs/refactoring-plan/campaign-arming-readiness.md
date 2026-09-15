@@ -20,12 +20,12 @@
 
 ## Readiness blockers (must clear before arming)
 
-1. **§22.17** — fresh independent adversarial witness on frozen catalog bytes (incl. ADJ-22 / [`reaudit-branch-coordinator-integration.md`](reaudit-branch-coordinator-integration.md)).
+1. ~~**§22.17** witness~~ — **Done** @ `3213fce2` → [`review-readiness-final.md`](review-readiness-final.md). **READINESS-01–05** repairs still open.
 2. **Explicit issuance** — obtain `READY FOR REFACTORING EXECUTION` on exact catalog SHA (not inferred from green validators).
 3. **Catalog freeze** — commit + record tree hash at arm time (`git rev-parse HEAD` on planning branch).
 4. **TASK-001 bootstrap** — `tools/refactor-proof/bin/tc-proof-host` absent; required after Phase 0, on architectural-`main` worktree (not tag branch production edits).
 
-Re-audit register: **49/49 closed** at planning boundary ([`reaudit-findings.tsv`](reaudit-findings.tsv)). §22: **19/20 proven** — only §22.17 open ([`planning-acceptance.md`](planning-acceptance.md)).
+Re-audit register: **49/49 closed** at planning boundary ([`reaudit-findings.tsv`](reaudit-findings.tsv)). §22: **20/20 proven** ([`planning-acceptance.md`](planning-acceptance.md)); READINESS repairs open ([`review-readiness-final.md`](review-readiness-final.md)).
 
 ---
 
@@ -68,8 +68,9 @@ All Rust validation uses **`cargo nextest`**, never `cargo test`.
 
 ### A. Phase 0 (before `/goal`)
 
-- [ ] Fresh §22.17 independent witness → `review-readiness-final.md` (or partition refresh)
-- [ ] Move §22.17 to **Proven** in `planning-acceptance.md` (20/20)
+- [x] Fresh §22.17 independent witness → [`review-readiness-final.md`](review-readiness-final.md) @ `3213fce2`
+- [x] Move §22.17 to **Proven** in `planning-acceptance.md` (20/20)
+- [ ] Repair **READINESS-01–05** (see witness doc) and spot-check partitions C/D/E
 - [ ] Issue **`READY FOR REFACTORING EXECUTION`** on frozen catalog bytes
 - [ ] Record catalog SHA; refresh prompt header if tip moved
 - [ ] Operator explicit authorization to arm campaign

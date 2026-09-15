@@ -63,14 +63,14 @@ Last audited: 2026-09-15 (subagent round + local verification).
 | --- | --- |
 | Re-audit register | **0 open / 49 closed** (planning boundary; 2026-09-15) |
 | Independent `READY FOR REFACTORING EXECUTION` | **Not issued** |
-| `planning-acceptance.md` §22 | **19 proven / 1 unproven** (§22.17 fresh witness round) |
+| `planning-acceptance.md` §22 | **20/20 proven** — witness [`review-readiness-final.md`](review-readiness-final.md) @ `3213fce2`; READINESS-01–05 open |
 | Production harness (`tc-proof-host`, `tools/refactor-proof/`) | **Not built** — TASK-001 deliverable |
 | BRANCH-01 whole-branch diff | **Closed (planning boundary)** — [coordinator witness](reaudit-branch-coordinator-integration.md); 752/7885 inventory reviewed |
 | Campaign doc freeze | Pending commit of current round |
 
 ### Top remaining blockers
 
-1. **§22.17 fresh independent witness round** — adversarial reviewers on frozen catalog bytes (including ADJ-22 / coordinator integration)
+1. ~~**§22.17 fresh independent witness round**~~ — **Done** → [`review-readiness-final.md`](review-readiness-final.md). Repair **READINESS-01–05** before arming.
 2. **`READY FOR REFACTORING EXECUTION` non-issuance** — explicit gate; do not infer from green mechanical validators
 3. **TASK-001 bootstrap** — canonical `taskfmt verify` + `tc-proof-host` non-runnable until harness exists
 4. **Catalog commit/freeze** — arm only from committed SHA; record exact tree hash at readiness
@@ -143,9 +143,10 @@ The stored prompt matches the coordinator specification. Preparation added (with
 ### A. Phase 0 (required before arming `/goal`)
 
 - [x] Close all **49** rows in [`reaudit-findings.tsv`](reaudit-findings.tsv) at planning boundary
-- [ ] Complete **fresh** independent witness round for §22.17 on frozen catalog bytes
+- [x] Complete **fresh** independent witness round for §22.17 → [`review-readiness-final.md`](review-readiness-final.md) @ `3213fce2`
 - [x] Finish **BRANCH-01** coordinator integration ([witness](reaudit-branch-coordinator-integration.md))
-- [ ] Re-prove **§22.17** in [`planning-acceptance.md`](planning-acceptance.md) (19/20 proven)
+- [x] Re-prove **§22.17** in [`planning-acceptance.md`](planning-acceptance.md) (20/20)
+- [ ] Repair **READINESS-01–05** per witness doc; spot-check partitions C/D/E
 - [ ] Obtain fresh **`READY FOR REFACTORING EXECUTION`** on frozen catalog bytes
 - [ ] Commit + hash-freeze campaign docs (`campaign-execution-prompt.md`, iteration guide, this report)
 
@@ -166,7 +167,7 @@ The stored prompt matches the coordinator specification. Preparation added (with
 ## 8. Recommended next step
 
 1. **Commit campaign prep docs** (prompt, iteration guide, prep report, `visual-validation.md`) — removes ambiguity before catalog freeze.
-2. **Complete §22.17** — fresh independent witness round on frozen catalog bytes (parallel subagents).
+2. **Repair READINESS-01–05** — coordinator/TASK-031/008 trusted bindings, INT-02, preparation mode, TASK-069 overclaims ([`review-readiness-final.md`](review-readiness-final.md)).
 3. **When Phase 0 green:** arm `/goal` from committed `campaign-execution-prompt.md`; first production work is TASK-001 bootstrap on architectural-main worktree.
 
 **Do not start the campaign goal in this preparation session.**
@@ -180,6 +181,6 @@ The stored prompt matches the coordinator specification. Preparation added (with
 | Prompt stored + iteration guidance | **Yes** |
 | Verification commands block iteration? | **No** — edit loop ~0.3 s–17 s targeted; smoke ~113 s; fidelity full matrix only at boundaries |
 | Phase 0 mechanical validators | **Yes** |
-| Phase 0 process / witness / findings | **No** — §22.17 witness open (49/49 findings closed) |
+| Phase 0 process / witness / findings | **Partial** — §22.17 witness done; READINESS-01–05 open (49/49 re-audit closed) |
 | TASK-001 harness | **No** |
 | Arm campaign `/goal` now? | **No** |

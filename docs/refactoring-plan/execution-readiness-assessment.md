@@ -12,7 +12,7 @@
 | --- | --- |
 | **Can we issue `READY FOR REFACTORING EXECUTION` now?** | **No** |
 | **Can planning-only Phase 0 mechanical gates be declared complete separately from TASK-001?** | **Yes** |
-| **Can planning-only Phase 0 (full §22 + re-audit + witness) be declared complete now?** | **No** — §22.17 fresh independent witness round remains |
+| **Can planning-only Phase 0 (full §22 + re-audit + witness) be declared complete now?** | **Partial** — §22.17 witness complete ([`review-readiness-final.md`](review-readiness-final.md)); READINESS-01–05 repairs still open before execution authorization |
 
 Do not arm the campaign `/goal` or dispatch TASK-001 production work without explicit authorization.
 
@@ -22,7 +22,7 @@ Do not arm the campaign `/goal` or dispatch TASK-001 production work without exp
 
 Mechanical validators and **seven** bootstrap freeze groups are green. Re-audit register is **49 closed / 0 open**. Bootstrap `--runner` deferrals and **BRANCH-01** are closed at the **planning-bootstrap / coordinator-integration** boundary; TASK-072/067/070 own submitted execution later.
 
-Remaining blockers are narrow: **§22.17** fresh independent witness on frozen catalog bytes (including ADJ-22 and coordinator integration), explicit non-issuance of `READY FOR REFACTORING EXECUTION`, and absent production proof harness (`tc-proof-host`).
+Remaining blockers: **READINESS-01–05** catalog repairs from [`review-readiness-final.md`](review-readiness-final.md) (coordinator projection / AGENTS conflict / TASK-008 disposition / preparation-mode binding / TASK-069 overclaims), explicit non-issuance of `READY FOR REFACTORING EXECUTION`, and absent production proof harness (`tc-proof-host`).
 
 ---
 
@@ -58,8 +58,8 @@ Remaining blockers are narrow: **§22.17** fresh independent witness on frozen c
 
 | Status | Count | Items |
 | --- | ---: | --- |
-| **Proven** | **19** | §22.1–§22.16, §22.18–§22.20 |
-| **Unproven** | **1** | §22.17 |
+| **Proven** | **20** | §22.1–§22.20 |
+| **Unproven** | **0** | — |
 
 See [`planning-acceptance.md`](planning-acceptance.md) for per-item evidence.
 
@@ -67,10 +67,10 @@ See [`planning-acceptance.md`](planning-acceptance.md) for per-item evidence.
 
 ## Exact blockers to `READY FOR REFACTORING EXECUTION`
 
-1. **§22.17 unproven** — fresh independent adversarial witness round on frozen catalog bytes.
-2. **No issuance** — do not infer readiness from green mechanical validators alone.
+1. **READINESS-01–05 open** — repair coordinator/TASK-031/008 trusted bindings, INT-02 AGENTS conflict, preparation-mode binding, TASK-069 overclaims ([`review-readiness-final.md`](review-readiness-final.md)).
+2. **No issuance** — do not infer readiness from green mechanical validators or witness completeness alone.
 3. **TASK-001 harness absent** — blocks campaign execution, not Phase 0 mechanical gates.
-4. **Commit/freeze** — arm `/goal` only from committed SHA with recorded tree hash.
+4. **Commit/freeze** — arm `/goal` only from post-repair committed SHA with recorded tree hash.
 
 ---
 
@@ -80,7 +80,7 @@ See [`planning-acceptance.md`](planning-acceptance.md) for per-item evidence.
 | --- | --- |
 | Mechanical validators + bootstrap freeze | **Yes** |
 | Re-audit register (planning boundary) | **Yes** — 49/49 |
-| §22 planning acceptance | **19/20** — §22.17 open |
+| §22 planning acceptance | **20/20** — witness @ [`review-readiness-final.md`](review-readiness-final.md); READINESS repairs open |
 | Independent `READY FOR REFACTORING EXECUTION` | **No** |
 | TASK-001 / `tc-proof-host` | **No** |
 
@@ -88,6 +88,6 @@ See [`planning-acceptance.md`](planning-acceptance.md) for per-item evidence.
 
 ## Recommended next steps
 
-1. Fresh adversarial witness round → `review-readiness-final.md` (or per-partition refresh).
+1. ~~Fresh adversarial witness round → `review-readiness-final.md`~~ **Done** @ `3213fce2`; repair READINESS-01–05 and spot-check.
 2. Commit and hash-freeze campaign docs at closure SHA.
 3. Build TASK-001 harness before arming campaign execution (explicit authorization required).
