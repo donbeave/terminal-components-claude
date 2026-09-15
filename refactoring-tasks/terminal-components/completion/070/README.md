@@ -19,6 +19,7 @@ TASK-001 qualifies comparison and the thin host core only. This package owns the
 
 Read before editing:
 
+- `/task/CAMPAIGN_AGENTS.md`: campaign executor protocol; supersedes AGENTS.md steps 6–7 for verification authority.
 - `/work/docs/refactoring-plan/proof-contract.md` and `/work/docs/refactoring-plan/architecture-adjudication.md`.
 - `/task/trusted/runner-bootstrap/runner-bootstrap-protocol.md` and the exact group70 fixture/driver source.
 - `/task/trusted/source-obligations.tsv`: all mapped clauses, exact historical source revisions, remaining-work and named-test obligations bind their requirement/acceptance/check IDs.

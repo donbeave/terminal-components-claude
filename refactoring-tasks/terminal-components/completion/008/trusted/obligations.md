@@ -12,6 +12,10 @@ Keep compatible ownership/safety/backend/API tests active and passing; preserve 
 
 Execute the complete required inventory with no-fail-fast and record every actual failure. Qualify unknown failure, missing/filtered/ignored test, renamed identity without relocation, changed classification, previously closed failure and candidate-edited stage-map rejection. A future-owner failure remains visibly failed and must close monotonically by its owner; app closure and final stages have empty relevant unresolved sets.
 
+## Branch components-B assertion dispositions
+
+Normative under R-001/R-002/R-003 and CHK-004/005/006. The protected `/task/trusted/branch-test-disposition-bindings.tsv` binds **W-021-07**, **W-025-07**, **W-025-08**, and **W-026-05** to TASK-008 exact-identity disposition authority: preserve compatible architectural assertions; replace only source-adjudicated conflicting observations using independently accepted oracle data. External test targets are listed in `/task/trusted/external-test-source-scope.md`; inline `M:` targets remain in `/task/trusted/inline-test-source-scope.md`. No component executor may edit dispositions without protected host review.
+
 Source requirements:
 
 - [docs/refactoring-plan/proof-contract.md](/work/docs/refactoring-plan/proof-contract.md).

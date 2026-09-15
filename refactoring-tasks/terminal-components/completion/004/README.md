@@ -19,6 +19,7 @@ This is a later execution task. The current planning goal only creates this immu
 
 Read before editing:
 
+- `/task/CAMPAIGN_AGENTS.md`: campaign executor protocol; supersedes AGENTS.md steps 6–7 for verification authority.
 - `/task/trusted/app-flow-contribution-contract.md`, `/task/trusted/app-flow-contributions.tsv`, `/task/trusted/app-flow-frame-contributions.tsv`, and `/task/trusted/app-flow-stage-audit.tsv`; consume only this application's rows, without dropping any parent scenario.
 
 - [docs/refactoring-plan/jackin.md](/work/docs/refactoring-plan/jackin.md).

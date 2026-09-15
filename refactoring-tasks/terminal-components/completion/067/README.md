@@ -19,6 +19,7 @@ Real Showcase style share measurement and all preserved allocation/byte/dirty-ap
 
 Read before editing:
 
+- `/task/CAMPAIGN_AGENTS.md`: campaign executor protocol; supersedes AGENTS.md steps 6–7 for verification authority.
 - `/task/trusted/obligations.md` and the exact historical clauses in `/task/trusted/source-obligations.tsv`.
 - The immutable host-mounted proof contract, architecture assessment/adjudication, test dispositions, scenario expansions and task-stage command inventory.
 - The accepted parent versions of every writable file and the commit-qualified source references above.

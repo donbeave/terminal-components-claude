@@ -260,6 +260,51 @@ class Audit:
         maximum = max(depth.values(), default=0)
         return {"maximum_dependency_depth": maximum, "deepest_tasks": sorted(task for task, value in depth.items() if value == maximum), "depth": depth, "longest_path_predecessors": predecessors}
 
+    def coordinator_branch_bindings(self) -> None:
+        projection = self.table("branch-diff-components-b-coordinator-projection.tsv")
+        disposition_doc = self.docs / "branch-diff-components-b-test-disposition-bindings.tsv"
+
+        row031 = next((row for row in projection if "TASK-031 host projection" in row.get("integration_item", "")), None)
+        self.require(row031 is not None, "Missing TASK-031 coordinator projection row")
+        if row031 is None:
+            return
+        claimed = {witness.strip() for witness in row031.get("projection_binding", "").split(";") if witness.strip().startswith("W-")}
+        claimed.discard("existing W-031-10/11")
+
+        proj_path = self.root / "refactoring-tasks/terminal-components/completion/031/trusted/branch-host-projection.tsv"
+        self.require(proj_path.is_file(), "Missing TASK-031 branch-host-projection.tsv")
+        if proj_path.is_file():
+            with proj_path.open(newline="", encoding="utf-8") as stream:
+                indexed = {row["witness_id"] for row in csv.DictReader(stream, delimiter="\t")}
+            self.require(claimed <= indexed, f"TASK-031 projection missing witnesses: {sorted(claimed - indexed)}")
+            self.require("W-042-JUMP-SUBMIT" not in indexed, "W-042-JUMP-SUBMIT must not appear in TASK-031 branch projection")
+
+        row008 = next((row for row in projection if "TASK-008 assertion dispositions" in row.get("integration_item", "")), None)
+        self.require(row008 is not None, "Missing TASK-008 coordinator disposition row")
+        disp_claimed = {"W-021-07", "W-025-07", "W-025-08", "W-026-05"}
+
+        trusted_disp = self.root / "refactoring-tasks/terminal-components/completion/008/trusted/branch-test-disposition-bindings.tsv"
+        obligations_path = self.root / "refactoring-tasks/terminal-components/completion/008/trusted/obligations.md"
+        external_path = self.root / "refactoring-tasks/terminal-components/completion/008/trusted/external-test-source-scope.md"
+        self.require(trusted_disp.is_file(), "Missing TASK-008 branch-test-disposition-bindings.tsv")
+        self.require(external_path.is_file(), "Missing TASK-008 external-test-source-scope.md")
+        if trusted_disp.is_file():
+            with trusted_disp.open(newline="", encoding="utf-8") as stream:
+                disp_ids = {row["witness_id"] for row in csv.DictReader(stream, delimiter="\t")}
+            self.require(disp_claimed <= disp_ids, "TASK-008 disposition TSV missing branch witnesses")
+        if obligations_path.is_file():
+            obligations = obligations_path.read_text()
+            for witness_id in disp_claimed:
+                self.require(witness_id in obligations, f"TASK-008 obligations.md missing {witness_id}")
+        if external_path.is_file() and disposition_doc.is_file():
+            external = external_path.read_text()
+            with disposition_doc.open(newline="", encoding="utf-8") as stream:
+                for row in csv.DictReader(stream, delimiter="\t"):
+                    for token in row.get("conflicting_scope", "").split(";"):
+                        token = token.strip()
+                        if token.startswith("crates/tui/tests/") and "*" not in token:
+                            self.require(token in external, f"External test path not scoped: {token}")
+
     def traceability(self, sources: dict, tasks: dict) -> None:
         rows = self.table("traceability.tsv")
         required_columns = {"source_namespace", "source_id", "task_id", "requirement_id", "acceptance_id", "check_id", "role", "disposition"}
@@ -383,6 +428,7 @@ def main() -> int:
         audit.historical_prose(sources, tasks)
         audit.frozen_assets()
         graph = audit.graph(dependencies)
+        audit.coordinator_branch_bindings()
         audit.traceability(sources, tasks)
     report = {"schema": "tc-planning-audit/v1", "mode": "inventory" if arguments.inventory_only else "artifact-integrity", "passed": not audit.errors, "counts": audit.counts, "graph": graph, "errors": audit.errors}
     if arguments.summary:

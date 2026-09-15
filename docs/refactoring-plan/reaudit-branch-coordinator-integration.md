@@ -50,7 +50,7 @@ Whole-branch semantic acceptance is **not** claimed: **752 / 7,885** inventory p
 
 Branch finite witnesses bound for conformance/host required-set membership (execution projects into TASK-031 CHK-006 witnesses, not planning edits to task packages):
 
-`W-021-07`, `W-022-10`, `W-023-07`, `W-024-07`, `W-024-08`, `W-025-07`, `W-025-08`, `W-026-05`, `W-027-07`, `W-028-06`, `W-042-JUMP-SUBMIT`, plus existing `W-031-10/11`.
+`W-021-07`, `W-022-10`, `W-023-07`, `W-024-07`, `W-024-08`, `W-025-07`, `W-025-08`, `W-026-05`, `W-027-07`, `W-028-06`, plus existing `W-031-10/11`. **W-042-JUMP-SUBMIT** is owned by TASK-042 only (Files jump consumer).
 
 ### TASK-025 scope catalogue
 

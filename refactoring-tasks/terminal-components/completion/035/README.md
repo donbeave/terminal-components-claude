@@ -19,6 +19,7 @@ General, Members and Environment provide original editing/save/dirty/selection/p
 
 Read before editing:
 
+- `/task/CAMPAIGN_AGENTS.md`: campaign executor protocol; supersedes AGENTS.md steps 6–7 for verification authority.
 - `/task/trusted/source-obligations.tsv`: exact historical clauses and their binding requirement, acceptance and check mappings.
 - `/task/trusted/obligations.md`: exact scenario membership, source clauses and frozen-proof rules.
 - The host-provided immutable `showcase.md` or `holla.md` report for this application's full expansion grammar, and `proof-contract.md` for proof isolation and stage accounting.

@@ -19,6 +19,7 @@ This package describes future implementation, not work authorized by the current
 
 Read before editing:
 
+- `/task/CAMPAIGN_AGENTS.md`: campaign executor protocol; supersedes AGENTS.md steps 6–7 for verification authority.
 - `/task/trusted/source-witnesses.md` in full; its finite source-state, actual-paint and real-mutant cases are normative R-001/R-002/R-003 proof obligations, not optional examples.
 - `/task/trusted/style-timing-contract.md` in full; its single production timing seam and independent qualification are normative R-001/R-002/R-003 obligations, consumed by TASK-067.
 - `/task/trusted/obligations.md` in full, including every assigned historical clause.

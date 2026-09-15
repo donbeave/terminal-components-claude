@@ -19,6 +19,7 @@ This is a later execution task. The current planning goal only creates this immu
 
 Read before editing:
 
+- `/task/CAMPAIGN_AGENTS.md`: campaign executor protocol; supersedes AGENTS.md steps 6–7 for verification authority.
 - [docs/refactoring-plan/history.md](/work/docs/refactoring-plan/history.md).
 - [docs/refactoring-plan/historical-obligations-canonical.tsv](/work/docs/refactoring-plan/historical-obligations-canonical.tsv).
 - [docs/refactoring-plan/architecture.md](/work/docs/refactoring-plan/architecture.md).

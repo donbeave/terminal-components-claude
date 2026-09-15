@@ -21,6 +21,7 @@ This package describes future implementation, not work authorized by the current
 
 Read before editing:
 
+- `/task/CAMPAIGN_AGENTS.md`: campaign executor protocol; supersedes AGENTS.md steps 6–7 for verification authority.
 - `/task/trusted/obligations.md` in full, including every assigned historical clause.
 - `/task/trusted/source-witnesses.md` in full; its finite case IDs, source anchors, inputs, axes and exact checkpoints are mandatory host-frozen proof inputs, not executor-selected examples.
 - `/task/trusted/source-obligations.tsv` in full; its exact source-qualified clauses, dispositions and task/check mappings are normative, not optional background.

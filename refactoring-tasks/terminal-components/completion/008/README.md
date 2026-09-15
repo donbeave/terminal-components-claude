@@ -19,6 +19,7 @@ This is a later execution task. The current planning goal only creates this immu
 
 Read before editing:
 
+- `/task/CAMPAIGN_AGENTS.md`: campaign executor protocol; supersedes AGENTS.md steps 6–7 for verification authority.
 - [docs/refactoring-plan/proof-contract.md](/work/docs/refactoring-plan/proof-contract.md).
 - [docs/refactoring-plan/decomposition-proposal.md](/work/docs/refactoring-plan/decomposition-proposal.md).
 - [docs/refactoring-plan/holla.md](/work/docs/refactoring-plan/holla.md).
@@ -26,6 +27,7 @@ Read before editing:
 - [docs/refactoring-plan/tablepro.md](/work/docs/refactoring-plan/tablepro.md).
 - `/task/trusted/source-obligations.tsv`: every mapped clause, remaining-work obligation and named test is binding under its requirement/acceptance/check IDs.
 - `/task/trusted/obligations.md`, `/task/trusted/inline-test-source-scope.md` and `/work/docs/refactoring-plan/proof-contract.md`.
+- `/task/trusted/branch-test-disposition-bindings.tsv` and `/task/trusted/external-test-source-scope.md`: components-B disposition authority and external test span targets.
 
 ## Preconditions
 
@@ -59,7 +61,7 @@ Out of scope:
 - **R-004 (MUST NOT):** Violate any rejection, deferral, non-goal or trust rule mapped to R-004 in the protected source obligations. Never skip or weaken a failing test to obtain green output, replace architecture assertions merely because product text changes, let candidate frames generate expected output, add broad tolerances, treat diagnostic failures as passing parity, or allow any unresolved identity at TASK-069.
 - **R-005 (MUST):** The complete authoritative gate succeeds with all actual check logs, protected-input integrity and the exact accepted source tree recorded by the host.
 
-R-001/R-002 additionally bind `/task/trusted/inline-test-source-scope.md`. The exact listed source files are writable only for host-approved test assertion spans, never production behavior. Before candidate edits, independently review proposed replacements against accepted TASK-007 identity evidence and TASK-006 oracle data and freeze the patch manifest. CHK-006 checks unchanged bytes outside approved spans, preserved module/cfg/ignore structure and compatible assertions, plus exact original archive bytes. Merely being in verify.toml's file scope grants no other mutation. Holla app hint/Escape assertions and scenario world-count assertions must be migrated through these exact rules.
+R-001/R-002 additionally bind `/task/trusted/inline-test-source-scope.md`. R-001/R-002 additionally bind `/task/trusted/branch-test-disposition-bindings.tsv` and `/task/trusted/external-test-source-scope.md` for components-B conflicting starting tests (W-021-07, W-025-07/08, W-026-05). The exact listed source files are writable only for host-approved test assertion spans, never production behavior. Before candidate edits, independently review proposed replacements against accepted TASK-007 identity evidence and TASK-006 oracle data and freeze the patch manifest. CHK-006 checks unchanged bytes outside approved spans, preserved module/cfg/ignore structure and compatible assertions, plus exact original archive bytes. Merely being in verify.toml's file scope grants no other mutation. Holla app hint/Escape assertions and scenario world-count assertions must be migrated through these exact rules.
 
 R-001/R-003 require the operator, before executor dispatch, to apply that exact reviewed span-patch manifest independently to a disposable recorded-parent checkout, verify the unchanged production/outside-span projection, and execute the complete inventory under pinned profiles without fail-fast omissions. Preserve pre-patch results separately; freeze the post-approved-test-migration register with original parent/tree, patch digest, independently derived patched tree and full execution evidence. Every newly exposed oracle-conflict failure needs exact identity/outcome/classification, source/oracle evidence and canonical correction/closing owner. CHK-004/005 accept those precise failed diagnostics while rejecting unapproved new failures, altered classification, missing execution, parent/patch swaps or compatible-assertion regressions. Neither candidate output nor this task's future receipt can authorize the register. R-003 requires the independently qualified approved-new-oracle-failure positive and unapproved-failure/patch-swap negatives.
 
@@ -157,6 +159,7 @@ Then every owned product artifact binds the correct source and complete actual e
 - **D-003:** Use the existing proof-contract operation interface and canonical taskfmt standalone gate. Runner operations belong to TASK-070, accounting to TASK-071 and architecture verification to TASK-072; do not invent private bypass scripts.
 - **D-004:** Preserve original source/fixture/test identities and exact finite membership. Artifact absence, invalid data and unimplemented required cases fail closed.
 - **D-005:** Trusted candidate capture output and trusted expected oracle output occupy separate authority domains. This preparation task cannot approve changed candidate UX.
+- **D-006:** Components-B branch disposition rows in `/task/trusted/branch-test-disposition-bindings.tsv` are immutable TASK-008 authority. Inline spans use `inline-test-source-scope.md`; external modules use `external-test-source-scope.md`.
 
 ## Preparation accounting authority
 

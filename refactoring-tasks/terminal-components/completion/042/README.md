@@ -19,6 +19,7 @@ Files index/browser/jump/preview/resource actions use exact virtual filesystem a
 
 Read before editing:
 
+- `/task/CAMPAIGN_AGENTS.md`: campaign executor protocol; supersedes AGENTS.md steps 6–7 for verification authority.
 - `/task/trusted/source-obligations.tsv`: exact historical clauses and their binding requirement, acceptance and check mappings.
 - `/task/trusted/obligations.md`: exact scenario membership, source clauses and frozen-proof rules.
 - `/task/trusted/holla-trace-corrections.md`: named executable copy/exit, exact port-argument and source-specific modal/menu-paste branches; these supplement the unchanged native routes.
