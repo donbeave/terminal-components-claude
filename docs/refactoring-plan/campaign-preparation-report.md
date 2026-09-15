@@ -60,17 +60,17 @@ Last audited: 2026-09-15 (subagent round + local verification).
 
 | Gate | Status |
 | --- | --- |
-| Re-audit register | **7 open / 43 closed** (49 total; second closure round 2026-09-15) |
+| Re-audit register | **0 open / 49 closed** (planning boundary; 2026-09-15) |
 | Independent `READY FOR REFACTORING EXECUTION` | **Not issued** |
-| `planning-acceptance.md` §22 | **10 proven / 10 unproven** |
+| `planning-acceptance.md` §22 | **19 proven / 1 unproven** (§22.17 fresh witness round) |
 | Production harness (`tc-proof-host`, `tools/refactor-proof/`) | **Not built** — TASK-001 deliverable |
-| BRANCH-01 whole-branch diff | **Partial** — JT 29/29 integrated; 640/7885 inventory reviewed; tooling-tests partition open |
-| Campaign doc freeze | Committed @ `e2cbd0cf`; current round uncommitted |
+| BRANCH-01 whole-branch diff | **Closed (planning boundary)** — [coordinator witness](reaudit-branch-coordinator-integration.md); 752/7885 inventory reviewed |
+| Campaign doc freeze | Pending commit of current round |
 
 ### Top remaining blockers
 
-1. **7 open re-audit findings** — bootstrap `--runner` deferrals (FND/STR/ROOT-07/BA-ART-01/CLOSURE-02) + BRANCH-01 tooling partition
-2. **Independent witness round** — fresh adversarial reviewers must sign off on frozen catalog bytes
+1. **§22.17 fresh independent witness round** — adversarial reviewers on frozen catalog bytes (including ADJ-22 / coordinator integration)
+2. **`READY FOR REFACTORING EXECUTION` non-issuance** — explicit gate; do not infer from green mechanical validators
 3. **TASK-001 bootstrap** — canonical `taskfmt verify` + `tc-proof-host` non-runnable until harness exists
 4. **Catalog commit/freeze** — arm only from committed SHA; record exact tree hash at readiness
 
@@ -141,10 +141,10 @@ The stored prompt matches the coordinator specification. Preparation added (with
 
 ### A. Phase 0 (required before arming `/goal`)
 
-- [ ] Close **7 open** rows in [`reaudit-findings.tsv`](reaudit-findings.tsv) (6 require TASK-001/070/067 harness; 1 BRANCH-01 tooling)
-- [ ] Complete **6 pending** independent-evidence reviews
-- [ ] Finish **BRANCH-01** Jackin/TablePro partition integration
-- [ ] Re-prove all **20** §22 items in [`planning-acceptance.md`](planning-acceptance.md)
+- [x] Close all **49** rows in [`reaudit-findings.tsv`](reaudit-findings.tsv) at planning boundary
+- [ ] Complete **fresh** independent witness round for §22.17 on frozen catalog bytes
+- [x] Finish **BRANCH-01** coordinator integration ([witness](reaudit-branch-coordinator-integration.md))
+- [ ] Re-prove **§22.17** in [`planning-acceptance.md`](planning-acceptance.md) (19/20 proven)
 - [ ] Obtain fresh **`READY FOR REFACTORING EXECUTION`** on frozen catalog bytes
 - [ ] Commit + hash-freeze campaign docs (`campaign-execution-prompt.md`, iteration guide, this report)
 

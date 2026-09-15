@@ -4,7 +4,7 @@
 
 This is the working proposal for the user's additional whole-branch review. The implementation base is pinned main `7b27732a8c3c131760ec3438f641cb3c11343a42`; the compared Holla branch is `2e2401393c47360741ebd321679de08982dca50a`. The immutable behavior oracle remains separately pinned at `02f5294bfdbf38004cc49130d0aff1d01f31434c`. Identical old files do not make those authorities interchangeable.
 
-The exact no-rename inventory contains 7,885 changed paths: 866 source, test, tooling and historical-document paths, plus 7,019 generated-artifact paths. Full source reading, finding integration, compatibility adjudication and independent rechecks are still in progress. Decoding historical images and parsing manifests is not visual parity approval. This proposal does not claim the entire review is finished.
+The exact no-rename inventory contains 7,885 changed paths: 866 source, test, tooling and historical-document paths, plus 7,019 generated-artifact paths. Partition source reads and planning finding integration are complete at the **planning boundary** (foundation, components A/B, Holla, Jackin/TablePro, TTE, xtask, tooling closure disposition). **752 / 7,885** inventory paths carry explicit reviewed/disposition rows; whole-branch semantic acceptance is not claimed. Decoding historical images and parsing manifests is not visual parity approval. §22.17 fresh independent witness and `READY FOR REFACTORING EXECUTION` remain open ([`execution-readiness-assessment.md`](execution-readiness-assessment.md)).
 
 No production implementation, branch integration, baseline blessing, commit, merge or publication is authorized here. Required changes belong in the existing completion task graph; they are not a competing rewrite from the Holla branch.
 
@@ -46,6 +46,7 @@ Universal allocation or timing promises must match measurable behavior. Long tra
 - [Components B](branch-diff-components-b.md): complete 35-path source review.
 - [Holla](branch-diff-holla.md): complete 86-path source review.
 - [Jackin and TablePro](branch-diff-jackin-tablepro.md): source review complete; **29/29 findings integrated** via [findings ledger](branch-diff-findings-jackin-tablepro.tsv), ADJ-18–21, and `jt-branch-corrections.md` supplements TASK-051–064.
+- [Components B coordinator integration](reaudit-branch-coordinator-integration.md): **6/6 findings integrated**; ADJ-22; TASK-031/025/008 projection; closure partition 244/244 disposition-bound.
 - [Exact inventory](branch-diff-inventory.tsv) and [artifact decode census](branch-artifact-census.json): coverage inputs, not acceptance certificates.
 - [Artifact disposition table](branch-diff-artifact-disposition.tsv): task-owner bindings for all 7,019 generated paths and surviving exporter/caller scopes (planning complete; not acceptance).
 - [Re-audit plan](reaudit-plan.md): remaining completion conditions and independent ownership.

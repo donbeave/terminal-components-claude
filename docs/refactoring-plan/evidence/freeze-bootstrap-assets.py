@@ -43,6 +43,11 @@ STYLE_TIMING = ["style-timing-bootstrap-" + name for name in (
 BROKER = ["broker-bootstrap-" + name for name in (
     "driver.py", "observer.rs", "protocol.md",
 )] + ARCHITECTURE + RUNNER
+CAPTURE_ATOMICITY = ["capture-atomicity-bootstrap-" + name for name in (
+    "driver.py", "producer.rs", "decoder.rs", "protocol.md",
+)] + ["architecture-bootstrap-main-driver.py",
+      "runner-bootstrap-driver.py", "host-bootstrap-observer.py", "runner-bootstrap-app.py",
+      "runner-bootstrap-worker.py"]
 COLUMNS = ["group", "source", "destination", "sha256"]
 GROUPS = {
     "proof": (PROOF, ("001", "070", "071", "072")),
@@ -51,6 +56,7 @@ GROUPS = {
     "architecture": (ARCHITECTURE, ("072",)),
     "style-timing": (STYLE_TIMING, ("072",)),
     "broker": (BROKER, ("072",)),
+    "capture-atomicity": (CAPTURE_ATOMICITY, ("070",)),
 }
 
 

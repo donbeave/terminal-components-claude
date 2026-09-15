@@ -294,3 +294,18 @@ Rail geometry and state roles are frozen exactly in TASK-020's trusted contract:
 **Rejected alternative.** Treating arbiter unit correctness as whole-app parity would omit restored consumers. Uniform keyboard/mouse/form notification would silently redesign multiple source asymmetries.
 
 **Task implication.** TASK-051/052/053/054/055/056 and JA-001–004/059/061–066 must observe domain, selected owner, timer and route alongside full frames. Independent review remains required; this is planning authority, not production implementation or baseline approval.
+
+## ADJ-22: Components-B branch repairs require distinct StatusBar, Grid and Picker policies
+
+**Evidence.** Independent components-B source audit ([`branch-diff-components-b.md`](branch-diff-components-b.md)) found conflated StatusBar/Segments drop semantics, universal Grid gesture wording, missing Completion cross-row width maxima, absent typed Picker keyless Submit, and unsigned menu reverse cycling. Author repairs in TASK-021–028 and TASK-042 bind finite witnesses (**W-028-06**, **W-022-10**, **W-024-07/08**, **W-023-07**, **W-027-07**, **W-021-07**, **W-025-07/08**, **W-026-05**, **W-042-JUMP-SUBMIT**). [`reaudit-components-b-branch-repairs.md`](reaudit-components-b-branch-repairs.md) independently reread the bounded repair clauses; [`reaudit-components-b-branch-repairs-ledger.md`](reaudit-components-b-branch-repairs-ledger.md) matched author handoff hashes. **HL-64-GESTURE** already qualifies DataGrid versus DataTable policies in [`history-late-obligations.tsv`](history-late-obligations.tsv).
+
+**Decision.** Record centrally:
+
+1. **StatusBar/Segments:** one shared finite layout/drop **configuration** with unchanged modern defaults. Retained-left truncation and later same-group tie removal apply to **source StatusBar** only. Source Segments uses gap2, first-left tie removal, right-over-left cross-group ties and may leave zero left survivors.
+2. **Grid gestures:** four explicit policies — modern default, DataGrid, DataTable-row, DataTable-cell. DataGrid global editable=false activates; global editable=true with read_only column or pending-deleted row returns Consumed without action/edit/mutation. Do not collapse these into one component-name-wide rule.
+3. **Picker query submit:** shared typed keyless Submit outcome under an explicit capability, **disabled by default**. Oracle Loading/Error searchable nonblank queries may reach Submit when enabled; modern Partial remains consumed with no action in both capability states.
+4. **Completion width:** measure independent semantic label and detail column maxima before runtime placement; this is source geometry correction, not a separate app painter.
+
+**Rejected alternative.** Restoring app-local segment/status loops, universal single-click Grid activation, or silent promotion of deferred F01/F04 proposals.
+
+**Task implication.** TASK-022/023/024/027/028/042 own component proofs; TASK-031 projects branch witness identities; TASK-008 source-disposes conflicting starting assertions per [`branch-diff-components-b-test-disposition-bindings.tsv`](branch-diff-components-b-test-disposition-bindings.tsv). Coordinator integration witness: [`reaudit-branch-coordinator-integration.md`](reaudit-branch-coordinator-integration.md). Independent catalog-byte review remains required for §22.17; this adjudication is planning authority only.

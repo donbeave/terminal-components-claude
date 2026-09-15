@@ -50,6 +50,11 @@ def reviewed_xtask(entry: dict) -> bool:
     return status.startswith("full")
 
 
+def reviewed_tui_tests_examples(row: dict[str, str]) -> bool:
+    coverage = row.get("read_coverage", "")
+    return coverage.startswith("main:") and "unread" not in coverage
+
+
 def load_reviewed_paths(docs: Path) -> dict[str, set[str]]:
     by_ledger: dict[str, set[str]] = {}
 
@@ -109,6 +114,14 @@ def load_reviewed_paths(docs: Path) -> dict[str, set[str]]:
     if len(xtask_paths) != len(xtask_payload["files"]):
         raise ValueError("xtask ledger row missing full read_status")
     by_ledger["branch-diff-xtask-ledger.json"] = xtask_paths
+
+    tte_path = docs / "branch-diff-tui-tests-examples.tsv"
+    with tte_path.open(newline="", encoding="utf-8") as stream:
+        rows = list(csv.DictReader(stream, delimiter="\t"))
+    paths = {row["path"] for row in rows if reviewed_tui_tests_examples(row)}
+    if len(paths) != len(rows):
+        raise ValueError("TUI tests/examples ledger row missing main read_coverage")
+    by_ledger["branch-diff-tui-tests-examples.tsv"] = paths
 
     return by_ledger
 
