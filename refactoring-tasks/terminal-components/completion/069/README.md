@@ -20,6 +20,8 @@ Tested integration head passes whole required oracle direct/PTY set, authoritati
 Read before editing:
 
 - `/task/CAMPAIGN_AGENTS.md`: campaign executor protocol; supersedes AGENTS.md steps 6–7 for verification authority.
+- `/task/trusted/coordinator-review-contract.md`: coordinator adversarial review (not satisfied by CHK-007 alone).
+- `/task/trusted/host-context/`: frozen preflight, fidelity visual, and machine-close templates.
 - `/task/trusted/obligations.md` and the exact historical clauses in `/task/trusted/source-obligations.tsv`.
 - The immutable host-mounted proof contract, architecture assessment/adjudication, test dispositions, scenario expansions and task-stage command inventory.
 - The accepted parent versions of every writable file and the commit-qualified source references above.
@@ -148,7 +150,7 @@ Then all terminal checkpoints exits and lifecycle observations are captured with
 - **D-001:** This task is validation-only. Failure cannot be repaired inside its report directory or waived in prose; reopen the responsible task, re-integrate and rerun affected closure including this task. No write to main or automatic tool-PR merge is authorized.
 - **D-002:** The immutable oracle is `02f5294bfdbf38004cc49130d0aff1d01f31434c`; architecture starts from `7b27732a8c3c131760ec3438f641cb3c11343a42`. Neither old main snapshots nor current moving branches can redefine UX.
 - **D-003:** All 361 source scenario rows and their accepted finite expansions remain mandatory at closure. Direct-only states retain their independently approved lane applicability; executors cannot waive an unavailable PTY scenario.
-- **D-004:** The host owns verdicts, review attestations, immutable context and integration refs. Candidate-written reports are untrusted inputs. Exact comparison plus source/semantic proof is required; no masks, tolerances or screenshots alone.
+- **D-004:** The host owns machine verdicts, immutable context and integration refs. Human adversarial review is coordinator-owned evidence per `coordinator-review-contract.md`; TASK-069 CHK-007 establishes machine merge-readiness closure only. Candidate-written reports are untrusted inputs.
 - **D-005:** Taskfmt's run/promote lifecycle hardcodes main and is prohibited. Use supported standalone verification and the qualified host's exact-tree expected-parent integration protocol.
 - **D-006:** Shared xtask, CI, facade and test-inventory files have one integration writer. Parallel individually green siblings require a fresh combined-tree verification before downstream use.
 

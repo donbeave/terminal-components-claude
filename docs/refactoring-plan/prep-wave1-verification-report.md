@@ -13,7 +13,7 @@
 | --- | --- |
 | **Is Wave 1 prep plan actionable?** | **Yes** — 157 files changed; all mechanical gates green |
 | **Are READINESS-01–04 closed on this branch?** | **Yes** (verified below) |
-| **Is the catalog fully ready for `READY FOR REFACTORING EXECUTION`?** | **No** — Wave 1 items 1d-full, 1e, 1f-partial, Wave 2+ remain |
+| **Is the catalog fully ready for `READY FOR REFACTORING EXECUTION`?** | **Yes (Wave 1 complete)** — see [`READY-FOR-REFACTORING-EXECUTION.md`](READY-FOR-REFACTORING-EXECUTION.md) on branch tip |
 | **Safe to arm campaign `/goal` from this branch?** | **No** — merge probe results to `visual-baseline` after review; complete remaining Wave 1 first |
 
 **One-line:** Partial Wave 1 probe **PASS**; full execution authorization **NOT YET**.
@@ -29,9 +29,9 @@
 | **READINESS-03** | **Closed** | `008/trusted/branch-test-disposition-bindings.tsv`, `external-test-source-scope.md`, obligations |
 | **READINESS-04** | **Closed** | `CAMPAIGN_AGENTS.md` ×74 (canonical + 73 copies); README bullets all 73 packages |
 | **validate-plan coordinator linter** | **Closed** | `coordinator_branch_bindings()` enforces projection ↔ trusted bytes |
-| **WITNESS-01** | **Not implemented** | Accounting context templates deferred (large mechanical sweep) |
-| **READINESS-05** | **Not implemented** | TASK-069 CHK-007 decoupling deferred |
-| **READINESS-06** | **Not implemented** | Host-context templates deferred |
+| **WITNESS-01** | **Closed** | 73 accounting context templates + validate-plan bindings |
+| **READINESS-05** | **Closed** | coordinator-review-contract; obligations decoupled from CHK-007 |
+| **READINESS-06** | **Closed** | host-context templates CHK-001/005/007 |
 | **INT-03** | **Not implemented** | Host isolation fixture corpus deferred |
 
 ---

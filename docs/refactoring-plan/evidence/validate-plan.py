@@ -260,6 +260,67 @@ class Audit:
         maximum = max(depth.values(), default=0)
         return {"maximum_dependency_depth": maximum, "deepest_tasks": sorted(task for task, value in depth.items() if value == maximum), "depth": depth, "longest_path_predecessors": predecessors}
 
+    def accounting_context_bindings(self) -> None:
+        bindings_path = (
+            self.root
+            / "refactoring-tasks/terminal-components/completion/071/trusted/check-context-templates/accounting-mode-bindings.tsv"
+        )
+        self.require(bindings_path.is_file(), "Missing TASK-071 accounting-mode-bindings.tsv")
+        if not bindings_path.is_file():
+            return
+        with bindings_path.open(newline="", encoding="utf-8") as stream:
+            expected = {(row["task_id"], row["check_id"]): row for row in csv.DictReader(stream, delimiter="\t")}
+        completion = self.root / "refactoring-tasks/terminal-components/completion"
+        found: set[tuple[str, str]] = set()
+        for verify in sorted(completion.glob("*/verify.toml")):
+            data = tomllib.loads(verify.read_text())
+            task_id = data.get("task_id", "")
+            if not task_id:
+                continue
+            num = task_id.split("-")[1]
+            for check in data.get("checks", []):
+                if "account-tests" not in check.get("argv", []):
+                    continue
+                check_id = check["id"]
+                template = completion / num / "trusted/check-context-templates" / f"{check_id}.json"
+                self.require(template.is_file(), f"Missing accounting context template: {task_id}:{check_id}")
+                if not template.is_file():
+                    continue
+                body = json.loads(template.read_text())
+                mode = body.get("qualification", {}).get("mode")
+                key = (task_id, check_id)
+                row = expected.get(key)
+                self.require(row is not None, f"Unbound accounting check: {task_id}:{check_id}")
+                if row is None:
+                    continue
+                self.require(mode == row["qualification_mode"], f"Accounting mode mismatch: {task_id}:{check_id}")
+                if task_id in {f"TASK-{n:03d}" for n in range(2, 9)}:
+                    self.require(mode == "preparation", f"Preparation task forbidden production mode: {task_id}:{check_id}")
+                else:
+                    self.require(mode == "production", f"Production task must use production mode: {task_id}:{check_id}")
+                found.add(key)
+        missing = set(expected) - found
+        extra = found - set(expected)
+        self.require(not missing, f"Missing accounting templates for bindings: {sorted(missing)[:5]}")
+        self.require(not extra, f"Unexpected accounting templates: {sorted(extra)[:5]}")
+
+    def task069_host_context(self) -> None:
+        base = self.root / "refactoring-tasks/terminal-components/completion/069/trusted"
+        required = [
+            base / "coordinator-review-contract.md",
+            base / "host-context/host-context-spec.md",
+            base / "host-context/CHK-001.template.json",
+            base / "host-context/CHK-005.template.json",
+            base / "host-context/CHK-007.template.json",
+        ]
+        for path in required:
+            self.require(path.is_file(), f"Missing TASK-069 host artifact: {path.relative_to(self.root)}")
+        obligations = (base / "obligations.md").read_text()
+        self.require("coordinator-review-contract.md" in obligations, "TASK-069 obligations must reference coordinator-review-contract.md")
+        self.require("host-context/CHK-005.template.json" in obligations, "TASK-069 obligations must bind fidelity visual template")
+        close = json.loads((base / "host-context/CHK-007.template.json").read_text())
+        self.require("human_review" in close.get("forbid_fields", []), "CHK-007 template must forbid human_review fields")
+
     def coordinator_branch_bindings(self) -> None:
         projection = self.table("branch-diff-components-b-coordinator-projection.tsv")
         disposition_doc = self.docs / "branch-diff-components-b-test-disposition-bindings.tsv"
@@ -429,6 +490,8 @@ def main() -> int:
         audit.frozen_assets()
         graph = audit.graph(dependencies)
         audit.coordinator_branch_bindings()
+        audit.accounting_context_bindings()
+        audit.task069_host_context()
         audit.traceability(sources, tasks)
     report = {"schema": "tc-planning-audit/v1", "mode": "inventory" if arguments.inventory_only else "artifact-integrity", "passed": not audit.errors, "counts": audit.counts, "graph": graph, "errors": audit.errors}
     if arguments.summary:

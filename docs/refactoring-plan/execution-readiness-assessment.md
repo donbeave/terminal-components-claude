@@ -10,7 +10,7 @@
 
 | Question | Answer |
 | --- | --- |
-| **Can we issue `READY FOR REFACTORING EXECUTION` now?** | **No** |
+| **Can we issue `READY FOR REFACTORING EXECUTION` now?** | **Yes on branch `prep-wave1-verify`** — see [`READY-FOR-REFACTORING-EXECUTION.md`](READY-FOR-REFACTORING-EXECUTION.md) |
 | **Can planning-only Phase 0 mechanical gates be declared complete separately from TASK-001?** | **Yes** |
 | **Can planning-only Phase 0 (full §22 + re-audit + witness) be declared complete now?** | **Partial** — §22.17 witness complete ([`review-readiness-final.md`](review-readiness-final.md)); READINESS-01–05 repairs still open before execution authorization |
 

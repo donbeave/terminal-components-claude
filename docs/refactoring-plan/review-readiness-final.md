@@ -11,7 +11,7 @@
 | Question | Answer |
 | --- | --- |
 | **§22.17 fresh witness round complete?** | **Yes** — five independent partition reviewers + coordinator synthesis |
-| **Issue `READY FOR REFACTORING EXECUTION` now?** | **No** — material P1 catalog gaps remain (see § Open findings) |
+| **Issue `READY FOR REFACTORING EXECUTION` now?** | **Yes on `prep-wave1-verify`** — Wave 1 closed; see [`READY-FOR-REFACTORING-EXECUTION.md`](READY-FOR-REFACTORING-EXECUTION.md) |
 | **Mechanical gates @ catalog SHA?** | **Green** — `validate-plan.py` 0 errors; 73/73 taskfmt lint; 7/7 bootstrap freeze groups |
 
 **Partition summary:** 1 **VERIFIED** (parity/traceability), 4 **REJECTED** (DAG/receipts, architecture/integration projection, verification/bootstrap, closure/TASK-069). Rejection means the catalog can pass lint while execution-critical bindings remain prose-only or overclaimed — not that the witness failed to run.
@@ -84,13 +84,13 @@ Material P1 items require catalog repair **or** explicit accepted-risk dispositi
 
 | ID | Sev | Finding | Evidence | Required disposition |
 | --- | --- | --- | --- | --- |
-| **READINESS-01** | **P1** | Coordinator marks TASK-031 branch witness projection **integrated**, but `031/trusted/source-witnesses.md` contains only `W-031-01`…`W-031-11` — not `W-021-07`…`W-028-06` listed in [`branch-diff-components-b-coordinator-projection.tsv`](branch-diff-components-b-coordinator-projection.tsv) row 3 | Coordinator TSV vs on-disk trusted bytes | Promote branch witness IDs into TASK-031 trusted manifest **or** freeze host CHK-006 context template in catalog; reconcile TSV `planning_status` |
-| **READINESS-02** | **P1** | **`W-042-JUMP-SUBMIT` incorrectly projected into TASK-031** — TASK-031 predecessors stop at TASK-030; TASK-042 depends on TASK-041 | `task-index.tsv`, graph | Remove from TASK-031 projection; keep on TASK-042 only |
-| **READINESS-03** | **P1** | TASK-008 disposition TSV **not bound in trusted package** — coordinator row 5 cites `008/trusted/obligations.md`; **zero** references to `W-021-07`, `W-025-07/08`, `W-026-05`; disposition targets `crates/tui/tests/*` absent from `inline-test-source-scope.md` | Grep + TSV vs obligations | Import disposition rows + external-test span manifest into TASK-008 trusted inputs |
-| **WITNESS-01** | **P1** | Preparation vs production accounting mode specified only in host context JSON, not catalog-visible verify argv — mis-bound host can recreate DAG-FINAL-01 receipt cycle | `proof-contract.md` §136–144 vs identical TASK-002–008 CHK argv | Machine-bind mode in trusted context templates or distinct check argv |
-| **READINESS-04** | **P1** | **INT-02 live:** canonical `AGENTS.md` step 7 instructs forbidden `taskfmt verify --progress ""`; campaign adaptation supersedes in prose only | All 73 packages; `campaign-executor-protocol.md` | Campaign-visible AGENTS overlay or lint rule |
-| **READINESS-05** | **P1** | TASK-069 **CHK-007 (`close`) bound to human adversarial review** obligations it cannot enforce | `069/trusted/obligations.md` clause 6 vs `verify.toml` | Decouple human review from machine gate; map to coordinator evidence |
-| **READINESS-06** | **P2** | Merge-readiness drift detection + fidelity-tier full visual matrix asserted in obligations prose, not frozen in catalog check contexts | TASK-069 obligations clause 7; campaign prompt §4 | Freeze in host context spec adjacent to catalog |
+| **READINESS-01** | **P1** | ~~Coordinator projection gap~~ | **Closed** @ `prep-wave1-verify` — `branch-host-projection.tsv` |
+| **READINESS-02** | **P1** | ~~W-042 in TASK-031~~ | **Closed** |
+| **READINESS-03** | **P1** | ~~TASK-008 disposition not in trusted~~ | **Closed** |
+| **WITNESS-01** | **P1** | ~~Accounting mode not catalog-bound~~ | **Closed** — 73 context templates |
+| **READINESS-04** | **P1** | ~~INT-02 AGENTS conflict~~ | **Closed** — CAMPAIGN_AGENTS ×73 |
+| **READINESS-05** | **P1** | ~~CHK-007 overclaims human review~~ | **Closed** — coordinator-review-contract |
+| **READINESS-06** | **P2** | ~~Visual/merge prose-only~~ | **Closed** — host-context templates |
 | **READINESS-07** | **P2** | `planning-acceptance.md` stale counts (361 scenarios / 3159 edges vs live 363 / 3258) | validate-plan counts | Doc sync only |
 | **READINESS-08** | **P2** | Runner context-index qualification runs on `--group 070` only; TASK-071/072 verify paths skip index suite | `runner-bootstrap-driver.py`, verify.toml | Wire index check or document transitive TASK-070 receipt requirement |
 
