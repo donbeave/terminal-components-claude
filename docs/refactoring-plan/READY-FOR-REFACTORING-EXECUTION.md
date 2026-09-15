@@ -2,12 +2,13 @@
 
 **Issued:** 2026-09-15  
 **Branch:** `prep-wave1-verify`  
-**Catalog commit:** `3cd8196c` on branch `prep-wave1-verify` (verify with `git rev-parse HEAD`)  
-**Parent planning tip:** `63cf451d` → Wave 1 remainder on this branch  
+**Catalog commit:** `98fdd8d5` on branch `prep-wave1-verify` (verify with `git rev-parse HEAD`)  
+**Parent planning tip:** `3cd8196c` → READINESS-08 closure on this branch  
+**Planning branch `visual-baseline`:** `98fdd8d5` — aligned to catalog tip (verify with `git rev-parse refs/heads/visual-baseline`)  
 **Product oracle:** `02f5294bfdbf38004cc49130d0aff1d01f31434c`  
 **Architectural main:** `7b27732a8c3c131760ec3438f641cb3c11343a42`  
 **Task-format authority:** `52d9f1eb7721f409bc47beb9fced7997b5c13ede`  
-**Frozen tag `visual-baseline` (peeled):** `4a79c0a2d40fca46fc406b77157ce3b3f12ec16b` — unmoved
+**Frozen tag `visual-baseline` (peeled):** `4a79c0a2d40fca46fc406b77157ce3b3f12ec16b` — unmoved (verify with `git rev-parse refs/tags/visual-baseline^{commit}`)
 
 ---
 
@@ -42,6 +43,7 @@ Independent planning witnesses, Wave 1 catalog repairs, and mechanical validator
 | WITNESS-01 — accounting context templates | **Closed** — 73 templates + bindings TSV |
 | READINESS-05 — TASK-069 review decoupled from CHK-007 | **Closed** |
 | READINESS-06 — host-context templates (visual/merge/close) | **Closed** |
+| READINESS-08 — transitive TASK-070 index receipt (071/072) | **Closed** |
 | §22.17 witness | **Complete** — [`review-readiness-final.md`](review-readiness-final.md) + spot-check below |
 | Re-audit register | **49/49 closed** |
 | Mechanical gates | **Green** — validate-plan 0 errors, 73/73 lint, bootstrap freeze 211 assets |

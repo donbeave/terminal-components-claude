@@ -16,7 +16,7 @@
 | **Is the catalog fully ready for `READY FOR REFACTORING EXECUTION`?** | **Yes (Wave 1 complete)** — see [`READY-FOR-REFACTORING-EXECUTION.md`](READY-FOR-REFACTORING-EXECUTION.md) |
 | **Safe to arm campaign `/goal` from this branch?** | **Catalog-ready** — requires operator explicit authorization per READY doc; tag `visual-baseline` unmoved |
 
-**One-line:** Wave 1 **PASS**; execution readiness **ISSUED** on `prep-wave1-verify` (catalog SHA `3cd8196c`).
+**One-line:** Wave 1 **PASS**; execution readiness **ISSUED** on `prep-wave1-verify` (catalog SHA `98fdd8d5`).
 
 ---
 
@@ -94,10 +94,10 @@
 
 | Branch | Role |
 | --- | --- |
-| `visual-baseline` | Planning oracle branch; unchanged by probe (stays @ `63cf451d` until merge decision) |
-| `prep-wave1-verify` | **Wave 1 complete** + [`READY-FOR-REFACTORING-EXECUTION.md`](READY-FOR-REFACTORING-EXECUTION.md) issued |
+| `visual-baseline` | Planning oracle branch; aligned to catalog tip @ `98fdd8d5` |
+| `prep-wave1-verify` | **Wave 1 + READINESS-08 complete** + [`READY-FOR-REFACTORING-EXECUTION.md`](READY-FOR-REFACTORING-EXECUTION.md) issued @ `98fdd8d5` |
 
-**Recommended merge path:** Optionally fast-forward `visual-baseline` planning tip to catalog SHA `3cd8196c` (operator decision). Tag `visual-baseline` remains frozen @ `4a79c0a2`.
+**Tag policy:** Frozen tag `visual-baseline` remains @ `4a79c0a2` (peeled; unmoved). Branch `visual-baseline` tracks catalog tip separately from the frozen tag.
 
 **Do not:** arm campaign `/goal` or dispatch TASK-001 without operator explicit authorization.
 
@@ -105,4 +105,4 @@
 
 ## Conclusion
 
-Wave 1 is **complete**. Partitions **C, D, and E** spot-check **PASS**. Mechanical gates green @ catalog SHA `3cd8196c`. Execution readiness issued — next step is operator authorization, then TASK-001 bootstrap on architectural `main`.
+Wave 1 is **complete**; READINESS-08 **closed**. Partitions **C, D, and E** spot-check **PASS**. Mechanical gates green @ catalog SHA `98fdd8d5`. Execution readiness issued — next step is operator authorization, then TASK-001 bootstrap on architectural `main`.
