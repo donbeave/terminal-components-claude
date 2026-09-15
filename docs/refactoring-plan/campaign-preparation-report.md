@@ -1,7 +1,7 @@
 # Campaign preparation report
 
-**Date:** 2026-09-15 (refreshed after subagent audit)  
-**Branch:** `visual-baseline` @ `e8f02608` (verify at arm time with `git rev-parse HEAD`)  
+**Date:** 2026-09-15 (re-verified after subagent audit + command benchmarks)  
+**Branch:** `visual-baseline` @ `a3e8e356` (verify at arm time with `git rev-parse HEAD`)  
 **Frozen tag:** `visual-baseline` → `4a79c0a2d40fca46fc406b77157ce3b3f12ec16b` (unmoved; branch ahead of tag)  
 **Purpose:** Evidence-based readiness assessment for arming the campaign `/goal`. **Preparation only — not execution.**
 
@@ -11,7 +11,7 @@
 
 | Artifact | Path | Status |
 | --- | --- | --- |
-| Campaign execution prompt | [`campaign-execution-prompt.md`](campaign-execution-prompt.md) | **Stored** @ `e8f02608` — canonical body with iteration amendments |
+| Campaign execution prompt | [`campaign-execution-prompt.md`](campaign-execution-prompt.md) | **Stored** @ `a3e8e356` — canonical body with iteration amendments (not unamended paste) |
 | Arming readiness analysis | [`campaign-arming-readiness.md`](campaign-arming-readiness.md) | **New** — prompt analysis, benchmarks, pre-arm checklist |
 | Campaign iteration guide | [`campaign-iteration-guide.md`](campaign-iteration-guide.md) | **Stored** — tiered gates, filters, measured timings |
 | Preparation report | This file | Updated 2026-09-15 |
@@ -30,7 +30,7 @@ Re-verified 2026-09-15 (git rev-parse + remote ls-remote).
 | --- | --- | --- | --- |
 | **Architectural `main`** | `7b27732a8c3c131760ec3438f641cb3c11343a42` | **Match** | Local + `origin/main` |
 | **Tag `visual-baseline` (peeled)** | `4a79c0a2d40fca46fc406b77157ce3b3f12ec16b` | **Match** | Annotated tag object `1ee5ebdc…`; **not retargeted** |
-| **Branch `visual-baseline` tip** | (ahead of tag) | `e8f02608` | Catalog bytes to freeze at arm time — **`git rev-parse` wins** |
+| **Branch `visual-baseline` tip** | (ahead of tag) | `a3e8e356` | Catalog bytes to freeze at arm time — **`git rev-parse` wins** |
 | **Product oracle** | `02f5294bfdbf38004cc49130d0aff1d01f31434c` | **Match** | Distinct from branch tip — correct |
 | **task-format authority** | `52d9f1eb7721f409bc47beb9fced7997b5c13ede` | **Match** | Remote + installed `taskfmt 0.2.0` |
 | **tui-snap campaign pin** | `0a2e490802b7b048cd96349c6af860f8a3a05c3d` | **Match** | `Cargo.toml` git rev |
@@ -117,8 +117,8 @@ Infra committed in `32c238e1`, `f395f284`, `c5384043`. Pin: `tui-snap` @ `0a2e49
 
 | Scenario | Wall time | Notes |
 | --- | --- | --- |
-| `showcase_pages_overview` (25 combos, FAST) | **~4 s** | Edit-loop representative |
-| CI smoke (7550 slots, ~302 PTY captures) | **~85–87 s** | All green @ `623a1a59` |
+| `showcase_pages_overview` (25 combos, FAST) | **~17 s** | Edit-loop representative @ `a3e8e356` |
+| CI smoke (7550 slots, ~302 PTY captures) | **~113 s** | All green @ `a3e8e356` |
 | Full FAST matrix | **~30 min** | Optional nightly; not acceptance oracle |
 | Full fidelity matrix | **~45–60 min est.** | Mandatory acceptance gate |
 
@@ -177,8 +177,8 @@ The stored prompt matches the coordinator specification. Preparation added (with
 
 | Dimension | Ready? |
 | --- | --- |
-| Prompt stored + iteration guidance | **Yes** (uncommitted edits pending commit) |
-| Verification commands block iteration? | **No** — edit loop ~4 s–87 s; full matrix only at boundaries |
+| Prompt stored + iteration guidance | **Yes** |
+| Verification commands block iteration? | **No** — edit loop ~0.3 s–17 s targeted; smoke ~113 s; fidelity full matrix only at boundaries |
 | Phase 0 mechanical validators | **Yes** |
 | Phase 0 process / witness / findings | **No** — §22.17 witness open (49/49 findings closed) |
 | TASK-001 harness | **No** |

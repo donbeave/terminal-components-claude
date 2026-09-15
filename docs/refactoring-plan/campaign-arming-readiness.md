@@ -1,8 +1,8 @@
 # Campaign arming readiness — prompt analysis (2026-09-15)
 
 **Purpose:** Prepare for arming `/goal` from [`campaign-execution-prompt.md`](campaign-execution-prompt.md) **without** starting production work.  
-**Catalog tip (last known):** `e8f02608` on `visual-baseline` (tag `4a79c0a2` unmoved).  
-**Method:** Subagent audit + local command benchmarks + doc cross-check.
+**Catalog tip (last known):** `a3e8e356` on `visual-baseline` (tag peeled `4a79c0a2` unmoved; branch **9 commits ahead**).  
+**Method:** Subagent audit + local command benchmarks (re-run 2026-09-15) + doc cross-check.
 
 ---
 
@@ -50,11 +50,11 @@ All Rust validation uses **`cargo nextest`**, never `cargo test`.
 
 | Tier | Command | Wall time | Result | Use when |
 | --- | --- | ---: | --- | --- |
-| **Edit loop** | `validate-plan.py --summary` | ~1 s | PASS | After planning/doc edits |
-| **Edit loop** | `taskfmt project lint terminal-components --config …/experiment.toml --projects-root …/refactoring-tasks` | ~1.4 s | PASS 73/73 | After task package edits |
-| **Edit loop** | `cargo nextest run -E 'test(store_integrity)'` | ~1–8 s | PASS | Snapshot store sanity |
-| **Edit loop** | `TUISNAP_FAST=1 cargo nextest run --run-ignored only -E 'binary(visual_baseline) & test(<filter>)'` | **~7.8 s** test time (25 combos, `showcase_pages_overview`)* | PASS | After rendering/interaction edits — pick smallest `<filter>` |
-| **Smoke** | `cargo nextest run --profile ci --run-ignored only -E 'binary(visual_baseline)'` | ~87–126 s | PASS 7550/7550 | PR/CI; not task acceptance |
+| **Edit loop** | `validate-plan.py --summary` | ~0.6 s | PASS | After planning/doc edits |
+| **Edit loop** | `taskfmt project lint terminal-components --config …/experiment.toml --projects-root …/refactoring-tasks` | ~0.3 s | PASS 73/73 | After task package edits |
+| **Edit loop** | `cargo nextest run -E 'test(store_integrity)'` | ~2.7 s | PASS | Snapshot store sanity |
+| **Edit loop** | `TUISNAP_FAST=1 cargo nextest run --run-ignored only -E 'binary(visual_baseline) & test(<filter>)'` | **~17 s** wall (25 combos, `showcase_pages_overview`; nextest ~16 s)* | PASS | After rendering/interaction edits — pick smallest `<filter>` |
+| **Smoke** | `cargo nextest run --profile ci --run-ignored only -E 'binary(visual_baseline)'` | ~113 s | PASS 7550/7550 | PR/CI; not task acceptance |
 | **Acceptance** | `cargo nextest run --run-ignored only -E 'binary(visual_baseline)'` (no FAST) | ~45–60 min | Required at boundaries | Task acceptance, app closures, TASK-069 |
 | **Blocked** | `taskfmt verify` / `tc-proof-host` | — | **Binary absent** | Campaign task execution only |
 
