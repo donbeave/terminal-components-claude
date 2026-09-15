@@ -2,7 +2,7 @@
 
 **Issued:** 2026-09-15  
 **Branch:** `prep-wave1-verify`  
-**Catalog commit:** **Catalog SHA:** `f2d834305eb5bec8a19b33664911826edf6af6e8`  
+**Catalog commit:** `3cd8196c` on branch `prep-wave1-verify` (verify with `git rev-parse HEAD`)  
 **Parent planning tip:** `63cf451d` → Wave 1 remainder on this branch  
 **Product oracle:** `02f5294bfdbf38004cc49130d0aff1d01f31434c`  
 **Architectural main:** `7b27732a8c3c131760ec3438f641cb3c11343a42`  
