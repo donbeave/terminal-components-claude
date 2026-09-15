@@ -3,8 +3,8 @@
 **Issued:** 2026-09-15  
 **Branch:** `prep-wave1-verify`  
 **Catalog commit:** `98fdd8d5` on branch `prep-wave1-verify` (verify with `git rev-parse HEAD`)  
-**Parent planning tip:** `3cd8196c` → READINESS-08 closure on this branch  
-**Planning branch `visual-baseline`:** `98fdd8d5` — aligned to catalog tip (verify with `git rev-parse refs/heads/visual-baseline`)  
+**Parent planning tip:** `1a873cff` → Wave 2 bootstrap work (IW-02/03 + TASK-001 plan) on this branch  
+**Planning branch `visual-baseline`:** `98fdd8d5` — READINESS-08 tip (Wave 2 on `prep-wave1-verify`; verify with `git rev-parse refs/heads/visual-baseline`)  
 **Product oracle:** `02f5294bfdbf38004cc49130d0aff1d01f31434c`  
 **Architectural main:** `7b27732a8c3c131760ec3438f641cb3c11343a42`  
 **Task-format authority:** `52d9f1eb7721f409bc47beb9fced7997b5c13ede`  
@@ -44,6 +44,9 @@ Independent planning witnesses, Wave 1 catalog repairs, and mechanical validator
 | READINESS-05 — TASK-069 review decoupled from CHK-007 | **Closed** |
 | READINESS-06 — host-context templates (visual/merge/close) | **Closed** |
 | READINESS-08 — transitive TASK-070 index receipt (071/072) | **Closed** |
+| IW-02 — catalog argv smoke gate | **Closed** — `catalog_argv_smoke()` validates 479 `/proof/bin/tc-proof` argv references |
+| IW-03 — TASK-001 operator bootstrap checklist | **Closed** — `tc-proof-operator-bootstrap-checklist/v1` in campaign-executor-protocol |
+| INT-03 — host isolation fixture corpus | **Deferred** — production host qualification is TASK-001+ deliverable |
 | §22.17 witness | **Complete** — [`review-readiness-final.md`](review-readiness-final.md) + spot-check below |
 | Re-audit register | **49/49 closed** |
 | Mechanical gates | **Green** — validate-plan 0 errors, 73/73 lint, bootstrap freeze 211 assets |
@@ -67,7 +70,7 @@ Independent planning witnesses, Wave 1 catalog repairs, and mechanical validator
 | `tc-proof-host` implementation + qualification | TASK-001 on architectural `main` worktree |
 | Operator explicit authorization to arm `/goal` | Operator |
 | Record exact catalog SHA at arm time | Coordinator |
-| Wave 2 hardening | **READINESS-08 closed**; INT-03 fixture corpus accepted at planning boundary (production host still TASK-001+) |
+| Wave 2 hardening | **Closed** — IW-02/03 closed; INT-03 deferred to TASK-001+ production host ([`task-001-bootstrap-plan.md`](task-001-bootstrap-plan.md)) |
 
 ---
 
