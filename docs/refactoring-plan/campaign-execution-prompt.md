@@ -1,8 +1,12 @@
 # Campaign execution prompt
 
-Stored for **campaign preparation** on **2026-09-15**; refreshed **2026-09-15** on branch `visual-baseline` @ `623a1a59` (tag `visual-baseline` remains frozen at `4a79c0a2`). This file freezes the canonical `/goal` prompt for executing the terminal-components refactoring campaign against the pinned catalog. Do not edit planning contracts or task packages during campaign execution without explicit replanning.
+Stored for **campaign preparation** on **2026-09-15**; refreshed **2026-09-15** on branch `visual-baseline` @ `e8f02608` (tag `visual-baseline` remains frozen at `4a79c0a2`). This file freezes the canonical `/goal` prompt for executing the terminal-components refactoring campaign against the pinned catalog. Do not edit planning contracts or task packages during campaign execution without explicit replanning.
+
+**Coordinator paste (2026-09-15):** a verbatim coordinator-supplied body was analyzed and merged here. The paste implied a full 7,550-combo visual matrix on every production edit; the stored body **amends** that with tiered gates in [Campaign iteration guide](campaign-iteration-guide.md) (edit-loop targeted `TUISNAP_FAST=1` filters vs fidelity full matrix at acceptance boundaries only). **Arm from this file, not the unamended paste.**
 
 **Fast iteration:** edit-loop visual tiers and targeted filters are in [Campaign iteration guide](campaign-iteration-guide.md) (mandatory addendum — not a relaxation of acceptance).
+
+**Readiness gate:** [`execution-readiness-assessment.md`](execution-readiness-assessment.md) — do not arm until `READY FOR REFACTORING EXECUTION` is issued on frozen catalog bytes.
 
 **Frozen catalog references:** task packages under `refactoring-tasks/terminal-components/completion/`, planning artifacts under `docs/refactoring-plan/`, and source contracts under `docs/sources/`. See [Campaign executor adaptation](campaign-executor-protocol.md), [Planning progress](PROGRESS.md), and [Proof contract](proof-contract.md).
 
@@ -57,7 +61,7 @@ Expected current identities are:
 * frozen annotated tag `visual-baseline` (peeled commit — do not move):
   `4a79c0a2d40fca46fc406b77157ce3b3f12ec16b`
 * current planning branch `visual-baseline` catalog tip (verify at arm time; may be ahead of tag):
-  `623a1a5985ad08baa99dfa397500927a35db2074` (as of 2026-09-15 prep)
+  `e8f02608ff174d214c054677cf46bae645a8918c` (verify at arm time with `git rev-parse HEAD`)
 * immutable product-experience oracle referenced by the task contracts:
   `02f5294bfdbf38004cc49130d0aff1d01f31434c`
 * task-format authority:
@@ -100,6 +104,8 @@ Read completely:
 * `docs/refactoring-plan/task-graph.md`
 * `docs/refactoring-plan/traceability.tsv`
 * `docs/refactoring-plan/architecture-adjudication.md`
+* `docs/refactoring-plan/execution-readiness-assessment.md`
+* `docs/refactoring-plan/campaign-arming-readiness.md`
 * all referenced re-audit reports
 * every package under `refactoring-tasks/terminal-components/completion/`
 

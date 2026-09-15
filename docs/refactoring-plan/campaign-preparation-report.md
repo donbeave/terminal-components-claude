@@ -1,8 +1,8 @@
 # Campaign preparation report
 
 **Date:** 2026-09-15 (refreshed after subagent audit)  
-**Branch:** `visual-baseline` @ `623a1a5985ad08baa99dfa397500927a35db2074`  
-**Frozen tag:** `visual-baseline` → `4a79c0a2d40fca46fc406b77157ce3b3f12ec16b` (unmoved; branch is **5 commits ahead**)  
+**Branch:** `visual-baseline` @ `e8f02608` (verify at arm time with `git rev-parse HEAD`)  
+**Frozen tag:** `visual-baseline` → `4a79c0a2d40fca46fc406b77157ce3b3f12ec16b` (unmoved; branch ahead of tag)  
 **Purpose:** Evidence-based readiness assessment for arming the campaign `/goal`. **Preparation only — not execution.**
 
 ---
@@ -11,7 +11,8 @@
 
 | Artifact | Path | Status |
 | --- | --- | --- |
-| Campaign execution prompt | [`campaign-execution-prompt.md`](campaign-execution-prompt.md) | **Stored** — committed base `32c238e1`; local edits (iteration cross-refs, header) |
+| Campaign execution prompt | [`campaign-execution-prompt.md`](campaign-execution-prompt.md) | **Stored** @ `e8f02608` — canonical body with iteration amendments |
+| Arming readiness analysis | [`campaign-arming-readiness.md`](campaign-arming-readiness.md) | **New** — prompt analysis, benchmarks, pre-arm checklist |
 | Campaign iteration guide | [`campaign-iteration-guide.md`](campaign-iteration-guide.md) | **Stored** — tiered gates, filters, measured timings |
 | Preparation report | This file | Updated 2026-09-15 |
 | Executor protocol | [`campaign-executor-protocol.md`](campaign-executor-protocol.md) | Tracked |
@@ -29,7 +30,7 @@ Re-verified 2026-09-15 (git rev-parse + remote ls-remote).
 | --- | --- | --- | --- |
 | **Architectural `main`** | `7b27732a8c3c131760ec3438f641cb3c11343a42` | **Match** | Local + `origin/main` |
 | **Tag `visual-baseline` (peeled)** | `4a79c0a2d40fca46fc406b77157ce3b3f12ec16b` | **Match** | Annotated tag object `1ee5ebdc…`; **not retargeted** |
-| **Branch `visual-baseline` tip** | (ahead of tag) | `623a1a59` | 5 commits post-freeze campaign prep — catalog bytes to freeze at arm time |
+| **Branch `visual-baseline` tip** | (ahead of tag) | `e8f02608` | Catalog bytes to freeze at arm time — **`git rev-parse` wins** |
 | **Product oracle** | `02f5294bfdbf38004cc49130d0aff1d01f31434c` | **Match** | Distinct from branch tip — correct |
 | **task-format authority** | `52d9f1eb7721f409bc47beb9fced7997b5c13ede` | **Match** | Remote + installed `taskfmt 0.2.0` |
 | **tui-snap campaign pin** | `0a2e490802b7b048cd96349c6af860f8a3a05c3d` | **Match** | `Cargo.toml` git rev |
@@ -52,7 +53,7 @@ Last audited: 2026-09-15 (subagent round + local verification).
 | `assemble-plan.py` | **PASS** — idempotent |
 | `derive-task-graph.py` | **PASS** — 73 tasks, depth 35 |
 | `taskfmt project lint terminal-components` | **PASS** — 73/73 |
-| `freeze-bootstrap-assets.py --check` (6 groups) | **PASS** — 202 assets |
+| `freeze-bootstrap-assets.py --check` (7 groups) | **PASS** — 211 assets |
 | `proof-comparator-bootstrap.py --self-test` | **PASS** — prep only; `"qualified_production_harness": false` |
 | `cargo nextest run -E 'test(store_integrity)'` | **PASS** |
 
@@ -165,7 +166,7 @@ The stored prompt matches the coordinator specification. Preparation added (with
 ## 8. Recommended next step
 
 1. **Commit campaign prep docs** (prompt, iteration guide, prep report, `visual-validation.md`) — removes ambiguity before catalog freeze.
-2. **Continue Phase 0** — close 15 open findings + independent witness round (est. weeks, parallel subagents).
+2. **Complete §22.17** — fresh independent witness round on frozen catalog bytes (parallel subagents).
 3. **When Phase 0 green:** arm `/goal` from committed `campaign-execution-prompt.md`; first production work is TASK-001 bootstrap on architectural-main worktree.
 
 **Do not start the campaign goal in this preparation session.**
@@ -179,6 +180,6 @@ The stored prompt matches the coordinator specification. Preparation added (with
 | Prompt stored + iteration guidance | **Yes** (uncommitted edits pending commit) |
 | Verification commands block iteration? | **No** — edit loop ~4 s–87 s; full matrix only at boundaries |
 | Phase 0 mechanical validators | **Yes** |
-| Phase 0 process / witness / findings | **No** — 15 open |
+| Phase 0 process / witness / findings | **No** — §22.17 witness open (49/49 findings closed) |
 | TASK-001 harness | **No** |
 | Arm campaign `/goal` now? | **No** |
