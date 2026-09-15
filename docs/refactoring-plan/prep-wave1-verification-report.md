@@ -83,7 +83,7 @@
 | ID | Severity | Status |
 | --- | --- | --- |
 | Wave 1 (READINESS-01–06, WITNESS-01) | P0 | **Closed** |
-| READINESS-08 | P2 | **Open** — runner index on 071/072 (Wave 2, non-blocking) |
+| READINESS-08 | P2 | **Closed** — transitive TASK-070 index receipt bound + validate-plan lint |
 | INT-03 | P2 | **Open** — host isolation fixture corpus (Wave 2, non-blocking) |
 | `tc-proof-host` | Expected | **Absent** — TASK-001 deliverable on architectural `main` |
 | Operator authorization to arm `/goal` | Required | **Not issued** |

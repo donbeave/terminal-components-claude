@@ -65,7 +65,7 @@ Independent planning witnesses, Wave 1 catalog repairs, and mechanical validator
 | `tc-proof-host` implementation + qualification | TASK-001 on architectural `main` worktree |
 | Operator explicit authorization to arm `/goal` | Operator |
 | Record exact catalog SHA at arm time | Coordinator |
-| Wave 2 hardening (READINESS-08, INT-03) | Optional before TASK-070; recommended during TASK-001 bootstrap |
+| Wave 2 hardening | **READINESS-08 closed**; INT-03 fixture corpus accepted at planning boundary (production host still TASK-001+) |
 
 ---
 

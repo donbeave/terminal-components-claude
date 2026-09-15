@@ -304,6 +304,45 @@ class Audit:
         self.require(not missing, f"Missing accounting templates for bindings: {sorted(missing)[:5]}")
         self.require(not extra, f"Unexpected accounting templates: {sorted(extra)[:5]}")
 
+    def runner_index_receipt_bindings(self) -> None:
+        specs = {
+            "TASK-071": {
+                "binding": "refactoring-tasks/terminal-components/completion/071/trusted/runner-index-receipt-binding.md",
+                "check_id": "CHK-008",
+                "group": "070",
+            },
+            "TASK-072": {
+                "binding": "refactoring-tasks/terminal-components/completion/072/trusted/runner-index-receipt-binding.md",
+                "check_id": "CHK-009",
+                "group": "070",
+            },
+        }
+        for task_id, spec in specs.items():
+            binding = self.root / spec["binding"]
+            self.require(binding.is_file(), f"Missing runner index binding: {spec['binding']}")
+            num = task_id.split("-")[1]
+            readme = self.root / f"refactoring-tasks/terminal-components/completion/{num}/README.md"
+            verify = self.root / f"refactoring-tasks/terminal-components/completion/{num}/verify.toml"
+            self.require(readme.is_file() and verify.is_file(), f"Missing TASK package for index binding: {task_id}")
+            if readme.is_file():
+                text = readme.read_text()
+                self.require("runner-index-receipt-binding.md" in text, f"{task_id} README must reference runner-index-receipt-binding.md")
+                self.require("D-006" in text, f"{task_id} README must declare D-006 index receipt binding")
+            if verify.is_file():
+                data = tomllib.loads(verify.read_text())
+                checks = data.get("checks", [])
+                match = next(
+                    (
+                        check
+                        for check in checks
+                        if check.get("id") == spec["check_id"]
+                        and spec["group"] in check.get("argv", [])
+                        and "runner-bootstrap-driver.py" in " ".join(check.get("argv", []))
+                    ),
+                    None,
+                )
+                self.require(match is not None, f"{task_id} verify.toml must wire {spec['check_id']} to runner --group {spec['group']}")
+
     def task069_host_context(self) -> None:
         base = self.root / "refactoring-tasks/terminal-components/completion/069/trusted"
         required = [
@@ -491,6 +530,7 @@ def main() -> int:
         graph = audit.graph(dependencies)
         audit.coordinator_branch_bindings()
         audit.accounting_context_bindings()
+        audit.runner_index_receipt_bindings()
         audit.task069_host_context()
         audit.traceability(sources, tasks)
     report = {"schema": "tc-planning-audit/v1", "mode": "inventory" if arguments.inventory_only else "artifact-integrity", "passed": not audit.errors, "counts": audit.counts, "graph": graph, "errors": audit.errors}

@@ -152,6 +152,7 @@ Then the complete prerequisite behavior remains exact without omitted results
 - **D-003:** Use existing canonical taskfmt standalone verification and current tui-snap primitives. No taskfmt dispatcher/monitor/promote call is allowed; no ref update targets main.
 - **D-004:** Host accepts `test-accounting` only after independent qualification and source rebuild. A later task resolves exactly that accepted producer product; no mutable latest path or candidate-written receipt is valid.
 - **D-005:** All commands and result schemas are exactly the frozen proof contract. Unsupported required behavior fails; adding permissive flags or alternative expected data cannot unblock it.
+- **D-006:** Context-index qualification (VF-03) is owned by TASK-070. This package inherits it through **CHK-008** (`--group 070`) per [`trusted/runner-index-receipt-binding.md`](trusted/runner-index-receipt-binding.md); `--group 071` checks alone do not satisfy index membership.
 
 ## Campaign execution binding
 

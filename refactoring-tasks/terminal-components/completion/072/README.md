@@ -206,6 +206,7 @@ Then the sole private guarded broker and immutable data are accepted while every
 - **D-003:** Use existing canonical taskfmt standalone verification and current tui-snap primitives. No taskfmt dispatcher/monitor/promote call is allowed; no ref update targets main.
 - **D-004:** Host accepts `architecture-verifier` only after independent qualification and source rebuild. A later task resolves exactly that accepted producer product; no mutable latest path or candidate-written receipt is valid.
 - **D-005:** All commands and result schemas are exactly the frozen proof contract. Unsupported required behavior fails; adding permissive flags or alternative expected data cannot unblock it.
+- **D-006:** Context-index qualification (VF-03) is owned by TASK-070. This package inherits it through **CHK-009** (`--group 070`) per [`trusted/runner-index-receipt-binding.md`](trusted/runner-index-receipt-binding.md); `--group 072` checks alone do not satisfy index membership.
 
 ## Campaign execution binding
 
