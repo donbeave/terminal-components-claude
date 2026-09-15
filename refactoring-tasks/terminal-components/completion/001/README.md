@@ -120,6 +120,7 @@ Then every R-004 prohibition holds and no candidate-selected artifact defines su
 - **D-003:** Use the existing proof-contract operation interface and canonical taskfmt standalone gate. Source/scenario runner operations are owned by TASK-070, accounting by TASK-071 and architecture verification by TASK-072. Those are distinct independently qualified prerequisites; do not claim this core task establishes them.
 - **D-004:** Preserve original source/fixture/test identities and exact finite membership. Artifact absence, invalid data and unimplemented required cases fail closed.
 - **D-005:** Independent bootstrap drivers judge the submitted executables; the submitted proof tool cannot be its own sole completion gate.
+- **D-006:** The TASK-001 manual bootstrap exception is governed by the machine-readable operator bootstrap checklist (`tc-proof-operator-bootstrap-checklist/v1`) in [campaign-executor-protocol.md § Operator bootstrap checklist (IW-03)](/work/docs/refactoring-plan/campaign-executor-protocol.md). Every evidence field must be recorded, every forbidden shortcut avoided, and coordinator sign-off points SO-001 through SO-007 must complete before the first `qualified-harness` receipt may enter the protected ledger.
 
 ## Campaign execution binding
 
