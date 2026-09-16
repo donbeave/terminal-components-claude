@@ -62,6 +62,54 @@ Inside `verify`, the host runs pinned `taskfmt verify` with container paths visi
 
 ---
 
+## Hybrid advisory verify (TASK-071/072)
+
+Hybrid packages keep bootstrap drivers for CHK-004+ but add production CHK-001:
+
+```text
+/proof/bin/tc-proof preflight --context /run/tc-proof/contexts/CHK-001.json
+```
+
+Agents cannot run `sudo` or `apfs.util`. Use [`scripts/hybrid-verify-sandbox.sh`](../../scripts/hybrid-verify-sandbox.sh):
+
+```sh
+export TC_PLANNING_REPO=/path/to/terminal-components-claude
+export TC_WORKTREE=$TC_PLANNING_REPO/.worktrees/campaign
+
+# No sudo — stages bind tree + CHK-001.json + synthetic.conf.fragment (includes run)
+./scripts/hybrid-verify-sandbox.sh prepare-hybrid --task 071   # or 072
+
+# Operator once (outside agent sessions) — merges fragment and refreshes firmlinks:
+sudo sh -c 'grep -q tc-task-001-bind /etc/synthetic.conf 2>/dev/null || cat /private/tmp/tc-task-001-bind/synthetic.conf.fragment >> /etc/synthetic.conf; /System/Library/Filesystems/apfs.fs/Contents/Resources/apfs.util -t'
+
+# Agent — verify-only mount check
+./scripts/hybrid-verify-sandbox.sh mount
+./scripts/hybrid-verify-sandbox.sh layout-smoke
+
+# Advisory taskfmt (exports TC_PROOF_* for CHK-001 preflight only)
+export TC_RUN=/tmp/tc-hybrid-071-run
+mkdir -p "$TC_RUN/logs"
+./scripts/hybrid-verify-sandbox.sh verify --progress "$TC_RUN/progress.md" --log-dir "$TC_RUN/logs"
+```
+
+### Without operator `/run` firmlink
+
+| Approach | `/run/tc-proof` at verify time | Full hybrid verify |
+| --- | --- | --- |
+| **Operator `apfs.util -t`** | Yes — `/run/tc-proof/contexts/CHK-001.json` | Yes on macOS host |
+| **Docker `docker-smoke`** | Yes inside container only | No — no `sandbox-exec`, not taskfmt |
+| **`tc-proof-host prepare/freeze`** | Host `$RUN/contexts/` mapped by operator | Yes — campaign authority; requires `campaign.json` task entry for 071/072 |
+
+`docker-smoke` (no sudo):
+
+```sh
+./scripts/hybrid-verify-sandbox.sh docker-smoke
+```
+
+`tc-proof-host prepare` for TASK-071/072 needs `.campaign/host/campaign.json` extended with `check_context_templates` for the task (not present in pre-arm campaign). Production host verify remains operator-owned; advisory sandbox is for implementer path/layout checks only.
+
+---
+
 ## Validation
 
 - Planning: `validate-plan.py` `catalog_argv_smoke()` — 479 `/proof/bin/tc-proof` argv references across packages (does not invoke binary).

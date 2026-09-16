@@ -43,7 +43,7 @@ Required at filesystem root when CHK checks execute:
 /work/tools/refactor-proof/bin/tc-proof-host → synced Mach-O (after sync-binaries.sh)
 ```
 
-Provision with [`scripts/task-001-verify-sandbox.sh`](../../scripts/task-001-verify-sandbox.sh) (`prepare` + `mount`).
+Provision with [`scripts/task-001-verify-sandbox.sh`](../../scripts/task-001-verify-sandbox.sh) (`prepare` + `mount`). Hybrid **071/072** also need [`scripts/hybrid-verify-sandbox.sh`](../../scripts/hybrid-verify-sandbox.sh) (`prepare-hybrid` + operator `/run` firmlink).
 
 ### Harness binary roles
 

@@ -9,9 +9,11 @@ Usage: task-001-verify-sandbox.sh <command> [options]
 
 Commands:
   prepare       Create $TC_BIND symlink tree (no sudo)
+  prepare-hybrid  Delegate to hybrid-verify-sandbox.sh (TASK-071/072; adds /proof/bin, /run)
   mount         Verify /task, /work, /proof/bootstrap exist (no sudo; never prompts)
   unmount       No-op for agents (firmlinks are host-provisioned outside agent sessions)
   layout-smoke  Verify container paths resolve expected files
+  preflight-smoke  Run CHK-001 preflight at /run/tc-proof/contexts/CHK-001.json (hybrid)
   verify        Run taskfmt verify from /work (requires mount + progress)
   docker-smoke  Optional Linux Docker volume layout check (paths only)
   help          Show this message
@@ -26,6 +28,7 @@ Environment:
   TC_MOUNT_MODE      synthetic (default on Darwin), symlink (legacy), or nullfs (deprecated)
   TC_BASE            Git base for verify (default: HEAD of worktree)
   TC_RUN             Run directory for logs (verify creates if unset)
+  TC_TASK_ID         Task band for bind layout (default: 001; hybrid: 071 or 072)
 
 verify options:
   --progress PATH    progress.md (required unless TC_RUN/progress.md exists)
@@ -37,6 +40,7 @@ Notes:
   - This script never invokes sudo, osascript, or password prompts. `mount` only checks that
     /task, /work, /proof/bootstrap already resolve (one-time host firmlinks via synthetic.conf).
   - Fragment for operators: $TC_BIND/synthetic.conf.fragment (apply outside agent sessions).
+  - Hybrid TASK-071/072: use scripts/hybrid-verify-sandbox.sh prepare-hybrid (includes run firmlink).
   - Untracked worktree files outside verify.toml writable_paths fail taskfmt scope.
     Keep scratch under .qual/ (gitignored in task-001-bootstrap) or run
     git -C \$TC_WORKTREE clean -fd before verify.
@@ -78,6 +82,11 @@ init_paths() {
     TC_BASE="$(git -C "$TC_WORKTREE" rev-parse HEAD 2>/dev/null || true)"
   fi
   TC_BASE="${TC_BASE:-UNKNOWN}"
+  TC_TASK_ID="${TC_TASK_ID:-001}"
+}
+
+is_hybrid_task() {
+  [[ "$TC_TASK_ID" == "071" || "$TC_TASK_ID" == "072" ]]
 }
 
 # Paths in synthetic.conf are root-relative without a leading slash.
@@ -97,25 +106,20 @@ synthetic_fragment_path() {
 }
 
 write_synthetic_fragment() {
-  local frag task_rel work_rel proof_rel
+  local frag task_rel work_rel proof_rel run_rel
   frag="$(synthetic_fragment_path)"
   task_rel="$(synthetic_target "$TC_BIND/task")"
   work_rel="$(synthetic_target "$TC_BIND/work")"
   proof_rel="$(synthetic_target "$TC_BIND/proof")"
+  run_rel="$(synthetic_target "$TC_BIND/run")"
   {
     synthetic_marker
     printf 'task\t%s\n' "$task_rel"
     printf 'work\t%s\n' "$work_rel"
     printf 'proof\t%s\n' "$proof_rel"
+    printf 'run\t%s\n' "$run_rel"
   } >"$frag"
   echo "Wrote synthetic fragment: $frag"
-}
-
-synthetic_entries_present() {
-  local frag
-  frag="$(synthetic_fragment_path)"
-  [[ -f "$frag" ]] || return 1
-  grep -q "^task[[:space:]]" "$frag" && grep -q "^work[[:space:]]" "$frag" && grep -q "^proof[[:space:]]" "$frag"
 }
 
 require_taskfmt() {
@@ -131,6 +135,9 @@ require_worktree() {
 
 cmd_prepare() {
   init_paths
+  if is_hybrid_task; then
+    exec "${BASH_SOURCE[0]%/*}/hybrid-verify-sandbox.sh" prepare-hybrid --task "$TC_TASK_ID"
+  fi
   require_taskfmt
   require_worktree
 
@@ -138,7 +145,7 @@ cmd_prepare() {
   task_pkg="$TC_CATALOG_ROOT/completion/001"
   bootstrap="$TC_BIND/proof/bootstrap"
 
-  mkdir -p "$bootstrap/bin"
+  mkdir -p "$bootstrap/bin" "$TC_BIND/run/tc-proof/contexts"
   ln -sfn "$task_pkg" "$TC_BIND/task"
   ln -sfn "$TC_WORKTREE" "$TC_BIND/work"
   ln -sfn "$TC_TASKFMT" "$bootstrap/bin/taskfmt"
@@ -164,6 +171,9 @@ path_mounted() {
 
 cmd_mount() {
   init_paths
+  if is_hybrid_task; then
+    exec "${BASH_SOURCE[0]%/*}/hybrid-verify-sandbox.sh" mount
+  fi
   [[ -d "$TC_BIND/task" ]] || die "run 'prepare' first (missing $TC_BIND/task)"
 
   if path_mounted /task && path_mounted /work && path_mounted /proof/bootstrap; then
@@ -179,9 +189,9 @@ Autonomous agents do not use sudo or password prompts. Bind layout is at:
 
 One-time host provisioning (operator, outside agent sessions):
   1. ./scripts/task-001-verify-sandbox.sh prepare
-  2. Merge $TC_BIND/synthetic.conf.fragment into /etc/synthetic.conf
-  3. sudo /System/Library/Filesystems/apfs.fs/Contents/Resources/apfs.util -t
-  4. ./scripts/task-001-verify-sandbox.sh mount   # verify-only
+  2. Operator one-liner (merge fragment + refresh firmlinks):
+     sudo sh -c 'grep -q tc-task-001-bind /etc/synthetic.conf 2>/dev/null || cat $TC_BIND/synthetic.conf.fragment >> /etc/synthetic.conf; /System/Library/Filesystems/apfs.fs/Contents/Resources/apfs.util -t'
+  3. ./scripts/task-001-verify-sandbox.sh mount   # verify-only
 
 See docs/refactoring-plan/task-001-verify-container.md
 EOF
@@ -298,9 +308,11 @@ main() {
   shift || true
   case "$cmd" in
     prepare) cmd_prepare "$@" ;;
+    prepare-hybrid) exec "${BASH_SOURCE[0]%/*}/hybrid-verify-sandbox.sh" prepare-hybrid "$@" ;;
     mount) cmd_mount "$@" ;;
     unmount) cmd_unmount "$@" ;;
     layout-smoke) cmd_layout_smoke "$@" ;;
+    preflight-smoke) exec "${BASH_SOURCE[0]%/*}/hybrid-verify-sandbox.sh" preflight-smoke "$@" ;;
     verify) cmd_verify "$@" ;;
     docker-smoke) cmd_docker_smoke "$@" ;;
     help|-h|--help) usage ;;
