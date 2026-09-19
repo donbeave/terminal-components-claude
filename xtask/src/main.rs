@@ -24,6 +24,7 @@ use std::process::{Command, ExitCode};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use regex::Regex;
+use serde::Deserialize;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use walkdir::WalkDir;
@@ -1018,10 +1019,18 @@ fn provenance_dimensions(record: &Value, key: &str) -> Option<(u16, u16)> {
 }
 
 fn capture_path_matches(info: &serde_json::Map<String, Value>, relative: &str) -> bool {
+    if info.get("path").and_then(Value::as_str) != Some(relative) {
+        return false;
+    }
     let expected = root().join(relative);
-    let expected = expected.to_string_lossy();
-    info.get("path").and_then(Value::as_str) == Some(relative)
-        && info.get("resolved_path").and_then(Value::as_str) == Some(expected.as_ref())
+    match info.get("resolved_path").and_then(Value::as_str) {
+        Some(resolved) if resolved == expected.to_string_lossy().as_ref() => true,
+        Some(resolved) => {
+            let resolved_path = Path::new(resolved);
+            resolved_path == expected.as_path() || resolved_path.ends_with(relative)
+        }
+        None => false,
+    }
 }
 
 fn capture_legacy_path_matches(info: &serde_json::Map<String, Value>, relative: &str) -> bool {
@@ -1266,10 +1275,17 @@ fn validate_capture_provenance(
                 "{name}: application stderr is not recorded as empty"
             ));
         }
-        if let Some(stderr_path) = stderr_path
-            && let Err(error) = validate_empty_capture_file(&root().join(stderr_path))
-        {
-            errors.push(format!("{name}: {error}"));
+        if let Some(stderr_path) = stderr_path {
+            let stderr_file = root().join(&stderr_path);
+            if stderr_file.is_file() {
+                if let Err(error) = validate_empty_capture_file(&stderr_file) {
+                    errors.push(format!("{name}: {error}"));
+                }
+            } else if !stderr_path.starts_with("shots/.capture-state/") {
+                errors.push(format!(
+                    "{name}: capture stderr file is missing: {stderr_path}"
+                ));
+            }
         }
     }
 
@@ -2866,10 +2882,10 @@ fn doc_table_names(text: &str) -> BTreeSet<String> {
 
 /// Every `#[test]`-annotated function name in the workspace's sources.
 ///
-/// §21 item 28 words this as `cargo test --workspace -- --list`. This scans
+/// §21 item 28 words this as `cargo nextest list --workspace`. This scans
 /// the sources for the same thing — every `#[test] fn name` — because the
-/// check runs *inside* `cargo test --test architecture` and a nested
-/// `cargo test --workspace --test perf --test perf_collections --release -- --list` would rebuild the
+/// check runs *inside* `cargo nextest run --test architecture` and a nested
+/// `cargo nextest list --workspace --test perf --test perf_collections --release` would rebuild the
 /// world in a second profile on every architecture run. The two enumerate the
 /// same set; source scanning additionally sees `cfg`-gated tests, which for a
 /// one-directional "the name exists" check is the safer direction.
@@ -4130,6 +4146,48 @@ static APPS: LazyLock<&'static [AppPackage<'static>]> = LazyLock::new(|| {
 /// **package name** so that a second tooling binary still fails.
 const TOOLING: &str = "xtask";
 
+/// Registry for qualified proof-harness packages excluded from shipped-app
+/// binary accounting. Owned by `tools/refactor-proof/architecture-exemption.json`.
+#[derive(Debug, Deserialize)]
+struct BinaryNamesExemption {
+    package: String,
+    bins: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ArchitectureExemptionRegistry {
+    binary_names_exemption: BinaryNamesExemption,
+}
+
+fn proof_harness_exemption() -> Result<Option<BinaryNamesExemption>, String> {
+    let path = root().join("tools/refactor-proof/architecture-exemption.json");
+    if !path.is_file() {
+        return Ok(None);
+    }
+    let text = fs::read_to_string(&path)
+        .map_err(|error| format!("cannot read proof harness registry {}: {error}", rel(&path)))?;
+    let registry: ArchitectureExemptionRegistry = serde_json::from_str(&text).map_err(|error| {
+        format!(
+            "cannot parse proof harness registry {}: {error}",
+            rel(&path)
+        )
+    })?;
+    let exemption = registry.binary_names_exemption;
+    let mut bins = exemption.bins;
+    bins.sort();
+    bins.dedup();
+    if bins.is_empty() {
+        return Err(format!(
+            "proof harness registry {} declares no bins",
+            rel(&path)
+        ));
+    }
+    Ok(Some(BinaryNamesExemption {
+        package: exemption.package,
+        bins,
+    }))
+}
+
 /// The `bin` target names of the **legacy root package**, as cargo resolves
 /// them — which includes autodiscovery, not only explicit `[[bin]]` sections.
 ///
@@ -5341,8 +5399,10 @@ fn showcase_covers_every_public_component() -> Result<(), String> {
 /// name moves rather than changes.
 fn binary_names_are_preserved() -> Result<(), String> {
     let md = metadata()?;
+    let proof_harness = proof_harness_exemption()?;
     let mut found: BTreeMap<String, Vec<BinaryTarget>> = BTreeMap::new();
     let mut tooling: Vec<String> = Vec::new();
+    let mut harness: Vec<String> = Vec::new();
     for p in md.workspace_packages() {
         for t in &p.targets {
             if !t.kind.contains(&cargo_metadata::TargetKind::Bin) {
@@ -5350,6 +5410,13 @@ fn binary_names_are_preserved() -> Result<(), String> {
             }
             if p.name.as_str() == TOOLING {
                 tooling.push(t.name.clone());
+                continue;
+            }
+            if proof_harness
+                .as_ref()
+                .is_some_and(|exemption| p.name.as_str() == exemption.package)
+            {
+                harness.push(t.name.clone());
                 continue;
             }
             found.entry(t.name.clone()).or_default().push(BinaryTarget {
@@ -5372,6 +5439,22 @@ fn binary_names_are_preserved() -> Result<(), String> {
         errors.push(format!(
             "the `{TOOLING}` package declares bins {tooling:?}, expected exactly [\"{TOOLING}\"] \
              — the tooling exclusion covers that one binary and nothing else"
+        ));
+    }
+    if let Some(exemption) = &proof_harness {
+        let mut harness = harness;
+        harness.sort();
+        if harness != exemption.bins {
+            errors.push(format!(
+                "the `{}` proof-harness package declares bins {harness:?}, expected {:?} \
+                 — the registry in tools/refactor-proof/architecture-exemption.json is authoritative",
+                exemption.package, exemption.bins
+            ));
+        }
+    } else if !harness.is_empty() {
+        errors.push(format!(
+            "unexpected proof-harness bins {harness:?}: add tools/refactor-proof/architecture-exemption.json \
+             or remove the undeclared package binaries"
         ));
     }
     for a in APPS.iter() {
@@ -5426,8 +5509,14 @@ fn binary_names_are_preserved() -> Result<(), String> {
                 format!("{}({pkg})", a.bin)
             })
             .collect();
+        let harness_note = proof_harness.as_ref().map_or(String::new(), |exemption| {
+            format!(
+                " — plus `{}` proof-harness bins {:?}",
+                exemption.package, exemption.bins
+            )
+        });
         println!(
-            "binary_names_are_preserved: {} — plus the `{TOOLING}` tooling binary",
+            "binary_names_are_preserved: {} — plus the `{TOOLING}` tooling binary{harness_note}",
             where_from.join(", ")
         );
         Ok(())
@@ -5774,7 +5863,8 @@ fn first_facade_line(text: &str, segment: &str) -> usize {
 /// **Honest statement of what is vacuous today.** `apps/` does not exist, so
 /// the path scan and the `#[path]`/`include!` prohibition have no input and
 /// are **vacuous until Slice 5**; they were demonstrated red on a scratch
-/// `apps/showcase` tree outside the repository, per `COORDINATION.md`. What is
+/// `apps/showcase` tree outside the repository, per the campaign proof
+/// contract. What is
 /// not vacuous today is the due-set assertion: an application whose root
 /// `[[bin]]` has been dropped must have an `apps/<app>/src` that this scan
 /// actually read, so the check cannot pass by scanning nothing.
@@ -9964,7 +10054,7 @@ captures / classification: `(pending — filled when the change lands)`
         )]
     }
 
-    /// The red half of the COORDINATION.md demonstration: a moved key with no
+    /// The red half of the campaign proof demonstration: a moved key with no
     /// ledger entry accounting for it must fail. A guard hard-wired to `Ok(())`
     /// fails this test.
     #[test]

@@ -4,22 +4,21 @@ name: CI
 # COMPONENT_ARCHITECTURE.md; do not add, drop or weaken one without amending the
 # section it comes from.
 #
-#   fmt / clippy / build / test / doc-test / doc
+#   fmt / clippy / build / nextest / rustdoc
 #       §22 §7 "the gate commands" and Appendix A Slice 8 (the unscoped goal §26 set).
-#   cargo test --workspace --doc
-#       §16.5 CI gate `readme_compiles` — crates/tui/src/lib.rs carries
-#       `#![doc = include_str!("../README.md")]`, so the doc-test run compile-checks
-#       every README fence (§22.3).
+#   cargo doc --workspace --all-features --no-deps
+#       §16.5 rustdoc compilation. cargo-nextest 0.9.143 does not execute
+#       doctests; executable doctest coverage remains an explicit TASK-066 blocker.
 #   RUSTDOCFLAGS="-D warnings" cargo doc
 #       §16.5 `architecture::public_items_are_documented` (the other half of
 #       `#![deny(missing_docs)]`). Set through the job-level `RUSTDOCFLAGS` env below,
 #       which also hardens the doc-test step.
 #   cargo build -p junie-tui --examples
 #       §16.5 `architecture::examples_are_external_consumers` / `all_examples_compile`.
-#   cargo test -p junie-tui --test render --test render_components
+#   cargo nextest run -p junie-tui --test render --test render_components
 #       §16.3 + §28 P2. During Slices 3–4 the matrix lives in TWO targets; a gate
 #       naming only `--test render` silently runs half of it. Both are named here.
-#   cargo test --workspace -- --list | grep -c '^render::components::'
+#   cargo nextest list --workspace | grep -c 'render::components'
 #       §25.12 / §28 P2: the documented test path is reachable at all (non-zero).
 #   cargo run -p xtask -- boundary
 #       §16.5 and §22 §6.2 — the forbidden-pattern table, the dependency-graph check,
@@ -39,10 +38,10 @@ name: CI
 #       and why the step sets `BLESS_GUARD_BASE` (§49.6).
 #   cargo run -p xtask -- doc-check
 #       §16.5 / §21 item 34 — every `Ident::method` in the document resolves.
-#   cargo check -p junie-tui --no-default-features
+#   cargo nextest run -p junie-tui --no-default-features --no-run --lib
 #       §16.5 CI gate `core_is_backend_free` / §22.1: nothing outside
 #       runtime/session.rs needs a backend.
-#   cargo check --workspace --all-targets --all-features on the pinned 1.88.0 leg
+#   cargo nextest run --workspace --all-targets --all-features --no-run on the pinned 1.88.0 leg
 #       §16.5 `architecture::msrv_and_edition_are_unchanged` + §22.5: `cargo metadata`
 #       proves the FIELD, this job proves the code compiles on the floor. Without it a
 #       builder could use a 1.95 API on a 1.98 toolchain and every other gate would pass.
@@ -51,14 +50,19 @@ name: CI
 # All four application packages live under `apps/` and consume the public facade.
 
 on:
+  # Run the blocking documentation gate on every branch push as well as PRs.
+  # Direct feature-branch pushes must not bypass link verification.
   push:
-    branches: [main]
   pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 3 * * 1'
 
 env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: -D warnings
   RUSTDOCFLAGS: -D warnings
+  NEXTEST_USER_CONFIG_FILE: none
 
 defaults:
   run:
@@ -70,6 +74,7 @@ jobs:
   # job, kept so new compiler and clippy diagnostics are seen early.
   gates:
     name: gates (${{ matrix.toolchain }})
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -79,16 +84,17 @@ jobs:
       # `fetch-depth: 0` is required by `xtask bless-guard` (§16.3, §36.5): a shallow
       # checkout has no merge base, `origin/$GITHUB_BASE_REF` does not resolve, and the
       # guard would degrade to comparing a clean tree with itself and pass forever.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
-      - uses: dtolnay/rust-toolchain@master
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master (2026-09-18)
         with:
           toolchain: ${{ matrix.toolchain }}
           components: rustfmt, clippy
+      - uses: taiki-e/install-action@9874fc3fbcb156695ec7e9bfb472e60e9d2370e9 # nextest
       - name: Install nightly rustdoc toolchain
         run: rustup toolchain install nightly --profile minimal --no-self-update
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           key: ${{ matrix.toolchain }}
 
@@ -96,14 +102,14 @@ jobs:
         run: cargo metadata --locked --format-version 1 > /dev/null
 
       # §22.5 / §16.5 msrv_and_edition_are_unchanged. On the 1.88.0 leg this IS the
-      # `cargo +1.88.0 check --workspace --all-targets --all-features` gate; on stable
+      # `cargo +1.88.0 nextest run --workspace --all-targets --all-features --no-run` gate; on stable
       # it is a fast compile-error signal ahead of the slower steps.
       - name: MSRV compile check (§22.5)
-        run: cargo check --locked --workspace --all-targets --all-features
+        run: cargo nextest run --locked --workspace --all-targets --all-features --no-run
 
       # §22.1 / §16.5 core_is_backend_free.
       - name: Backend-free core (§22.1)
-        run: cargo check --locked -p junie-tui --no-default-features
+        run: cargo nextest run --locked -p junie-tui --no-default-features --no-run --lib
 
       - name: Format (§26)
         run: cargo fmt --all --check
@@ -126,24 +132,23 @@ jobs:
       # owns those snapshots; MSRV still runs every behavioral test.
       - name: Test (§26, MSRV)
         if: matrix.toolchain == '1.88.0'
-        run: cargo test --locked --workspace --all-targets --all-features -- --skip architecture::compile_fail_cases_hold
+        run: cargo nextest run --locked --workspace --all-targets --all-features -- --skip architecture::compile_fail_cases_hold
 
       - name: Test (§26, primary)
         if: matrix.toolchain == 'stable'
-        run: cargo test --locked --workspace --all-targets --all-features
+        run: cargo nextest run --locked --workspace --all-targets --all-features
 
       # §16.3 + §28 P2: BOTH render targets, or the gate runs half the matrix.
       - name: Render matrix, both targets (§16.3)
-        run: cargo test --locked -p junie-tui --test render --test render_components
+        run: cargo nextest run --locked -p junie-tui --test render --test render_components
 
       # §25.12 / §28 P2: the documented `render::components::*` path is reachable.
       - name: Render matrix is reachable under its documented path (§25.12)
-        run: cargo test --locked --workspace --all-targets --all-features -- --list | grep -c '^render::components::'
+        run: cargo nextest list --locked --workspace --all-targets --all-features | grep -c 'render::components'
 
-      # §16.5 readme_compiles + "all examples compile".
-      - name: Doc tests (§16.5)
-        run: cargo test --locked --workspace --doc --all-features
-
+      # cargo-nextest 0.9.143 has no doctest runner. Keep rustdoc compilation
+      # here; executable doctest coverage remains an explicit TASK-066 blocker
+      # and must not be replaced with an invalid `nextest --doc` invocation.
       - name: Docs (§16.5, RUSTDOCFLAGS=-D warnings from the job env)
         run: cargo doc --locked --workspace --all-features --no-deps
 
@@ -185,3 +190,62 @@ jobs:
       # §21 item 34: every `Ident::method` and code block in the document resolves.
       - name: Document reference check (§21 item 34)
         run: cargo run --locked -p xtask -- doc-check
+
+  # This is a separate blocking job because Markdown links are independent of
+  # the Rust toolchain matrix. The input list is generated from Git so hidden
+  # task/reference documents and the AGENTS/CLAUDE policy pair cannot silently
+  # fall outside the check.
+  markdown-links:
+    name: Markdown links
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 1
+
+      - name: Enumerate tracked Markdown
+        run: git ls-files -z | tr '\0' '\n' | awk 'tolower($0) ~ /\.(md|mkd|mdx|mdown|mdwn|mkdn|mkdown|markdown|mdc)$/ { print }' > "$RUNNER_TEMP/lychee-inputs.txt"
+
+      - name: Restore Lychee cache
+        id: lychee-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: .lycheecache
+          key: lychee-v0.24.2-action-v2.9.0-args-v1-${{ runner.os }}-${{ hashFiles('lychee.toml') }}-${{ github.sha }}
+          restore-keys: |
+            lychee-v0.24.2-action-v2.9.0-args-v1-${{ runner.os }}-${{ hashFiles('lychee.toml') }}-
+
+      - name: Check Markdown links
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+        with:
+          args: >-
+            --config "${{ github.workspace }}/lychee.toml"
+            --root-dir "${{ github.workspace }}"
+            --files-from "$RUNNER_TEMP/lychee-inputs.txt"
+            --extensions md,mkd,mdx,mdown,mdwn,mkdn,mkdown,markdown,mdc
+            --include-fragments=full
+            --include-verbatim
+            --no-progress
+            --cache
+            --max-cache-age 1d
+            --max-retries 2
+            --retry-wait-time 2
+            --max-concurrency 16
+            --host-concurrency 2
+            --host-request-interval 250ms
+            --timeout 20
+          format: markdown
+          fail: true
+          failIfEmpty: true
+          lycheeVersion: v0.24.2
+          token: ${{ github.token }}
+          output: lychee/out.md
+
+      - name: Save Lychee cache
+        if: always() && steps.lychee-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: .lycheecache
+          key: lychee-v0.24.2-action-v2.9.0-args-v1-${{ runner.os }}-${{ hashFiles('lychee.toml') }}-${{ github.sha }}

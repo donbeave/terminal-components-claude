@@ -1,4 +1,4 @@
-# Junie TUI — a Ratatui design system and its first real application
+# Junie TUI — a Ratatui design system and four terminal applications
 
 Four binaries share one library:
 
@@ -94,12 +94,13 @@ the explorer beside the tabs from 100 columns up; below that it becomes a
 drawer that covers the tab body while it has focus (`0` opens it, opening an
 object or pressing Tab puts it away).
 
-Verify:
+Quick local check (the campaign acceptance gate is the process in
+[`AGENTS.md`](AGENTS.md), not this short command list):
 
 ```sh
 cargo fmt --check
 cargo clippy --all-targets -- -D warnings
-cargo test
+cargo nextest run
 ```
 
 ## Keyboard and mouse
@@ -226,7 +227,8 @@ From the live site's CSS custom properties and computed styles:
 
 ## Design tokens
 
-All values live in `src/theme.rs`; rendering code never spells an RGB value.
+All values live in `crates/tui/src/theme/`; rendering code never spells an RGB
+value.
 
 | Token | Value | Source on junie.jetbrains.com |
 |---|---|---|
@@ -241,10 +243,10 @@ All values live in `src/theme.rs`; rendering code never spells an RGB value.
 | `accent` | `#48e054` | `--colors-primary` |
 | `accent_hover` | `#3ab343` | primary at 80 % over black |
 | `accent_pressed` | `#2b8632` | darker step for the press flash |
-| `accent_bg` / `accent_bg_subtle` | green 20 % / 10 % | `primary-t-fog`, `bg-primary/10` |
+| `accent_tint` / `danger_tint` | green/red selection tints | `primary-t-fog`, danger tint |
 | `error` | `#e44545` | `--color-destructive` (red-400) |
 | `warning` | `#f59e09` | amber-500 |
-| `info` | `#8787ff` | Rescui purple, used only for reference |
+| `info` | `#8787ff` | informational/reference text |
 
 ## Component state model
 
@@ -308,6 +310,7 @@ apps/showcase       pages/ (one per component + two composed screens), app.rs sh
 apps/tablepro       db.rs (demo catalog + row generator), sql.rs (tokens, statements, safety tiers, runner, EXPLAIN),
                     model.rs, tabs.rs, workbench.rs, connections.rs, app.rs, tests
 apps/jackin-preview deterministic preview library, simulation, screens, and tests
+apps/holla       deterministic context-adaptive action launcher and tests
 tools/        headless capture harness (tmux → ANSI → PNG) used for visual review
 ```
 
@@ -318,9 +321,9 @@ the public facade.
 
 ## Library boundary
 
-- `crates/tui/src/` is the reusable library (`junie_tui`); `apps/showcase`,
-  `apps/tablepro`, and `apps/jackin-preview` consume it only through its public
-  API.
+- `crates/tui/src/` is the reusable library (`junie_tui`); all four applications
+  — Showcase, Holla, Jackin Preview, and TablePro — consume it only through its
+  public API.
 - `crates/tui/examples/` are external-style consumers of the same facade, so
   application code and examples exercise one supported API boundary.
 - Application packages own their domain models and screen composition; the
@@ -335,8 +338,11 @@ tools/capture.sh start 120 40 -- target/debug/tablepro --connect Production`),
 sends keys and SGR mouse events, and captures the pane with colours;
 `tools/ansi2png.py` rasterises the capture with JetBrains Mono so rendered
 output can be inspected as an image. Screens in `shots/` were produced this
-way: `f_*` are the showcase, `s_*` the new component pages, `t_*` the
-workbench, and `j_*` the Jackin preview (`tools/capture.sh start 120 40 --
+way: `f_*` are historical showcase captures, `s_*` the historical component
+pages, `t_*` the workbench, and `j_*` the Jackin preview. Current matrix
+captures use `showcase_*`, `tablepro_*`, `jackin-preview_*`, and `holla_*`
+names from [`shots/capture-matrix.tsv`](shots/capture-matrix.tsv); Holla uses
+the `reference-default` theme. (`tools/capture.sh start 120 40 --
 target/debug/jackin-preview --scenario returning --motion reduced`; use the
 tmux key name `Escape`, not `Esc`, when scripting). Each start prints a unique
 run id; pass it as `CAPTURE_RUN_ID` to `shot` and `stop`. Each published shot
@@ -345,7 +351,9 @@ and `png`; failed conversion never replaces the previous complete directory.
 The capture manifest records the exact argv, binary hash, Git dirty state,
 environment, and tool versions.
 
-The showcase also carries a visual baseline (`apps/showcase/tests/baselines/showcase.txt`):
-a digest of every page at 120×40 and 80×24, excluding the navigation sidebar.
-The showcase visual test fails when a page changes; regenerate deliberately
-with `UPDATE_BASELINE=1 cargo test -p showcase --test visual showcase_visual_baseline`.
+The showcase also carries a diagnostic self-baseline
+(`apps/showcase/tests/baselines/showcase.txt`): a digest of every page across
+80×24, 100×30, 120×40, and 160×50, four colour levels, and both themes,
+including the navigation sidebar. It is not the immutable visual oracle and is
+not an acceptance path while readiness is **NO-GO**. Do not regenerate it or
+set `UPDATE_BASELINE=1` during campaign preparation.

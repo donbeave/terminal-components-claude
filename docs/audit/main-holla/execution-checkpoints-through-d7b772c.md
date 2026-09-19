@@ -1,8 +1,13 @@
 # Main-based Holla integration execution plan
 
+> Historical execution plan. Superseded by the current
+> [readiness report](../../refactoring-plan/execution-readiness-report.md).
+> Do not replay its branch, taskfmt, container, command, or merge instructions.
+
 ## Authority and stop condition
 
-The complete user task is preserved in [main-holla-integration-task.md](main-holla-integration-task.md).
+The complete historical user task is preserved in
+[main-holla-integration-task.md](../../plans/main-holla-integration-task.md).
 Main is the implementation base; pinned Holla is the product reference. All four
 applications, every surviving architecture obligation, all verification layers,
 and exact merged-commit verification are required. Narrow slice acceptance is
@@ -38,7 +43,7 @@ Reviewers inspect committed source and independently bound evidence. Lifecycle:
 characterize -> reproduce -> shared fix -> caller migration -> independent
 view/behavior proof -> review -> integration -> full candidate verification.
 
-| Task | Requirements | Owner | Current state and remaining proof |
+| Task | Requirements | Owner | State recorded at checkpoint and remaining proof |
 |---|---|---|---|
 | T01 Sources/work preservation | 1–2 | integrator | Pinned and isolated; revalidate concurrent main before merge |
 | T02 History/obligations | 3 | history audit/integrator | Exhaustive history review complete; normative consolidation and final obligation mapping remain |
@@ -115,7 +120,7 @@ showcase-fidelity, historical-regeneration and test-inventory.
 4. Finish actual Holla App lifecycle across routes/modals, all eleven scenarios,
    always-armed query/caret, focused hints with status, scrolling and real binary
    behavior. Domain-module tests alone do not prove the application.
-5. Expand capture/CI/build provenance from one authoritative current four-app
+5. Expand capture/CI/build provenance from one authoritative then-current four-app
    inventory. Preserve pinned Holla132 and historical499 separately. Unsupported
    theme/motion/clock axes and missing targets must fail, never be ignored.
    Phase2 candidate7e8a36c rejected: root actual-compiler probe changed an ignored
@@ -128,7 +133,7 @@ showcase-fidelity, historical-regeneration and test-inventory.
    matrix, all boundary/doc/perf/parity/capture gates, independent images/live
    journeys, coherent normative docs, PR and exact merged-source proof.
 
-Current integration checkpoint: runtime reparenting, scoped activation origin,
+Integration checkpoint recorded at that date: runtime reparenting, scoped activation origin,
 active menu bindings and conditional typing caret are integrated through2f13925.
 Root48 MSRV activation/layer/typing/publication/Scene tests pass. Jackin stable
 manager identity is integrated aaed062 (33 MSRV tests); Right rendering remains
@@ -415,7 +420,7 @@ mapping and all visual obligations remain separate.
 ## Historical checkpoints
 
 The previous 352-line execution log is preserved byte-for-byte in
-[execution-checkpoints-through-825bbb6.md](../audit/main-holla/execution-checkpoints-through-825bbb6.md).
+[execution-checkpoints-through-825bbb6.md](execution-checkpoints-through-825bbb6.md).
 Its SHA256 is b99d5700f77b77ae77eeaf774f0766b01ec6eb46623d48cdece588dbf1801855. It records earlier observations, including superseded
 failures and temporary owner assignments; this plan supplies current status.
 No obligation was removed: the complete archived task remains the final audit

@@ -284,7 +284,8 @@ impl Inventory<'_> {
             .iter()
             .map(|app| {
                 let mut args = vec![
-                    "test".into(),
+                    "nextest".into(),
+                    "run".into(),
                     "--locked".into(),
                     "-p".into(),
                     app.package.into(),
@@ -294,8 +295,8 @@ impl Inventory<'_> {
                 }
                 args.extend([
                     "--release".into(),
-                    "--".into(),
                     "--test-threads=1".into(),
+                    "--".into(),
                     "--nocapture".into(),
                 ]);
                 args
