@@ -26,6 +26,7 @@ mod ja014;
 mod ja015;
 mod ja016;
 mod ja017;
+mod ja018;
 mod observe;
 
 pub use frame::{ObservedCell, ObservedCursor, ObservedFrame};
@@ -58,6 +59,7 @@ pub use ja014::{JA014_ID, JA014_SIZES, Ja014Capture, ja014_prelude_name_validati
 pub use ja015::{JA015_ID, Ja015Capture, ja015_prelude_browser};
 pub use ja016::{JA016_ID, Ja016Capture, ja016_editor_tabs};
 pub use ja017::{JA017_ID, JA017_SIZES, Ja017Capture, ja017_editor_name_edit};
+pub use ja018::{JA018_ID, JA018_SIZES, Ja018Capture, ja018_editor_save_replay};
 pub use observe::{
     CaptureColor, DirectSession, EPOCH_SECS, HELPER_TICK_MS, HISTORICAL_PAINT_SIZE, MOTION_SEED,
     Viewport, color_label, motion_name, route_name,
