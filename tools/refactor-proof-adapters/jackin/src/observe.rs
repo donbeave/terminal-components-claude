@@ -3,7 +3,7 @@
 use std::time::Duration;
 
 use jackin_app::{App, Motion, Route, Scenario};
-use junie_tui::{Axis, ColorLevel, KeyCode, KeyModifiers, MouseKind, Theme};
+use junie_tui::{Axis, ColorLevel, Id, KeyCode, KeyModifiers, MouseKind, Rect, Theme};
 use junie_tui_testing::Harness;
 
 use crate::frame::{ObservedCell, ObservedCursor, ObservedFrame};
@@ -216,6 +216,17 @@ impl DirectSession {
     /// Click at a production coordinate.
     pub fn click(&mut self, x: u16, y: u16) {
         let _ = self.harness.click(x, y);
+    }
+
+    /// Double-click at a production coordinate.
+    pub fn double_click(&mut self, x: u16, y: u16) {
+        let _ = self.harness.double_click(x, y);
+    }
+
+    /// Last-draw area of a control, if registered.
+    #[must_use]
+    pub fn area_of(&self, id: Id) -> Option<Rect> {
+        self.harness.area_of(id)
     }
 
     /// Wheel at a production coordinate.
