@@ -316,5 +316,23 @@ class ExecutionContext(unittest.TestCase):
             self.assertTrue(all(c["cwd"] == str(root.resolve()) for c in cap["commands"]))
 
 
+class BoundListing(unittest.TestCase):
+    def test_committed_listing_is_pending_nextest_names(self):
+        root = Path(__file__).resolve().parent
+        listing_path = root / "listing.json"
+        required_path = root / "required.json"
+        if not listing_path.is_file():
+            self.skipTest("listing.json not bound yet")
+        listing = json.loads(listing_path.read_text())
+        required = json.loads(required_path.read_text())
+        self.assertEqual(listing["approval"], "pending")
+        self.assertEqual(required["approval"], "pending")
+        self.assertFalse(listing["executed"])
+        self.assertEqual(len(listing["targets"]), len(required["targets"]))
+        self.assertTrue(listing["targets"])
+        self.assertTrue(all(o.get("destinations") == [] for o in required["obligations"]))
+        self.assertTrue(any("doctest" in b.get("reason", "") for b in listing["blocked"]))
+
+
 if __name__ == "__main__":
     unittest.main()
