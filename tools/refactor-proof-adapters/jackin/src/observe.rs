@@ -1,4 +1,4 @@
-//! Production-view session: `App::for_scenario` plus runtime draw.
+//! Production-view session: `App::for_scenario` / `for_scenario_at` plus runtime draw.
 
 use std::time::Duration;
 
@@ -16,9 +16,9 @@ pub const EPOCH_SECS: i64 = 1_788_401_640;
 pub const HELPER_TICK_MS: u64 = 200;
 /// Viewport at which `App::draw` currently overpaints selected routes.
 ///
-/// JA-001's first leaf is 80×24 so that path is not taken. The adapter still
-/// always calls production `App::draw`; it never invokes the historical
-/// painter itself and never treats that overpaint as an expected artifact.
+/// The adapter still always calls production `App::draw`; it never invokes the
+/// historical painter itself and never treats that overpaint as an expected
+/// artifact.
 pub const HISTORICAL_PAINT_SIZE: (u16, u16) = (120, 40);
 
 /// Terminal size for a capture.
@@ -30,13 +30,87 @@ pub struct Viewport {
     pub height: u16,
 }
 
+impl Viewport {
+    /// Named size.
+    #[must_use]
+    pub const fn new(width: u16, height: u16) -> Self {
+        Self { width, height }
+    }
+
+    /// Whether this size currently enables app-local historical overpaint.
+    #[must_use]
+    pub const fn is_historical_paint_size(self) -> bool {
+        self.width == HISTORICAL_PAINT_SIZE.0 && self.height == HISTORICAL_PAINT_SIZE.1
+    }
+}
+
+/// Color identity for a capture. `None` and `NoColor` both resolve to mono
+/// through the public harness; they remain distinct identities.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CaptureColor {
+    /// 24-bit colour.
+    TrueColor,
+    /// 256-colour palette.
+    Ansi256,
+    /// 16 ANSI colours.
+    Ansi16,
+    /// Explicit `--color none` / mono.
+    None,
+    /// `NO_COLOR` without an explicit color flag.
+    NoColor,
+}
+
+impl CaptureColor {
+    /// Production theme downgrade used for this identity.
+    #[must_use]
+    pub const fn level(self) -> ColorLevel {
+        match self {
+            Self::TrueColor => ColorLevel::TrueColor,
+            Self::Ansi256 => ColorLevel::Ansi256,
+            Self::Ansi16 => ColorLevel::Ansi16,
+            Self::None | Self::NoColor => ColorLevel::Mono,
+        }
+    }
+
+    /// Stable identity label.
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::TrueColor => "truecolor",
+            Self::Ansi256 => "256",
+            Self::Ansi16 => "16",
+            Self::None => "none",
+            Self::NoColor => "nocolor",
+        }
+    }
+
+    /// JA-001 remaining colour identities after the truecolor first leaf.
+    #[must_use]
+    pub const fn ja001_remaining() -> [Self; 4] {
+        [Self::Ansi256, Self::Ansi16, Self::None, Self::NoColor]
+    }
+
+    /// Full colour matrix used by JA-001/JA-067.
+    #[must_use]
+    pub const fn all() -> [Self; 5] {
+        [
+            Self::TrueColor,
+            Self::Ansi256,
+            Self::Ansi16,
+            Self::None,
+            Self::NoColor,
+        ]
+    }
+}
+
 /// Direct production-view session over the public runtime harness.
 #[derive(Debug)]
 pub struct DirectSession {
+    program: &'static str,
     scenario: Scenario,
     motion: Motion,
     construct_frame: u64,
-    color: ColorLevel,
+    color: CaptureColor,
     harness: Harness<App>,
 }
 
@@ -46,35 +120,64 @@ impl DirectSession {
     pub fn ja001_first_leaf(scenario: Scenario) -> Self {
         Self::paused_frame0(
             scenario,
-            Viewport {
-                width: crate::JA001_FIRST_LEAF_WIDTH,
-                height: crate::JA001_FIRST_LEAF_HEIGHT,
-            },
-            ColorLevel::TrueColor,
+            Viewport::new(
+                crate::JA001_FIRST_LEAF_WIDTH,
+                crate::JA001_FIRST_LEAF_HEIGHT,
+            ),
+            CaptureColor::TrueColor,
         )
     }
 
     /// `fresh(world, Paused, 0); draw` through production `App::for_scenario`.
     #[must_use]
-    pub fn paused_frame0(scenario: Scenario, viewport: Viewport, color: ColorLevel) -> Self {
-        let app = App::for_scenario(scenario, Motion::Paused);
-        Self::from_app(app, scenario, Motion::Paused, 0, viewport, color)
+    pub fn paused_frame0(scenario: Scenario, viewport: Viewport, color: CaptureColor) -> Self {
+        Self::fresh(
+            crate::JA001_ID,
+            scenario,
+            Motion::Paused,
+            0,
+            viewport,
+            color,
+        )
+    }
+
+    /// Fresh world at an explicit motion/frame, then production draw.
+    ///
+    /// Frame 0 uses [`App::for_scenario`]; nonzero frames use
+    /// [`App::for_scenario_at`].
+    #[must_use]
+    pub fn fresh(
+        program: &'static str,
+        scenario: Scenario,
+        motion: Motion,
+        frame: u64,
+        viewport: Viewport,
+        color: CaptureColor,
+    ) -> Self {
+        let app = if frame == 0 {
+            App::for_scenario(scenario, motion)
+        } else {
+            App::for_scenario_at(scenario, motion, frame)
+        };
+        Self::from_app(program, app, scenario, motion, frame, viewport, color)
     }
 
     fn from_app(
+        program: &'static str,
         app: App,
         scenario: Scenario,
         motion: Motion,
         construct_frame: u64,
         viewport: Viewport,
-        color: ColorLevel,
+        color: CaptureColor,
     ) -> Self {
-        let mut harness =
-            Harness::new(app, Theme::junie(), viewport.width, viewport.height).with_color(color);
+        let mut harness = Harness::new(app, Theme::junie(), viewport.width, viewport.height)
+            .with_color(color.level());
         // Harness::new already presents once; an extra production draw is the
         // explicit `draw` in `fresh(...); draw` and is state-neutral when paused.
         harness.draw();
         Self {
+            program,
             scenario,
             motion,
             construct_frame,
@@ -118,13 +221,13 @@ impl DirectSession {
         ObservedFrame {
             identity: format!(
                 "{id}/{world}/{motion}/{frame}/{width}x{height}/{color}/{checkpoint}",
-                id = crate::JA001_ID,
+                id = self.program,
                 world = self.scenario.name(),
                 motion = motion_name(self.motion),
                 frame = self.construct_frame,
                 width = area.width,
                 height = area.height,
-                color = color_label(self.color),
+                color = self.color.label(),
                 checkpoint = checkpoint,
             ),
             scenario: self.scenario.name().to_owned(),
@@ -133,7 +236,7 @@ impl DirectSession {
             app_frame: app.frame(),
             width: area.width,
             height: area.height,
-            color: color_label(self.color).to_owned(),
+            color: self.color.label().to_owned(),
             theme: "junie".to_owned(),
             route: route_name(app.route()).to_owned(),
             focus: self.harness.focus().map(|id| format!("{id:?}")),

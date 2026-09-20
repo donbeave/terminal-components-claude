@@ -102,4 +102,11 @@ impl ObservedFrame {
     pub fn is_complete(&self) -> bool {
         self.cells.len() == usize::from(self.width).saturating_mul(usize::from(self.height))
     }
+
+    /// Whether this frame was drawn at the size where `App::draw` overpaints.
+    #[must_use]
+    pub const fn at_historical_paint_size(&self) -> bool {
+        self.width == crate::HISTORICAL_PAINT_SIZE.0
+            && self.height == crate::HISTORICAL_PAINT_SIZE.1
+    }
 }

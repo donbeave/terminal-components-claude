@@ -15,11 +15,14 @@ mod observe;
 pub use frame::{ObservedCell, ObservedCursor, ObservedFrame};
 pub use ja001::{
     JA001_FIRST_LEAF_COLOR, JA001_FIRST_LEAF_HEIGHT, JA001_FIRST_LEAF_SIZE, JA001_FIRST_LEAF_WIDTH,
-    JA001_ID, Ja001Capture, expected_route, ja001_paused_frame0_truecolor, ja001_worlds,
+    JA001_ID, JA001_REMAINING_SIZES, JA001_SIZES, Ja001Capture, expected_route,
+    ja001_paused_frame0_all_sizes_truecolor, ja001_paused_frame0_at,
+    ja001_paused_frame0_remaining_colors, ja001_paused_frame0_remaining_sizes_truecolor,
+    ja001_paused_frame0_truecolor, ja001_worlds,
 };
 pub use observe::{
-    DirectSession, EPOCH_SECS, HELPER_TICK_MS, HISTORICAL_PAINT_SIZE, MOTION_SEED, Viewport,
-    color_label, motion_name, route_name,
+    CaptureColor, DirectSession, EPOCH_SECS, HELPER_TICK_MS, HISTORICAL_PAINT_SIZE, MOTION_SEED,
+    Viewport, color_label, motion_name, route_name,
 };
 
 pub use jackin_app::{App, Motion, Route, Scenario};

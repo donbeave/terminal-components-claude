@@ -9,9 +9,10 @@
 )]
 
 use jackin_adapter::{
-    ColorLevel, DirectSession, EPOCH_SECS, HISTORICAL_PAINT_SIZE, JA001_FIRST_LEAF_COLOR,
-    JA001_FIRST_LEAF_HEIGHT, JA001_FIRST_LEAF_SIZE, JA001_FIRST_LEAF_WIDTH, JA001_ID, MOTION_SEED,
-    Motion, Scenario, Viewport, expected_route, ja001_paused_frame0_truecolor, ja001_worlds,
+    CaptureColor, DirectSession, EPOCH_SECS, HISTORICAL_PAINT_SIZE, JA001_FIRST_LEAF_COLOR,
+    JA001_FIRST_LEAF_HEIGHT, JA001_FIRST_LEAF_SIZE, JA001_FIRST_LEAF_WIDTH, JA001_ID,
+    JA001_REMAINING_SIZES, MOTION_SEED, Motion, Scenario, Viewport, expected_route,
+    ja001_paused_frame0_remaining_sizes_truecolor, ja001_paused_frame0_truecolor, ja001_worlds,
     motion_name, route_name,
 };
 
@@ -126,12 +127,88 @@ fn ja001_observes_production_for_scenario_draw_not_historical_paint() {
 
     let other = DirectSession::paused_frame0(
         Scenario::Returning,
-        Viewport {
-            width: 80,
-            height: 24,
-        },
-        ColorLevel::TrueColor,
+        Viewport::new(80, 24),
+        CaptureColor::TrueColor,
     )
     .observe("initial");
     assert_eq!(frame.digest, other.digest);
+}
+
+fn assert_ja001_capture(
+    scenario: Scenario,
+    capture: &jackin_adapter::Ja001Capture,
+    viewport: Viewport,
+    color: &str,
+) {
+    let frame = &capture.initial;
+    assert_eq!(frame.scenario, scenario.name());
+    assert_eq!(frame.motion, "paused");
+    assert_eq!(frame.construct_frame, 0);
+    assert_eq!(frame.width, viewport.width);
+    assert_eq!(frame.height, viewport.height);
+    assert_eq!(frame.color, color);
+    assert_eq!(frame.theme, "junie");
+    assert_eq!(frame.route, route_name(expected_route(scenario)));
+    assert_eq!(frame.motion_seed, MOTION_SEED);
+    assert_eq!(frame.epoch_secs, EPOCH_SECS);
+    assert_eq!(frame.now_secs, EPOCH_SECS);
+    assert!(!frame.clock_running);
+    assert!(frame.is_complete(), "{}", frame.identity);
+    assert_eq!(
+        frame.cells.len(),
+        usize::from(viewport.width) * usize::from(viewport.height)
+    );
+    assert!(
+        frame.text.chars().any(|c| c != ' ' && c != '\n'),
+        "{} empty production draw",
+        frame.identity
+    );
+    assert_eq!(
+        capture.initial.digest, capture.after_ticks.digest,
+        "{}",
+        frame.identity
+    );
+    assert_eq!(capture.initial.cells, capture.after_ticks.cells);
+    assert!(!capture.after_ticks.clock_running);
+}
+
+#[test]
+fn ja001_remaining_sizes_truecolor_covers_eight_worlds() {
+    let captures = ja001_paused_frame0_remaining_sizes_truecolor();
+    assert_eq!(
+        captures.len(),
+        JA001_REMAINING_SIZES.len() * ja001_worlds().len()
+    );
+    let mut idx = 0;
+    for viewport in JA001_REMAINING_SIZES {
+        for scenario in ja001_worlds() {
+            assert_ja001_capture(scenario, &captures[idx], viewport, "truecolor");
+            idx += 1;
+        }
+    }
+}
+
+#[test]
+fn ja001_120x40_observes_production_draw_without_blessing_overpaint() {
+    let viewport = Viewport::new(120, 40);
+    assert!(viewport.is_historical_paint_size());
+    let capture =
+        DirectSession::paused_frame0(Scenario::Returning, viewport, CaptureColor::TrueColor);
+    let frame = capture.observe("initial");
+    assert!(frame.at_historical_paint_size());
+    assert_eq!(frame.width, 120);
+    assert_eq!(frame.height, 40);
+    assert_eq!(frame.route, "manager");
+    assert!(frame.is_complete());
+    assert_eq!(frame.motion_seed, MOTION_SEED);
+    // Production draw is observed in memory. There is no blessed expected
+    // artifact for the 120×40 overpaint branch.
+    let baseline = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/baselines");
+    assert!(
+        !baseline.exists(),
+        "adapter must not bless historical overpaint into {baseline:?}"
+    );
+    let small = DirectSession::ja001_first_leaf(Scenario::Returning).observe("initial");
+    assert_ne!(frame.digest, small.digest);
+    assert_ne!((frame.width, frame.height), (small.width, small.height));
 }
