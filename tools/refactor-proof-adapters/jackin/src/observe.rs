@@ -229,6 +229,11 @@ impl DirectSession {
         self.harness.is_open(id)
     }
 
+    /// Tab until `id` owns focus, matching `H::tab_to`.
+    pub fn tab_to(&mut self, id: Id) -> bool {
+        self.harness.tab_to(id)
+    }
+
     /// Bracketed paste through the production runtime.
     pub fn paste(&mut self, s: &str) {
         let _ = self.harness.paste(s);
