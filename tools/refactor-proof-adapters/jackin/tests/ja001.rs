@@ -11,9 +11,9 @@
 use jackin_adapter::{
     CaptureColor, DirectSession, EPOCH_SECS, HISTORICAL_PAINT_SIZE, JA001_FIRST_LEAF_COLOR,
     JA001_FIRST_LEAF_HEIGHT, JA001_FIRST_LEAF_SIZE, JA001_FIRST_LEAF_WIDTH, JA001_ID,
-    JA001_REMAINING_SIZES, MOTION_SEED, Motion, Scenario, Viewport, expected_route,
-    ja001_paused_frame0_remaining_sizes_truecolor, ja001_paused_frame0_truecolor, ja001_worlds,
-    motion_name, route_name,
+    JA001_REMAINING_SIZES, JA001_SIZES, MOTION_SEED, Motion, Scenario, Viewport, expected_route,
+    ja001_paused_frame0_remaining_colors, ja001_paused_frame0_remaining_sizes_truecolor,
+    ja001_paused_frame0_truecolor, ja001_worlds, motion_name, route_name,
 };
 
 #[test]
@@ -211,4 +211,42 @@ fn ja001_120x40_observes_production_draw_without_blessing_overpaint() {
     let small = DirectSession::ja001_first_leaf(Scenario::Returning).observe("initial");
     assert_ne!(frame.digest, small.digest);
     assert_ne!((frame.width, frame.height), (small.width, small.height));
+}
+
+#[test]
+fn ja001_remaining_colors_cover_eight_worlds_all_sizes() {
+    let captures = ja001_paused_frame0_remaining_colors();
+    let expected = JA001_SIZES.len() * CaptureColor::ja001_remaining().len() * ja001_worlds().len();
+    assert_eq!(captures.len(), expected);
+    let mut idx = 0;
+    for viewport in JA001_SIZES {
+        for color in CaptureColor::ja001_remaining() {
+            for scenario in ja001_worlds() {
+                assert_ja001_capture(scenario, &captures[idx], viewport, color.label());
+                idx += 1;
+            }
+        }
+    }
+}
+
+#[test]
+fn ja001_none_and_nocolor_are_distinct_identities() {
+    let none = DirectSession::paused_frame0(
+        Scenario::Returning,
+        Viewport::new(80, 24),
+        CaptureColor::None,
+    )
+    .observe("initial");
+    let nocolor = DirectSession::paused_frame0(
+        Scenario::Returning,
+        Viewport::new(80, 24),
+        CaptureColor::NoColor,
+    )
+    .observe("initial");
+    assert_eq!(none.color, "none");
+    assert_eq!(nocolor.color, "nocolor");
+    assert_ne!(none.identity, nocolor.identity);
+    // Direct harness has no separate NO_COLOR env path; cells match mono.
+    assert_eq!(none.digest, nocolor.digest);
+    assert_eq!(none.cells, nocolor.cells);
 }
