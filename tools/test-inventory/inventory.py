@@ -410,12 +410,57 @@ def main():
     check.add_argument("--required", type=Path, required=True)
     check.add_argument("--catalog", type=Path, default=Path(__file__).with_name("historical.json"))
     check.add_argument("--root", type=Path, required=True)
+    disc = sub.add_parser("discover")
+    disc.add_argument("--root", type=Path, required=True)
+    disc.add_argument("--output", type=Path, required=True)
+    disc.add_argument("--seed", type=Path)
+    rec_cmd = sub.add_parser("reconcile")
+    rec_cmd.add_argument("--root", type=Path, required=True)
+    rec_cmd.add_argument("--discovery", type=Path, required=True)
+    rec_cmd.add_argument("--required", type=Path, default=Path(__file__).with_name("required.json"))
+    rec_cmd.add_argument("--catalog", type=Path, default=Path(__file__).with_name("historical.json"))
+    rec_cmd.add_argument("--canonical", type=Path, required=True)
+    rec_cmd.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     try:
         if args.command == "capture":
             result = capture(args.root.resolve(), json.loads(args.profiles.read_text()),
                              args.output, args.execute, args.toolchain)
             print(f"captured {len(result['targets'])} targets; {len(result['blocked'])} blockers; not approved")
+        elif args.command == "discover":
+            import source_discovery
+            root = args.root.resolve()
+            output = args.output
+            if output.exists():
+                raise Invalid("refuse existing output")
+            in_tree = output.resolve().is_relative_to(root)
+            allowed = (root / "tools/test-inventory").resolve()
+            require(not in_tree or output.resolve().is_relative_to(allowed),
+                    "discovery evidence must be outside source tree or under tools/test-inventory")
+            seed = args.seed.read_text() if args.seed else None
+            if seed is None:
+                default_seed = root / "docs/refactoring-plan/inline-test-source-scope.md"
+                if default_seed.is_file():
+                    seed = default_seed.read_text()
+            result = source_discovery.discover(root, seed)
+            source_discovery.write_discovery(result, output, root)
+            print(f"discovered {len(result['identities'])} identities; {len(result['blockers'])} blockers; not executed")
+        elif args.command == "reconcile":
+            import reconcile as rec
+            root = args.root.resolve()
+            output = args.output
+            in_tree = output.resolve().is_relative_to(root)
+            allowed = (root / "tools/test-inventory").resolve()
+            require(not in_tree or output.resolve().is_relative_to(allowed),
+                    "reconcile evidence must be outside source tree or under tools/test-inventory")
+            result = rec.reconcile(
+                json.loads(args.catalog.read_text()),
+                json.loads(args.discovery.read_text()),
+                rec.load_canonical(args.canonical),
+                json.loads(args.required.read_text()),
+            )
+            rec.write_reconcile(result, output)
+            print(f"reconciled {result['matched']} identities; {result['unresolved']} unresolved; approval pending")
         else:
             captured = json.loads(args.capture.read_text())
             require(captured["source_sha256"] == source_fingerprint(args.root.resolve(), safe_env()),

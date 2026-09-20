@@ -8,6 +8,13 @@ Requirements: Python 3.11+, Git, Cargo/Rust, and cargo-nextest 0.9.143 or a
 newer reviewed version (tested with rust-toolchain.toml 1.98.1).
 
 ```sh
+python3 tools/test-inventory/inventory.py discover \
+  --root "$PWD" --seed docs/refactoring-plan/inline-test-source-scope.md \
+  --output /external/evidence/source-discovery.json
+python3 tools/test-inventory/inventory.py reconcile \
+  --root "$PWD" --discovery /external/evidence/source-discovery.json \
+  --canonical docs/refactoring-plan/historical-obligations-canonical.tsv \
+  --output /external/evidence/obligation-proposals.json
 python3 tools/test-inventory/inventory.py capture \
   --root "$PWD" --profiles tools/test-inventory/profiles.json \
   --toolchain 1.98.1 --execute --output /external/evidence/test-capture.json
@@ -15,6 +22,23 @@ python3 tools/test-inventory/inventory.py verify \
   --root "$PWD" --capture /external/evidence/test-capture.json \
   --required tools/test-inventory/required.json
 ```
+
+`discover` walks every workspace crate/app/xtask/example/test crate root, follows
+`mod` declarations including `#[path]` and cfg(test) modules, expands known
+test-generating macros (`conformance_suite`, `matrix`, `baseline_case` and the
+combo/audit wrappers), records rustdoc fences (including `include_str!`
+markdown) and trybuild `compile_fail` globs, and classifies each assertion
+`preserve` or `oracle-conflict`. Parsing is not execution. The 146-path
+`inline-test-source-scope.md` list is a seed: every seed path must exist and be
+reached; extra external/generated identities are required completeness, not a
+license to skip the seed.
+
+`reconcile` maps the 3,211 historical catalog identities onto discovered
+package/kind/target/identity tuples and retains the 620-row canonical
+historical union. Exact current names map; basename-only hits are
+`unapproved-relocation` and stay unresolved. Duplicate-equivalent source rows
+remain independent. `required.json` stays `approval: pending` with an empty
+target matrix until executed nextest coverage has no doctest/harness blockers.
 
 Capture writes evidence, even when compilation or target coverage is blocked.
 It never writes requirements, mappings, snapshots, or source. Omit `--execute`
@@ -102,7 +126,7 @@ is owned separately; this slice does not alter their current behavior.
 
 ```sh
 cd tools/test-inventory
-python3 -m unittest -v test_inventory.py
+python3 -m unittest -v test_source_discovery.py test_reconcile.py test_inventory.py
 INVENTORY_TEST_TOOLCHAIN=stable python3 -m unittest -v test_inventory.py
 ```
 
