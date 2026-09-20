@@ -16,6 +16,8 @@ mod ja004;
 mod ja005;
 mod ja006;
 mod ja007;
+mod ja008;
+mod ja009;
 mod observe;
 
 pub use frame::{ObservedCell, ObservedCursor, ObservedFrame};
@@ -38,6 +40,8 @@ pub use ja006::{JA006_ID, Ja006Capture, ja006_returning_manager_pointer};
 pub use ja007::{
     JA007_ID, JA007_LABELS, JA007_SIZES, Ja007Capture, ja007_returning_row_activation,
 };
+pub use ja008::{JA008_ID, JA008_SIZES, JA008_WORLDS, Ja008Capture, ja008_workspace_actions};
+pub use ja009::{JA009_ID, JA009_SIZES, Ja009Capture, ja009_instance_actions};
 pub use observe::{
     CaptureColor, DirectSession, EPOCH_SECS, HELPER_TICK_MS, HISTORICAL_PAINT_SIZE, MOTION_SEED,
     Viewport, color_label, motion_name, route_name,

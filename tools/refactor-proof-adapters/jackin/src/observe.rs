@@ -218,6 +218,22 @@ impl DirectSession {
         let _ = self.harness.click(x, y);
     }
 
+    /// Click the centre of a registered control.
+    pub fn click_id(&mut self, id: Id) {
+        let _ = self.harness.click_id(id);
+    }
+
+    /// Whether a layer id is open.
+    #[must_use]
+    pub fn is_open(&self, id: Id) -> bool {
+        self.harness.is_open(id)
+    }
+
+    /// Bracketed paste through the production runtime.
+    pub fn paste(&mut self, s: &str) {
+        let _ = self.harness.paste(s);
+    }
+
     /// Double-click at a production coordinate.
     pub fn double_click(&mut self, x: u16, y: u16) {
         let _ = self.harness.double_click(x, y);
