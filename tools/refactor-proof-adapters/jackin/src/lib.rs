@@ -23,6 +23,7 @@ mod ja011;
 mod ja012;
 mod ja013;
 mod ja014;
+mod ja015;
 mod observe;
 
 pub use frame::{ObservedCell, ObservedCursor, ObservedFrame};
@@ -52,6 +53,7 @@ pub use ja011::{JA011_ID, JA011_SIZES, Ja011Capture, ja011_launch_picker};
 pub use ja012::{JA012_ID, Ja012Capture, ja012_prelude_pending_editor};
 pub use ja013::{JA013_ID, JA013_SIZES, Ja013Capture, ja013_prelude_git_and_rewind};
 pub use ja014::{JA014_ID, JA014_SIZES, Ja014Capture, ja014_prelude_name_validation};
+pub use ja015::{JA015_ID, Ja015Capture, ja015_prelude_browser};
 pub use observe::{
     CaptureColor, DirectSession, EPOCH_SECS, HELPER_TICK_MS, HISTORICAL_PAINT_SIZE, MOTION_SEED,
     Viewport, color_label, motion_name, route_name,
