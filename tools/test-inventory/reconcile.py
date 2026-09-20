@@ -97,7 +97,6 @@ def compact_identity(row):
 
 def reconcile(historical, discovery, canonical_rows, required):
     require(required.get("approval") == "pending", "required.json must stay pending until complete matrix")
-    require(required.get("targets") == [], "required target matrix is incomplete until executed capture")
     require(historical["schema"] == 1, "unknown historical schema")
     require(len(historical["obligations"]) == len(required["obligations"]),
             "historical obligation omitted or invented")

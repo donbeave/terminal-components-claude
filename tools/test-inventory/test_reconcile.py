@@ -109,10 +109,6 @@ class Mapping(unittest.TestCase):
         required["approval"] = "reviewed"
         with self.assertRaises(Invalid):
             rec.reconcile(historical, {"identities": [], "blockers": []}, canonical(), required)
-        required = required_from(historical)
-        required["targets"] = [{"profile": "x"}]
-        with self.assertRaises(Invalid):
-            rec.reconcile(historical, {"identities": [], "blockers": []}, canonical(), required)
         result = rec.reconcile(historical, {"identities": [], "blockers": []},
                                canonical(), required_from(historical))
         result["approval"] = "reviewed"
@@ -154,7 +150,6 @@ class RepoUnion(unittest.TestCase):
         root = Path(__file__).resolve().parents[2]
         required = json.loads((root / "tools/test-inventory/required.json").read_text())
         self.assertEqual(required["approval"], "pending")
-        self.assertEqual(required["targets"], [])
         canonical_path = root / "docs/refactoring-plan/historical-obligations-canonical.tsv"
         if not canonical_path.is_file():
             self.skipTest("canonical union not present")

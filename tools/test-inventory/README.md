@@ -17,9 +17,16 @@ python3 tools/test-inventory/inventory.py reconcile \
   --output /external/evidence/obligation-proposals.json
 python3 tools/test-inventory/inventory.py capture \
   --root "$PWD" --profiles tools/test-inventory/profiles.json \
-  --toolchain 1.98.1 --execute --output /external/evidence/test-capture.json
-python3 tools/test-inventory/inventory.py verify \
+  --toolchain 1.98.1 --output /external/evidence/test-capture.json
+python3 tools/test-inventory/inventory.py bind-listing \
   --root "$PWD" --capture /external/evidence/test-capture.json \
+  --required tools/test-inventory/required.json \
+  --output tools/test-inventory/listing.json
+python3 tools/test-inventory/inventory.py capture \
+  --root "$PWD" --profiles tools/test-inventory/profiles.json \
+  --toolchain 1.98.1 --execute --output /external/evidence/test-execute.json
+python3 tools/test-inventory/inventory.py verify \
+  --root "$PWD" --capture /external/evidence/test-execute.json \
   --required tools/test-inventory/required.json
 ```
 
@@ -37,8 +44,13 @@ license to skip the seed.
 package/kind/target/identity tuples and retains the 620-row canonical
 historical union. Exact current names map; basename-only hits are
 `unapproved-relocation` and stay unresolved. Duplicate-equivalent source rows
-remain independent. `required.json` stays `approval: pending` with an empty
-target matrix until executed nextest coverage has no doctest/harness blockers.
+remain independent. `required.json` stays `approval: pending` until executed nextest coverage has
+no doctest/harness blockers and the listing/execution matrix is reviewed.
+`bind-listing` copies nextest-listed identities into `listing.json` and into
+`required.json` targets without setting `approval: reviewed` or filling
+obligation destinations. Listing is not execution. Capture subprocesses receive
+`MISE_NO_CONFIG=1` and `CARGO_HOME/bin` first on `PATH` so mise/mbx wrappers
+cannot substitute `cargo test`.
 
 Capture writes evidence, even when compilation or target coverage is blocked.
 It never writes requirements, mappings, snapshots, or source. Omit `--execute`

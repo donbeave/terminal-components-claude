@@ -391,7 +391,6 @@ class RepoInventory(unittest.TestCase):
         self.assertTrue(any(b.get("reason", "").startswith("cargo-nextest") for b in result["blockers"]))
         required = json.loads((root / "tools/test-inventory/required.json").read_text())
         self.assertEqual(required["approval"], "pending")
-        self.assertEqual(required["targets"], [])
         conflicts = json.loads((root / "tools/test-inventory/conflicts.json").read_text())
         self.assertEqual(conflicts["approval"], "pending")
         conflict_ids = {(row["package"], row["identity"]) for row in conflicts["conflicts"]}
