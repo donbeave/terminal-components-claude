@@ -13,6 +13,7 @@ mod ja001;
 mod ja002;
 mod ja003;
 mod ja004;
+mod ja005;
 mod observe;
 
 pub use frame::{ObservedCell, ObservedCursor, ObservedFrame};
@@ -28,6 +29,9 @@ pub use ja002::{
 };
 pub use ja003::{JA003_ID, JA003_SIZES, Ja003Capture, ja003_first_use_full};
 pub use ja004::{JA004_ID, JA004_SIZES, Ja004Capture, ja004_first_use_reduced_and_quit};
+pub use ja005::{
+    JA005_ID, JA005_PREFIX, JA005_VARIANTS, Ja005Capture, ja005_returning_manager_keys,
+};
 pub use observe::{
     CaptureColor, DirectSession, EPOCH_SECS, HELPER_TICK_MS, HISTORICAL_PAINT_SIZE, MOTION_SEED,
     Viewport, color_label, motion_name, route_name,
