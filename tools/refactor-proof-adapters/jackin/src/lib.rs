@@ -10,6 +10,7 @@
 
 mod frame;
 mod ja001;
+mod ja002;
 mod observe;
 
 pub use frame::{ObservedCell, ObservedCursor, ObservedFrame};
@@ -19,6 +20,9 @@ pub use ja001::{
     ja001_paused_frame0_all_sizes_truecolor, ja001_paused_frame0_at,
     ja001_paused_frame0_remaining_colors, ja001_paused_frame0_remaining_sizes_truecolor,
     ja001_paused_frame0_truecolor, ja001_worlds,
+};
+pub use ja002::{
+    JA002_ID, ja002_frames, ja002_paused_first_use, knock_caption, production_intro_message,
 };
 pub use observe::{
     CaptureColor, DirectSession, EPOCH_SECS, HELPER_TICK_MS, HISTORICAL_PAINT_SIZE, MOTION_SEED,
