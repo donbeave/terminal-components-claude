@@ -11,6 +11,8 @@
 mod frame;
 mod ja001;
 mod ja002;
+mod ja003;
+mod ja004;
 mod observe;
 
 pub use frame::{ObservedCell, ObservedCursor, ObservedFrame};
@@ -24,10 +26,12 @@ pub use ja001::{
 pub use ja002::{
     JA002_ID, ja002_frames, ja002_paused_first_use, knock_caption, production_intro_message,
 };
+pub use ja003::{JA003_ID, JA003_SIZES, Ja003Capture, ja003_first_use_full};
+pub use ja004::{JA004_ID, JA004_SIZES, Ja004Capture, ja004_first_use_reduced_and_quit};
 pub use observe::{
     CaptureColor, DirectSession, EPOCH_SECS, HELPER_TICK_MS, HISTORICAL_PAINT_SIZE, MOTION_SEED,
     Viewport, color_label, motion_name, route_name,
 };
 
 pub use jackin_app::{App, Motion, Route, Scenario};
-pub use junie_tui::ColorLevel;
+pub use junie_tui::{Axis, ColorLevel, KeyCode, KeyModifiers, MouseKind};

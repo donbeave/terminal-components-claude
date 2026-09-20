@@ -3,7 +3,7 @@
 use std::time::Duration;
 
 use jackin_app::{App, Motion, Route, Scenario};
-use junie_tui::{ColorLevel, Theme};
+use junie_tui::{Axis, ColorLevel, KeyCode, KeyModifiers, MouseKind, Theme};
 use junie_tui_testing::Harness;
 
 use crate::frame::{ObservedCell, ObservedCursor, ObservedFrame};
@@ -193,6 +193,63 @@ impl DirectSession {
         }
     }
 
+    /// Send one key through the production runtime.
+    pub fn key(&mut self, code: KeyCode) {
+        let _ = self.harness.key(code);
+    }
+
+    /// Send one key with modifiers through the production runtime.
+    pub fn key_mod(&mut self, code: KeyCode, mods: KeyModifiers) {
+        let _ = self.harness.key_mod(code, mods);
+    }
+
+    /// Send a control chord, matching `H::ctrl`.
+    pub fn ctrl(&mut self, c: char) {
+        let _ = self.harness.ctrl(c);
+    }
+
+    /// Type Unicode characters through the production runtime.
+    pub fn type_str(&mut self, s: &str) {
+        let _ = self.harness.type_str(s);
+    }
+
+    /// Click at a production coordinate.
+    pub fn click(&mut self, x: u16, y: u16) {
+        let _ = self.harness.click(x, y);
+    }
+
+    /// Wheel at a production coordinate.
+    pub fn wheel(&mut self, axis: Axis, delta: i16, x: u16, y: u16) {
+        let _ = self.harness.wheel(axis, delta, x, y);
+    }
+
+    /// Pointer event at a production coordinate.
+    pub fn mouse(&mut self, kind: MouseKind, x: u16, y: u16) {
+        let _ = self.harness.mouse(kind, x, y);
+    }
+
+    /// Drag from one cell to another.
+    pub fn drag(&mut self, from: (u16, u16), to: (u16, u16)) {
+        let _ = self.harness.drag(from, to);
+    }
+
+    /// Resize the production test terminal.
+    pub fn resize(&mut self, width: u16, height: u16) {
+        let _ = self.harness.resize(width, height);
+    }
+
+    /// Find a painted label, matching `H::find`.
+    #[must_use]
+    pub fn find(&self, needle: &str) -> Option<(u16, u16)> {
+        self.harness.find(needle)
+    }
+
+    /// Immutable production app projection.
+    #[must_use]
+    pub fn app(&self) -> &App {
+        self.harness.app()
+    }
+
     /// Observe the last production frame without dispatching input.
     #[must_use]
     pub fn observe(&self, checkpoint: &str) -> ObservedFrame {
@@ -249,6 +306,8 @@ impl DirectSession {
             digest: self.harness.snapshot().digest(),
             text: self.harness.text(),
             cells,
+            quit: app.should_quit() || self.harness.runtime().quit_requested(),
+            selected_row: app.manager.selected_row().stable_key(),
         }
     }
 }

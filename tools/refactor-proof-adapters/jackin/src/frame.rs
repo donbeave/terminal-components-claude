@@ -82,6 +82,10 @@ pub struct ObservedFrame {
     pub text: String,
     /// Dense row-major cells, length `width * height`.
     pub cells: Vec<ObservedCell>,
+    /// Whether production requested quit.
+    pub quit: bool,
+    /// Manager stable row key after the draw.
+    pub selected_row: String,
 }
 
 impl ObservedFrame {
