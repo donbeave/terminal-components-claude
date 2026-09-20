@@ -2890,16 +2890,7 @@ fn build_context(
     );
     object.insert(
         "members".to_string(),
-        json!([
-            "tiny/direct/8/blue",
-            "tiny/direct/8/yellow",
-            "tiny/direct/12/blue",
-            "tiny/direct/12/yellow",
-            "tiny/pty/8/blue",
-            "tiny/pty/8/yellow",
-            "tiny/pty/12/blue",
-            "tiny/pty/12/yellow"
-        ]),
+        Value::Array(context_member_values(check, common)?),
     );
     object
         .entry("inventory".to_string())
@@ -2945,6 +2936,295 @@ fn build_context(
     }
     object.insert("qualification".to_string(), qualification);
     Ok(context)
+}
+
+const TINY_MEMBER_IDS: [&str; 8] = [
+    "tiny/direct/8/blue",
+    "tiny/direct/8/yellow",
+    "tiny/direct/12/blue",
+    "tiny/direct/12/yellow",
+    "tiny/pty/8/blue",
+    "tiny/pty/8/yellow",
+    "tiny/pty/12/blue",
+    "tiny/pty/12/yellow",
+];
+const SHOWCASE_SCENARIOS_REL: &str = "docs/refactoring-plan/showcase-scenarios.tsv";
+const SHOWCASE_SCENARIOS_HEADER: &str = "scenario_id\tpage\tsizes\taction_checkpoints\trequired_observable_proof\tsource_refs\tcomponents";
+const HOLLA_WORLDS_REL: &str = "tools/refactor-proof-adapters/holla/src/worlds.rs";
+const ORACLE_PAGE_SLUGS: [&str; 23] = [
+    "overview",
+    "buttons",
+    "inputs",
+    "textareas",
+    "forms",
+    "lists",
+    "trees",
+    "tables",
+    "editabletables",
+    "panels",
+    "sidebars",
+    "dialogs",
+    "progress",
+    "scrolling",
+    "terminal",
+    "codeeditor",
+    "diff",
+    "datagrid",
+    "chipsselects",
+    "pickers",
+    "chrome",
+    "settings",
+    "taskrunner",
+];
+const SC_BASE_COLORS: [&str; 4] = ["truecolor", "256", "16", "mono"];
+const SINGLE_TRUECOLOR: [&str; 1] = ["truecolor"];
+const EMBEDDED_ORACLE_WORLDS: [&str; 34] = [
+    "first-use",
+    "rust-dirty",
+    "monorepo-root",
+    "monorepo-child",
+    "docker-cleanup",
+    "disk-cleanup",
+    "upgrade-plan",
+    "activities-multi",
+    "remote-host",
+    "launch-failure",
+    "hard-cases",
+    "parity-discovery",
+    "parity-history",
+    "parity-files",
+    "parity-browser",
+    "parity-git-current",
+    "parity-git-batch",
+    "parity-task-sources",
+    "parity-cargo",
+    "parity-docker",
+    "parity-brew-services",
+    "parity-gradle",
+    "parity-idea",
+    "parity-upgrade-managers",
+    "parity-executor",
+    "parity-task-input",
+    "parity-custom-actions",
+    "parity-disk-scan",
+    "parity-disk-navigation",
+    "parity-insights",
+    "parity-delete-safety",
+    "parity-cleanup-results",
+    "parity-platforms",
+    "parity-platforms-linux",
+];
+
+fn tiny_member_ids() -> Vec<String> {
+    TINY_MEMBER_IDS
+        .iter()
+        .map(|identity| (*identity).to_string())
+        .collect()
+}
+
+fn is_showcase_proof(task_id: &str, namespace: &str) -> bool {
+    task_id == "TASK-002" || namespace == "showcase"
+}
+
+fn is_holla_proof(task_id: &str, namespace: &str) -> bool {
+    task_id == "TASK-003" || namespace == "holla"
+}
+
+fn proof_member_ids(task_id: &str, namespace: &str, worktree: &Path) -> Result<Vec<String>> {
+    if is_showcase_proof(task_id, namespace) {
+        return match expand_showcase_members(worktree)? {
+            Some(members) => Ok(members),
+            None => Ok(tiny_member_ids()),
+        };
+    }
+    if is_holla_proof(task_id, namespace) {
+        return Ok(holla_member_ids(worktree));
+    }
+    Ok(tiny_member_ids())
+}
+
+fn context_member_values(check: &CheckSpec, common: &Value) -> Result<Vec<Value>> {
+    let object = common
+        .as_object()
+        .ok_or_else(|| VerifierError::new("common binding is not an object"))?;
+    let task_id = required_string(object, "task_id")?;
+    let worktree = required_string(object, "worktree")?;
+    Ok(
+        proof_member_ids(&task_id, &check.namespace, Path::new(&worktree))?
+            .into_iter()
+            .map(Value::String)
+            .collect(),
+    )
+}
+
+fn expand_showcase_members(worktree: &Path) -> Result<Option<Vec<String>>> {
+    let path = worktree.join(SHOWCASE_SCENARIOS_REL);
+    if !path.exists() {
+        return Ok(None);
+    }
+    let path = regular_file(&path, "showcase scenarios")?;
+    let raw = fs::read_to_string(&path)?;
+    Ok(Some(expand_showcase_tsv(&raw)?))
+}
+
+fn expand_showcase_tsv(raw: &str) -> Result<Vec<String>> {
+    let mut lines = raw.lines();
+    let header = lines
+        .next()
+        .ok_or_else(|| VerifierError::new("showcase-scenarios.tsv is empty"))?;
+    if header != SHOWCASE_SCENARIOS_HEADER {
+        return Err(VerifierError::new(
+            "unexpected showcase-scenarios.tsv header",
+        ));
+    }
+    let mut members = Vec::new();
+    let mut seen = BTreeSet::new();
+    for (index, line) in lines.enumerate() {
+        if line.is_empty() {
+            continue;
+        }
+        expand_showcase_row(index.saturating_add(2), line, &mut members, &mut seen)?;
+    }
+    if members.is_empty() {
+        return Err(VerifierError::new(
+            "showcase-scenarios.tsv has no data rows",
+        ));
+    }
+    Ok(members)
+}
+
+fn expand_showcase_row(
+    line_no: usize,
+    line: &str,
+    members: &mut Vec<String>,
+    seen: &mut BTreeSet<String>,
+) -> Result<()> {
+    let cols: Vec<&str> = line.split('\t').collect();
+    if cols.len() != 7 {
+        return Err(VerifierError::new(format!(
+            "showcase-scenarios.tsv line {line_no}: expected 7 columns, got {}",
+            cols.len()
+        )));
+    }
+    let scenario_id = cols.first().copied().ok_or_else(|| {
+        VerifierError::new(format!(
+            "showcase-scenarios.tsv line {line_no}: missing scenario_id"
+        ))
+    })?;
+    let page = cols.get(1).copied().ok_or_else(|| {
+        VerifierError::new(format!(
+            "showcase-scenarios.tsv line {line_no}: missing page"
+        ))
+    })?;
+    let sizes = cols.get(2).copied().ok_or_else(|| {
+        VerifierError::new(format!(
+            "showcase-scenarios.tsv line {line_no}: missing sizes"
+        ))
+    })?;
+    if !scenario_id.starts_with("SC-") {
+        return Err(VerifierError::new(format!(
+            "showcase-scenarios.tsv line {line_no}: scenario id {scenario_id} does not start with SC-"
+        )));
+    }
+    let pages = showcase_pages(line_no, page)?;
+    let sizes = showcase_sizes(line_no, sizes)?;
+    let colors: &[&str] = if scenario_id.starts_with("SC-BASE-") {
+        &SC_BASE_COLORS
+    } else {
+        &SINGLE_TRUECOLOR
+    };
+    for page in pages {
+        for size in &sizes {
+            for color in colors {
+                let identity = format!("{scenario_id}/{page}/{size}/{color}");
+                if !seen.insert(identity.clone()) {
+                    return Err(VerifierError::new(format!(
+                        "showcase-scenarios.tsv duplicate expansion identity {identity}"
+                    )));
+                }
+                members.push(identity);
+            }
+        }
+    }
+    Ok(())
+}
+
+fn showcase_pages(line_no: usize, value: &str) -> Result<Vec<&'static str>> {
+    if value == "all23" {
+        return Ok(ORACLE_PAGE_SLUGS.to_vec());
+    }
+    ORACLE_PAGE_SLUGS
+        .iter()
+        .copied()
+        .find(|slug| *slug == value)
+        .map(|slug| vec![slug])
+        .ok_or_else(|| {
+            VerifierError::new(format!(
+                "showcase-scenarios.tsv line {line_no}: unknown page {value}"
+            ))
+        })
+}
+
+fn showcase_sizes(line_no: usize, value: &str) -> Result<Vec<String>> {
+    let mut sizes = Vec::new();
+    for token in value.split(',') {
+        let token = token.trim();
+        let Some((cols, rows)) = parse_size_token(token) else {
+            return Err(VerifierError::new(format!(
+                "showcase-scenarios.tsv line {line_no}: unparsable size {token}"
+            )));
+        };
+        sizes.push(format!("{cols}x{rows}"));
+    }
+    if sizes.is_empty() {
+        return Err(VerifierError::new(format!(
+            "showcase-scenarios.tsv line {line_no}: empty sizes"
+        )));
+    }
+    Ok(sizes)
+}
+
+fn parse_size_token(token: &str) -> Option<(u16, u16)> {
+    let (cols, rows) = token.split_once('x')?;
+    Some((cols.parse().ok()?, rows.parse().ok()?))
+}
+
+fn holla_member_ids(worktree: &Path) -> Vec<String> {
+    oracle_world_names(worktree)
+        .into_iter()
+        .map(|world| format!("holla/{world}"))
+        .collect()
+}
+
+fn oracle_world_names(worktree: &Path) -> Vec<String> {
+    let path = worktree.join(HOLLA_WORLDS_REL);
+    if path.is_file()
+        && let Ok(source) = fs::read_to_string(&path)
+        && let Some(names) = parse_oracle_worlds_source(&source)
+    {
+        return names;
+    }
+    EMBEDDED_ORACLE_WORLDS
+        .iter()
+        .map(|world| (*world).to_string())
+        .collect()
+}
+
+fn parse_oracle_worlds_source(source: &str) -> Option<Vec<String>> {
+    let rest = source.split_once("const ORACLE_WORLDS")?.1;
+    // Skip `[&str; N]` in the type; the world list is the array after `=`.
+    let after_eq = rest.split_once('=')?.1;
+    let body = after_eq.split_once('[')?.1.split_once(']')?.0;
+    let mut names = Vec::new();
+    let mut remaining = body;
+    while let Some((_, after_open)) = remaining.split_once('"') {
+        let (name, after_name) = after_open.split_once('"')?;
+        if !name.is_empty() {
+            names.push(name.to_string());
+        }
+        remaining = after_name;
+    }
+    (names.len() == 34).then_some(names)
 }
 
 fn artifact_entries(
@@ -5114,6 +5394,26 @@ finally:
         assert_eq!(actual, expected);
         assert_eq!(prepared.members.len(), expected.len());
         assert!(validate_prepared_run(&fixture.run_dir).is_ok());
+        let first_check = require_some!(
+            index_members
+                .iter()
+                .find_map(|member| member.get("check_id").and_then(Value::as_str)),
+            "first check id"
+        );
+        let first_context = require_ok!(
+            context_by_check(&index, first_check),
+            "first TASK-001 context"
+        );
+        let members = require_some!(
+            first_context.get("members").and_then(Value::as_array),
+            "TASK-001 members"
+        );
+        assert!(
+            members
+                .iter()
+                .any(|member| member.as_str() == Some("tiny/direct/8/blue")),
+            "empty-namespace TASK-001 must keep tiny members"
+        );
     }
 
     #[test]
@@ -5235,6 +5535,19 @@ finally:
                 .and_then(|check| check.get("namespace"))
                 .and_then(Value::as_str),
             Some("showcase"),
+        );
+        let members = require_some!(
+            context.get("members").and_then(Value::as_array),
+            "CHK-003 members"
+        );
+        let member_ids: Vec<&str> = members.iter().filter_map(Value::as_str).collect();
+        assert!(
+            !member_ids.iter().any(|id| *id == "tiny/direct/8/blue"),
+            "TASK-002 oracle members must not be the tiny synthetic set"
+        );
+        assert!(
+            member_ids.iter().any(|id| id.contains("SC-BASE-overview")),
+            "TASK-002 oracle members must include SC-BASE-overview identities"
         );
 
         let compare = require_ok!(context_by_check(&index, "CHK-004"), "CHK-004 context");
@@ -5390,6 +5703,109 @@ finally:
             observer_sequence_for_check(&check, None).expect("empty namespace sequence"),
             vec!["oracle", "oracle"],
         );
+    }
+
+    #[test]
+    fn showcase_tsv_expansion_uses_sc_base_overview_identities() {
+        let root = require_ok!(
+            PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../..")
+                .canonicalize(),
+            "workspace root"
+        );
+        let members = require_ok!(
+            proof_member_ids("TASK-002", "showcase", &root),
+            "expand TASK-002 members"
+        );
+        assert!(
+            !members.iter().any(|id| id == "tiny/direct/8/blue"),
+            "cloned repo TSV must not fall back to tiny members"
+        );
+        assert!(
+            members.iter().any(|id| id.contains("SC-BASE-overview")),
+            "expanded members must include SC-BASE-overview"
+        );
+        assert!(
+            members
+                .iter()
+                .any(|id| id == "SC-BASE-overview/overview/80x24/truecolor"),
+            "identity must match ExpandedCase::identity"
+        );
+        assert!(
+            members.iter().any(|id| id.contains("/diff/")),
+            "all23 expansion must include Diff"
+        );
+    }
+
+    #[test]
+    fn missing_showcase_tsv_falls_back_to_tiny_members() {
+        let directory = require_ok!(tempfile::tempdir(), "empty worktree");
+        let members = require_ok!(
+            proof_member_ids("TASK-002", "showcase", directory.path()),
+            "missing TSV fallback"
+        );
+        assert_eq!(members, tiny_member_ids());
+    }
+
+    #[test]
+    fn empty_namespace_keeps_tiny_members() {
+        let directory = require_ok!(tempfile::tempdir(), "empty worktree");
+        let members = require_ok!(
+            proof_member_ids("TASK-001", "", directory.path()),
+            "TASK-001 members"
+        );
+        assert_eq!(members, tiny_member_ids());
+        assert!(members.iter().any(|id| id == "tiny/direct/8/blue"));
+    }
+
+    #[test]
+    fn holla_members_are_prefixed_oracle_worlds() {
+        let directory = require_ok!(tempfile::tempdir(), "empty worktree");
+        let members = require_ok!(
+            proof_member_ids("TASK-003", "holla", directory.path()),
+            "TASK-003 members"
+        );
+        assert_eq!(members.len(), 34);
+        assert_eq!(members.first().map(String::as_str), Some("holla/first-use"));
+        assert_eq!(
+            members.last().map(String::as_str),
+            Some("holla/parity-platforms-linux")
+        );
+        assert!(
+            !members.iter().any(|id| id.contains("tiny/")),
+            "Holla identities must not reuse tiny members"
+        );
+    }
+
+    #[test]
+    fn holla_worlds_rs_is_parsed_when_present() {
+        let directory = require_ok!(tempfile::tempdir(), "adapter worktree");
+        let worlds = directory
+            .path()
+            .join("tools/refactor-proof-adapters/holla/src");
+        require_ok!(fs::create_dir_all(&worlds), "adapter dirs");
+        let mut names = String::from("pub const ORACLE_WORLDS: [&str; 34] = [\n");
+        for (index, world) in EMBEDDED_ORACLE_WORLDS.iter().enumerate() {
+            names.push_str(&format!("    \"parsed-{world}\""));
+            if index.saturating_add(1) != EMBEDDED_ORACLE_WORLDS.len() {
+                names.push(',');
+            }
+            names.push('\n');
+        }
+        names.push_str("];\n");
+        require_ok!(
+            fs::write(worlds.join("worlds.rs"), names),
+            "write worlds.rs"
+        );
+        let members = require_ok!(
+            proof_member_ids("TASK-003", "holla", directory.path()),
+            "parsed worlds"
+        );
+        assert_eq!(
+            members.first().map(String::as_str),
+            Some("holla/parsed-first-use")
+        );
+        assert_eq!(members.len(), 34);
     }
 
     #[test]
