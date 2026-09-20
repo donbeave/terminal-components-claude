@@ -728,6 +728,7 @@ prepare_native_contexts() {
 		--taskfmt-revision "$TASKFMT_REV"
 		--taskfmt-version "$TASKFMT_VERSION"
 		--taskfmt-sha256 "$TASKFMT_SHA256"
+		--observer-provider "${TC_PROOF_OBSERVER_PROVIDER:?set TC_PROOF_OBSERVER_PROVIDER to the bound observer provider}"
 	)
 	if [[ -n "${TC_TASK_DEPENDENCY_RECEIPTS:-}" ]]; then
 		local receipt

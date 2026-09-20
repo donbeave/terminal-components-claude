@@ -183,6 +183,21 @@ def _qualification_file(path: Path, field: str) -> Path:
     return path
 
 
+def _validate_observer_provider(value: Any, field: str) -> None:
+    provider = _mapping(value, field)
+    _unknown(provider, {"path", "sha256"}, field)
+    _required(provider, ("path", "sha256"), field)
+    path = _qualification_file(
+        Path(_absolute_path(provider["path"], f"{field}.path")),
+        f"{field}.path",
+    )
+    if not os.access(path, os.X_OK):
+        _reject(f"{field} is not executable")
+    _sha256(provider["sha256"], f"{field}.sha256")
+    if _file_sha256(path, field) != provider["sha256"]:
+        _reject(f"{field} hash mismatch")
+
+
 def _qualification_directory(path: Path, field: str) -> Path:
     _path_components_have_no_symlink(path, field)
     try:
@@ -1484,12 +1499,12 @@ def _validate_external_proof_preparation(
     index = _read_json(index_path, "proof_preparation.context_index")
     _unknown(
         index,
-        {"schema", "task_id", "run_id", "worktree_commit", "scope_base", "contexts", "results", "observer"},
+        {"schema", "task_id", "run_id", "worktree_commit", "scope_base", "contexts", "results", "observer_sequences", "observer"},
         "proof_preparation.context_index",
     )
     _required(
         index,
-        ("schema", "task_id", "run_id", "worktree_commit", "scope_base", "contexts", "results", "observer"),
+        ("schema", "task_id", "run_id", "worktree_commit", "scope_base", "contexts", "results", "observer_sequences", "observer"),
         "proof_preparation.context_index",
     )
     if index["schema"] != CONTEXT_INDEX_SCHEMA:
@@ -1508,12 +1523,12 @@ def _validate_external_proof_preparation(
     observer = _read_json(observer_path, "proof_preparation.observer")
     _unknown(
         observer,
-        {"schema", "task_id", "run_id", "worktree_commit", "scope_base", "transport", "nonce_sha256"},
+        {"schema", "task_id", "run_id", "worktree_commit", "scope_base", "transport", "nonce_sha256", "sequences", "provider"},
         "proof_preparation.observer",
     )
     _required(
         observer,
-        ("schema", "task_id", "run_id", "worktree_commit", "scope_base", "transport", "nonce_sha256"),
+        ("schema", "task_id", "run_id", "worktree_commit", "scope_base", "transport", "nonce_sha256", "sequences", "provider"),
         "proof_preparation.observer",
     )
     if observer["schema"] != OBSERVER_SCHEMA or observer["transport"] != "inherited-pipe/v1":
@@ -1526,6 +1541,7 @@ def _validate_external_proof_preparation(
     ):
         _reject("proof preparation observer identity mismatch")
     _sha256(observer["nonce_sha256"], "proof preparation observer nonce")
+    _validate_observer_provider(observer["provider"], "proof_preparation.observer.provider")
 
     def entry_map(value: Any, field: str) -> dict[str, Mapping[str, Any]]:
         if not isinstance(value, list) or not value:
@@ -2199,9 +2215,10 @@ def _validate_proof_context_bindings(
     observer = _mapping(
         common["observer"], f"{field}.qualification.common.observer"
     )
-    _required(observer, ("transport", "nonce", "capability"), f"{field}.observer")
+    _required(observer, ("transport", "nonce", "capability", "provider"), f"{field}.observer")
     if observer["transport"] != "inherited-pipe/v1":
         _reject(f"{field} observer transport is not inherited-pipe/v1")
+    _validate_observer_provider(observer["provider"], f"{field}.observer.provider")
     nonce = _string(observer["nonce"], f"{field}.observer.nonce")
     capability = Path(_absolute_path(observer["capability"], f"{field}.observer.capability"))
     if capability.resolve() != (run_path / "observer.json").resolve():
@@ -2458,6 +2475,7 @@ def _validate_preparation_file(
             "scope_base",
             "contexts",
             "results",
+            "observer_sequences",
             "observer",
         },
         "context_index",
@@ -2472,6 +2490,7 @@ def _validate_preparation_file(
             "scope_base",
             "contexts",
             "results",
+            "observer_sequences",
             "observer",
         ),
         "context_index",
@@ -2688,6 +2707,8 @@ def _validate_preparation_file(
             "scope_base",
             "transport",
             "nonce_sha256",
+            "sequences",
+            "provider",
         },
         "observer",
     )
@@ -2701,6 +2722,8 @@ def _validate_preparation_file(
             "scope_base",
             "transport",
             "nonce_sha256",
+            "sequences",
+            "provider",
         ),
         "observer",
     )
@@ -2716,6 +2739,7 @@ def _validate_preparation_file(
     if observer_record["transport"] != "inherited-pipe/v1":
         _reject("observer capability transport mismatch")
     _sha256(observer_record["nonce_sha256"], "observer.nonce_sha256")
+    _validate_observer_provider(observer_record["provider"], "observer.provider")
 
 
 def validate_proof_preparation(

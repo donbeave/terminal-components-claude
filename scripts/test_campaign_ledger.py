@@ -286,6 +286,10 @@ def make_preparation(root: Path) -> tuple[dict[str, Any], Path, Path, dict[str, 
         "taskfmt_path": str(taskfmt_path),
     }
     nonce = "fixture-observer-nonce"
+    provider_path = root / "observer-provider"
+    provider_path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    provider_path.chmod(0o755)
+    provider = {"path": str(provider_path), "sha256": file_sha256(provider_path)}
     common = {
         "run_id": str(run),
         "task_id": "TASK-001",
@@ -310,6 +314,7 @@ def make_preparation(root: Path) -> tuple[dict[str, Any], Path, Path, dict[str, 
             "transport": "inherited-pipe/v1",
             "nonce": nonce,
             "capability": str(observer_path),
+            "provider": provider,
         },
         "outputs": {
             "runtime": str(run / "outputs"),
@@ -371,6 +376,8 @@ def make_preparation(root: Path) -> tuple[dict[str, Any], Path, Path, dict[str, 
         "scope_base": BASE,
         "transport": "inherited-pipe/v1",
         "nonce_sha256": hashlib.sha256(nonce.encode()).hexdigest(),
+        "sequences": {"CHK-001": ["direct"]},
+        "provider": provider,
     }
     write_json(observer_path, observer)
     index = {
@@ -393,6 +400,7 @@ def make_preparation(root: Path) -> tuple[dict[str, Any], Path, Path, dict[str, 
                 "sha256": file_sha256(result_path),
             }
         ],
+        "observer_sequences": {"CHK-001": ["direct"]},
         "observer": {
             "path": str(observer_path),
             "sha256": file_sha256(observer_path),

@@ -19,7 +19,7 @@ tc-proof prepare --task-dir PATH --run-dir PATH --worktree PATH --scope-base COM
   --native-build-receipt PATH --taskfmt PATH --taskfmt-source PATH \
   --taskfmt-revision COMMIT --taskfmt-version VERSION --taskfmt-sha256 SHA256 \
   [--dependency-receipt PATH] [--run-id ID] [--observer-nonce NONCE] \
-  [--observer-socket PATH]
+  --observer-provider PATH [--observer-socket PATH]
 tc-proof validate --run-dir PATH
 tc-proof launch --run-dir PATH --check-id CHK-NNN [--timeout-ms N] -- PROGRAM [ARGS...]
 ";
@@ -86,6 +86,7 @@ fn parse_prepare_args(args: &[String]) -> Result<verifier::PrepareOptions, Strin
     let mut run_id = None;
     let mut observer_nonce = None;
     let mut observer_socket = None;
+    let mut observer_provider = None;
     let mut index = 0;
     while index < args.len() {
         let Some(option) = args.get(index).map(String::as_str) else {
@@ -156,6 +157,13 @@ fn parse_prepare_args(args: &[String]) -> Result<verifier::PrepareOptions, Strin
                     "--observer-socket",
                 )?));
             }
+            "--observer-provider" => {
+                observer_provider = Some(PathBuf::from(value_after(
+                    args,
+                    &mut index,
+                    "--observer-provider",
+                )?));
+            }
             "--help" | "-h" => return Err(HELP.to_string()),
             option => return Err(format!("unknown prepare option: {option}")),
         }
@@ -182,6 +190,8 @@ fn parse_prepare_args(args: &[String]) -> Result<verifier::PrepareOptions, Strin
         run_id,
         observer_nonce,
         observer_socket,
+        observer_provider: observer_provider
+            .ok_or_else(|| "missing --observer-provider".to_string())?,
     })
 }
 
@@ -292,7 +302,9 @@ fn main() -> ExitCode {
             }
         },
         "validate" => match parse_validate_args(&args)
-            .and_then(|run_dir| verifier::validate_run(&run_dir).map_err(|error| error.to_string()))
+            .and_then(|run_dir| {
+                verifier::validate_run_closed(&run_dir).map_err(|error| error.to_string())
+            })
             .and_then(|run| print_json(&run))
         {
             Ok(()) => ExitCode::SUCCESS,

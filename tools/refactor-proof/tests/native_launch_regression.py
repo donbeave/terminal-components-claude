@@ -127,6 +127,8 @@ def prepare_fixture(
     root: Path,
     taskfmt: tuple[Path, Path, str, str, str],
 ) -> tuple[Path, dict[str, dict[str, str]], Path]:
+    provider = root / "observer-provider.py"
+    write_provider(provider)
     candidate = root / "candidate"
     cloned = run(["git", "clone", "--local", "--no-hardlinks", str(source), str(candidate)], cwd=source)
     if cloned.returncode != 0:
@@ -192,6 +194,8 @@ def prepare_fixture(
             taskfmt_sha256,
             "--observer-nonce",
             "fixture-observer",
+            "--observer-provider",
+            str(root / "observer-provider.py"),
         ],
         cwd=source,
     )

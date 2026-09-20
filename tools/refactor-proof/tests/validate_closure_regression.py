@@ -59,6 +59,7 @@ def _fixture(base_dir: Path | None = None) -> tuple[Path, dict[str, object], dic
                 "worktree_commit": worktree_commit,
                 "scope_base": scope_base,
                 "operation": "direct",
+                "observer_sequence": ["direct"],
                 "qualification": {},
             }
         )
@@ -81,6 +82,10 @@ def _fixture(base_dir: Path | None = None) -> tuple[Path, dict[str, object], dic
         result_hash = _write_json(result_path, preparation)
         results.append({"check_id": check_id, "path": str(result_path), "sha256": result_hash})
 
+    provider_path = root / "observer-provider"
+    provider_path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    provider_path.chmod(0o755)
+    provider_hash = hashlib.sha256(provider_path.read_bytes()).hexdigest()
     observer = {
         "schema": "tc-proof-observer-capability/v1",
         "task_id": task_id,
@@ -89,6 +94,8 @@ def _fixture(base_dir: Path | None = None) -> tuple[Path, dict[str, object], dic
         "scope_base": scope_base,
         "transport": "inherited-pipe/v1",
         "nonce_sha256": "c" * 64,
+        "sequences": {"CHK-001": ["direct"], "CHK-002": ["direct"]},
+        "provider": {"path": str(provider_path), "sha256": provider_hash},
     }
     observer_path = root / "observer.json"
     observer_hash = _write_json(observer_path, observer)
@@ -100,6 +107,7 @@ def _fixture(base_dir: Path | None = None) -> tuple[Path, dict[str, object], dic
         "scope_base": scope_base,
         "contexts": contexts,
         "results": results,
+        "observer_sequences": {"CHK-001": ["direct"], "CHK-002": ["direct"]},
         "observer": {"path": str(observer_path), "sha256": observer_hash},
     }
 
