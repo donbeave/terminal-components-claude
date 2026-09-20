@@ -51,6 +51,10 @@ pub struct Observation {
     pub digest: u64,
     /// Plain-text frame, rows joined by newlines.
     pub text: String,
+    /// Connection-list error, when present.
+    pub error: Option<String>,
+    /// Hovered control hash, if any.
+    pub hover: Option<u64>,
 }
 
 /// Observe the current production harness state at `checkpoint`.
@@ -95,5 +99,7 @@ pub fn observe(
         cursor: harness.cursor().map(|pos| (pos.x, pos.y)),
         digest: harness.snapshot().digest(),
         text: harness.text(),
+        error: app.connections_screen.error.clone(),
+        hover: harness.hover().map(junie_tui::Id::hash),
     }
 }

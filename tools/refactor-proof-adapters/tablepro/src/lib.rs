@@ -7,13 +7,24 @@
 #![forbid(unsafe_code)]
 
 mod cli;
+mod input;
 mod launch;
 mod observe;
 mod scenario;
 
 pub use cli::{HELP, invoke_cli, invoke_cli_with_env, parse_color_flag};
-pub use launch::{launch_preset_c, theme_for};
+pub use input::{
+    alt, backtab, click_text, ctrl, delete, down, end, enter, esc, function, home, hover_text,
+    left, page_down, page_up, pointer_down_text, pointer_up_text, repeat_key, replace_paste, right,
+    shift, space, tab, ticks, type_text, up, wheel_down_text,
+};
+pub use launch::{
+    connect_fixture, launch_preset_c, launch_preset_l, launch_preset_q, launch_preset_ql,
+    launch_preset_t, launch_preset_w, theme_for,
+};
 pub use observe::{Observation, observe};
 pub use scenario::{
-    ALL_SIZES, CHECKPOINT_INITIAL, COLOR_PROFILES, ColorProfile, PRESET_C, SCENARIO_TP001,
+    ALL_SIZES, CHECKPOINT_INITIAL, COLOR_PROFILES, ColorProfile, FIXTURE_ANALYTICS,
+    FIXTURE_LOCAL_POSTGRESQL, FIXTURE_PRODUCTION, FIXTURE_STAGING, PRESET_C, PRESET_L, PRESET_Q,
+    PRESET_QL, PRESET_T, PRESET_W, SCENARIO_TP001, SCENARIO_TP002,
 };

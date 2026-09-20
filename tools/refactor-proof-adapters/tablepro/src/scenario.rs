@@ -4,10 +4,30 @@ use junie_tui::ColorLevel;
 
 /// TP-001 parent identity.
 pub const SCENARIO_TP001: &str = "TP-001";
+/// TP-002 parent identity.
+pub const SCENARIO_TP002: &str = "TP-002";
 /// Preset C: Connections launch with no `--connect`.
 pub const PRESET_C: &str = "C";
+/// Preset W: `--connect Production` then the Workbench landing path.
+pub const PRESET_W: &str = "W";
+/// Preset L: `--connect "Local PostgreSQL"`.
+pub const PRESET_L: &str = "L";
+/// Preset T: W then Ctrl+O, `orders`, Enter.
+pub const PRESET_T: &str = "T";
+/// Preset Q: W then Ctrl+T, `i`, SQL, Esc.
+pub const PRESET_Q: &str = "Q";
+/// Preset QL: L then Ctrl+T, `i`, SQL, Esc.
+pub const PRESET_QL: &str = "QL";
 /// Named first-frame checkpoint of TP-001.
 pub const CHECKPOINT_INITIAL: &str = "initial";
+/// Fixture ordinal of Local PostgreSQL in `db::connections()`.
+pub const FIXTURE_LOCAL_POSTGRESQL: usize = 0;
+/// Fixture ordinal of Staging (auth-failed) in `db::connections()`.
+pub const FIXTURE_STAGING: usize = 2;
+/// Fixture ordinal of Analytics (unreachable) in `db::connections()`.
+pub const FIXTURE_ANALYTICS: usize = 3;
+/// Fixture ordinal of Production in `db::connections()`.
+pub const FIXTURE_PRODUCTION: usize = 4;
 
 /// `ALL` sizes from the `TablePro` scenario contract: 80×24, 100×30, 120×40, 160×50.
 pub const ALL_SIZES: [(u16, u16); 4] = [(80, 24), (100, 30), (120, 40), (160, 50)];

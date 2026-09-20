@@ -7,7 +7,8 @@
     clippy::panic,
     clippy::indexing_slicing,
     clippy::missing_panics_doc,
-    clippy::too_many_lines
+    clippy::too_many_lines,
+    clippy::uninlined_format_args
 )]
 
 use std::ffi::OsStr;
