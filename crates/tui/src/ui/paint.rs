@@ -13,9 +13,11 @@ use ratatui_core::layout::{Position, Rect};
 use ratatui_core::style::{Color, Modifier, Style};
 
 use super::Ui;
+use crate::scroll::ScrollState;
 use crate::text::Span;
 use crate::text::clusters::{ClusterFeed, ClusterScratch};
 use crate::text::measure::graphemes;
+use crate::theme::builder::{FadeOutcome, fade_mix};
 use crate::theme::{FgStep, GlyphRole, PaintStyle, Role, Surface, Theme};
 
 /// One-cluster paint cursor: the single writer shared by cell, string, span,
@@ -422,7 +424,158 @@ impl Ui<'_> {
             }
         }
     }
+
+    /// Fade the edge rows of `area` that hide more content, blending them
+    /// toward the container background (oracle `src/ui/fade.rs`, restored
+    /// once for every scroller).
+    ///
+    /// Call it after the rows are painted and before the scrollbar; `area`
+    /// is the content rectangle without the scrollbar column, so headers,
+    /// footers and the bar itself are never faded. The fade appears only in
+    /// the direction that has more content and disappears at the boundary.
+    /// Fewer than four rows are all content and fade nothing; four through
+    /// eleven rows fade the outer row per hidden edge at 55% contrast, and
+    /// twelve or more add the inner row at 80%. Emphasised cells stay whole:
+    /// a cell on another background plane (a selected row, a mark), a
+    /// reversed cell, the row holding a cursor, and every `keep` row passed
+    /// to [`scroll_edges_except`](Self::scroll_edges_except). Palettes
+    /// without RGB cannot blend, so the outermost row dims with `DIM`
+    /// instead and the inner row stays. Glyphs, geometry, hits and selection
+    /// never change: only foregrounds blend and only `DIM` is added.
+    pub fn scroll_edges(&mut self, area: Rect, st: &ScrollState) {
+        self.scroll_edges_except(area, st, &[]);
+    }
+
+    /// [`scroll_edges`](Self::scroll_edges) with rows that must stay whole
+    /// whatever plane they are on: a widget passes its cursor row (an
+    /// absolute `y`) so a focus bar on the container plane is never dimmed.
+    pub fn scroll_edges_except(&mut self, area: Rect, st: &ScrollState, keep: &[u16]) {
+        let area = area.intersection(self.clip);
+        if area.is_empty() || area.height < FADE_MIN_ROWS {
+            return;
+        }
+        let up = st.offset() > 0;
+        let down = st.viewport_len() > 0
+            && st.offset().saturating_add(st.viewport_len()) < st.content_len();
+        if !up && !down {
+            return;
+        }
+        let depth: u16 = if area.height >= FADE_DEEP_FROM { 2 } else { 1 };
+        let container = self.majority_bg(area);
+        if up {
+            self.fade_unless_protected(area, area.y, FADE_OUTER_KEEP, container, keep);
+            if depth == 2 {
+                self.fade_unless_protected(
+                    area,
+                    area.y.saturating_add(1),
+                    FADE_INNER_KEEP,
+                    container,
+                    keep,
+                );
+            }
+        }
+        if down {
+            self.fade_unless_protected(
+                area,
+                area.bottom().saturating_sub(1),
+                FADE_OUTER_KEEP,
+                container,
+                keep,
+            );
+            if depth == 2 {
+                self.fade_unless_protected(
+                    area,
+                    area.bottom().saturating_sub(2),
+                    FADE_INNER_KEEP,
+                    container,
+                    keep,
+                );
+            }
+        }
+    }
+
+    /// Fade one edge row unless it is protected: a `keep` row or a row
+    /// holding a cursor request. Content paints (and requests its caret)
+    /// before the fade runs, so the recorded rows are the oracle's
+    /// hardware-cursor row on this frame.
+    fn fade_unless_protected(
+        &mut self,
+        area: Rect,
+        y: u16,
+        keep_strength: f32,
+        container: Color,
+        keep: &[u16],
+    ) {
+        let protected = keep.contains(&y)
+            || self
+                .frame
+                .cursors
+                .iter()
+                .any(|c| c.pos.y == y && area.contains(c.pos));
+        if !protected {
+            self.fade_edge_row(area, y, keep_strength, container);
+        }
+    }
+
+    /// The background most cells of `area` share: the container plane.
+    /// First-seen order with last-max-wins ties, exactly like the oracle,
+    /// so a tied vote resolves to the same plane.
+    fn majority_bg(&mut self, area: Rect) -> Color {
+        let mut counts: Vec<(Color, usize)> = Vec::new();
+        for pos in area.positions() {
+            let bg = self.buffer().cell(pos).map_or(Color::Reset, |c| c.bg);
+            match counts.iter_mut().find(|(c, _)| *c == bg) {
+                Some((_, n)) => *n = (*n).saturating_add(1),
+                None => counts.push((bg, 1)),
+            }
+        }
+        counts
+            .into_iter()
+            .max_by_key(|(_, n)| *n)
+            .map_or(Color::Reset, |(c, _)| c)
+    }
+
+    /// Blend one edge row toward `container` through the shared
+    /// [`fade_mix`](crate::theme::builder::fade_mix) oracle transcription:
+    /// blended RGB foregrounds repaint, outer-row non-RGB cells dim, and
+    /// cells on another plane or reversed stay whole. Glyphs never change.
+    fn fade_edge_row(&mut self, area: Rect, y: u16, keep: f32, container: Color) {
+        for x in area.x..area.right() {
+            let pos = Position::new(x, y);
+            let touched = match self.buffer().cell_mut(pos) {
+                Some(cell)
+                    if cell.bg == container && !cell.modifier.contains(Modifier::REVERSED) =>
+                {
+                    match fade_mix(cell.fg, container, keep) {
+                        FadeOutcome::Blended(mixed) => {
+                            cell.fg = mixed;
+                            true
+                        }
+                        // no RGB to blend: the outermost row dims, the inner row stays
+                        FadeOutcome::ApplyDim => {
+                            cell.modifier |= Modifier::DIM;
+                            true
+                        }
+                        FadeOutcome::Unchanged => false,
+                    }
+                }
+                _ => false,
+            };
+            if touched {
+                self.mark(pos, None);
+            }
+        }
+    }
 }
+
+/// Fraction of the foreground contrast kept on the outermost faded row.
+const FADE_OUTER_KEEP: f32 = 0.55;
+/// Fraction kept on the row inside the outermost one (tall viewports only).
+const FADE_INNER_KEEP: f32 = 0.8;
+/// Viewports with at least this many rows fade two rows per edge.
+const FADE_DEEP_FROM: u16 = 12;
+/// Viewports shorter than this are not faded: every row is content.
+const FADE_MIN_ROWS: u16 = 4;
 
 /// Scoped owner of the frame's reusable text scratch for one streaming
 /// paint: takes the scratch for the guarded paint, then wipes its content
@@ -543,6 +696,8 @@ mod tests {
 
     use super::super::cx::LastFrame;
     use super::super::{FrameState, Ui, UiCore};
+    use crate::id::Id;
+    use crate::scroll::ScrollState;
     use crate::text::Span;
     use crate::text::clusters::{ClusterFeed, ClusterScratch};
     use crate::theme::{FgStep, Role, Surface, Theme};
@@ -1294,5 +1449,274 @@ mod tests {
         frame.reset(2, Rect::new(0, 0, 8, 1));
         assert_eq!(frame.text_scratch.capacity(), warm_capacity);
         assert_eq!(frame.text_scratch.len(), 0);
+    }
+
+    // ── TASK-014 scroll-edge fade (oracle src/ui/fade.rs) ──
+
+    const FADE_BG: Color = Color::Rgb(0, 0, 0);
+    const FADE_FG: Color = Color::Rgb(200, 200, 200);
+    const FADE_ID: Id = Id::root("scroll-edges.tests");
+
+    fn fade_state(offset: usize, content: usize, viewport: usize) -> ScrollState {
+        let mut st = ScrollState::new(content);
+        st.set_viewport(viewport);
+        st.scroll_to(offset);
+        st
+    }
+
+    fn paint_fade_rows(ui: &mut Ui<'_>, rows: u16) {
+        for y in 0..rows {
+            ui.paint_str(
+                Rect::new(0, y, 10, 1),
+                "abcdefghij",
+                Style::new().fg(FADE_FG).bg(FADE_BG),
+            );
+        }
+    }
+
+    fn fade_grey(buf: &Buffer, y: u16) -> u8 {
+        match buf.cell(Position::new(0, y)).map(|c| c.fg) {
+            Some(Color::Rgb(r, _, _)) => r,
+            other => panic!("{other:?}"),
+        }
+    }
+
+    fn faded(theme: &Theme, rows: u16, st: &ScrollState, cursor: Option<Position>) -> Buffer {
+        let page = Rect::new(0, 0, 10, rows);
+        with_page(theme, page, |ui| {
+            paint_fade_rows(ui, rows);
+            if let Some(pos) = cursor {
+                ui.set_cursor(FADE_ID, pos);
+            }
+            ui.scroll_edges(page, st);
+        })
+        .1
+    }
+
+    /// Only the edges that hide more content fade, and the fade clears at
+    /// the boundary; when everything fits nothing fades.
+    #[test]
+    fn scroll_edges_fade_only_hidden_edges_and_clear_at_boundaries() {
+        let theme = Theme::junie();
+        let s = |offset: usize| fade_state(offset, 30, 6);
+        // at the top: only the bottom row fades
+        let b = faded(&theme, 6, &s(0), None);
+        assert_eq!(fade_grey(&b, 0), 200);
+        assert_eq!(fade_grey(&b, 5), 110, "outer row keeps 55%");
+        assert_eq!(fade_grey(&b, 4), 200, "one row only below twelve rows");
+        // in the middle: both edges
+        let b = faded(&theme, 6, &s(10), None);
+        assert_eq!(fade_grey(&b, 0), 110);
+        assert_eq!(fade_grey(&b, 5), 110);
+        // at the bottom: only the top row
+        let b = faded(&theme, 6, &s(24), None);
+        assert_eq!(fade_grey(&b, 0), 110);
+        assert_eq!(fade_grey(&b, 5), 200);
+        // everything fits: nothing fades
+        let b = faded(&theme, 6, &fade_state(0, 6, 6), None);
+        assert_eq!(fade_grey(&b, 0), 200);
+        assert_eq!(fade_grey(&b, 5), 200);
+    }
+
+    /// Twelve or more rows fade two rows per hidden edge; three rows are
+    /// all content; four and eleven fade exactly the outer row.
+    #[test]
+    fn scroll_edges_tall_two_rows_short_none() {
+        let theme = Theme::junie();
+        let b = faded(&theme, 12, &fade_state(5, 100, 12), None);
+        assert_eq!(fade_grey(&b, 0), 110);
+        assert_eq!(fade_grey(&b, 1), 160, "inner row keeps 80%");
+        assert_eq!(fade_grey(&b, 2), 200);
+        assert_eq!(fade_grey(&b, 11), 110);
+        assert_eq!(fade_grey(&b, 10), 160);
+        let b = faded(&theme, 3, &fade_state(5, 100, 3), None);
+        assert_eq!(fade_grey(&b, 0), 200, "three rows are all content");
+        assert_eq!(fade_grey(&b, 2), 200, "three rows are all content");
+        for rows in [4u16, 11] {
+            let bottom = rows - 1;
+            let b = faded(&theme, rows, &fade_state(5, 100, usize::from(rows)), None);
+            assert_eq!(fade_grey(&b, 0), 110, "{rows} rows fade the outer row");
+            assert_eq!(fade_grey(&b, bottom), 110, "{rows} rows fade the outer row");
+            assert_eq!(fade_grey(&b, 1), 200, "{rows} rows keep a single row");
+            assert_eq!(
+                fade_grey(&b, bottom - 1),
+                200,
+                "{rows} rows keep a single row"
+            );
+        }
+    }
+
+    /// A selected row on its own plane, a reversed cell, a marked cell and
+    /// the cursor row stay whole while the plain neighbour fades; a cursor
+    /// outside the area protects nothing.
+    #[test]
+    fn scroll_edges_leave_emphasised_cells_and_cursor_row_whole() {
+        let theme = Theme::junie();
+        let page = Rect::new(0, 0, 10, 6);
+        let st = fade_state(10, 30, 6);
+        let buf = with_page(&theme, page, |ui| {
+            paint_fade_rows(ui, 6);
+            ui.paint_str(
+                Rect::new(0, 0, 10, 1),
+                "abcdefghij",
+                Style::new().fg(FADE_FG).bg(Color::Rgb(20, 60, 20)),
+            );
+            ui.paint_str(
+                Rect::new(0, 5, 2, 1),
+                "ab",
+                Style::new()
+                    .fg(FADE_FG)
+                    .bg(FADE_BG)
+                    .add_modifier(Modifier::REVERSED),
+            );
+            ui.paint_str(
+                Rect::new(2, 5, 1, 1),
+                "c",
+                Style::new().fg(FADE_FG).bg(Color::Rgb(40, 40, 0)),
+            );
+            ui.scroll_edges(page, &st);
+        })
+        .1;
+        assert_eq!(fade_grey(&buf, 0), 200, "selected row untouched");
+        assert_eq!(fade_grey(&buf, 5), 200, "reversed cell untouched");
+        assert!(
+            matches!(
+                buf.cell(Position::new(2, 5)).map(|c| c.fg),
+                Some(Color::Rgb(200, ..))
+            ),
+            "marked cell untouched"
+        );
+        assert!(
+            matches!(
+                buf.cell(Position::new(3, 5)).map(|c| c.fg),
+                Some(Color::Rgb(110, ..))
+            ),
+            "the plain neighbour fades"
+        );
+        // the hardware cursor row (an editing caret) stays whole
+        let b = faded(&theme, 6, &st, Some(Position::new(4, 5)));
+        assert_eq!(fade_grey(&b, 5), 200);
+        assert_eq!(fade_grey(&b, 0), 110);
+        // a cursor outside the area protects nothing
+        let b = faded(&theme, 6, &st, Some(Position::new(4, 9)));
+        assert_eq!(fade_grey(&b, 5), 110);
+        assert_eq!(fade_grey(&b, 0), 110);
+    }
+
+    /// A `keep` row stays whole on the container plane.
+    #[test]
+    fn scroll_edges_except_keeps_named_rows_on_container_plane() {
+        let theme = Theme::junie();
+        let page = Rect::new(0, 0, 10, 6);
+        let st = fade_state(10, 30, 6);
+        let buf = with_page(&theme, page, |ui| {
+            paint_fade_rows(ui, 6);
+            ui.scroll_edges_except(page, &st, &[5]);
+        })
+        .1;
+        assert_eq!(fade_grey(&buf, 0), 110);
+        assert_eq!(fade_grey(&buf, 5), 200, "the kept row is untouched");
+    }
+
+    /// Without RGB to blend the outermost row dims and the inner row stays,
+    /// with no colour invented, for every foreground/background mix.
+    #[test]
+    fn scroll_edges_dim_outer_row_only_without_rgb() {
+        let theme = Theme::junie();
+        for (fg, bg) in [
+            (Color::Gray, Color::Black),
+            (Color::Rgb(200, 200, 200), Color::Black),
+            (Color::Gray, Color::Rgb(0, 0, 0)),
+        ] {
+            let page = Rect::new(0, 0, 10, 12);
+            let st = fade_state(5, 100, 12);
+            let buf = with_page(&theme, page, |ui| {
+                for y in 0..12 {
+                    ui.paint_str(
+                        Rect::new(0, y, 10, 1),
+                        "abcdefghij",
+                        Style::new().fg(fg).bg(bg),
+                    );
+                }
+                ui.scroll_edges(page, &st);
+            })
+            .1;
+            let cell = |y: u16| buf.cell(Position::new(0, y)).cloned().unwrap_or_default();
+            assert!(cell(0).modifier.contains(Modifier::DIM), "{fg:?} on {bg:?}");
+            assert!(
+                !cell(1).modifier.contains(Modifier::DIM),
+                "{fg:?} on {bg:?}: inner row stays"
+            );
+            assert!(
+                cell(11).modifier.contains(Modifier::DIM),
+                "{fg:?} on {bg:?}"
+            );
+            assert_eq!(cell(0).fg, fg, "{fg:?} on {bg:?}: no colour invented");
+            assert_eq!(cell(0).bg, bg, "{fg:?} on {bg:?}: no colour invented");
+        }
+    }
+
+    /// A tied background vote resolves to the last majority plane, exactly
+    /// like the oracle: the tied-away outer row stays whole and the tied
+    /// plane fades.
+    #[test]
+    fn scroll_edges_tied_backgrounds_resolve_to_last_majority() {
+        let theme = Theme::junie();
+        let page = Rect::new(0, 0, 10, 4);
+        let st = fade_state(10, 30, 4);
+        let other = Color::Rgb(10, 10, 40);
+        let buf = with_page(&theme, page, |ui| {
+            for y in 0..4 {
+                let bg = if y < 2 { FADE_BG } else { other };
+                ui.paint_str(
+                    Rect::new(0, y, 10, 1),
+                    "abcdefghij",
+                    Style::new().fg(FADE_FG).bg(bg),
+                );
+            }
+            ui.scroll_edges(page, &st);
+        })
+        .1;
+        assert_eq!(fade_grey(&buf, 0), 200, "tied-away row stays whole");
+        assert_eq!(
+            buf.cell(Position::new(0, 3)).map(|c| c.fg),
+            Some(Color::Rgb(115, 115, 128)),
+            "last majority plane fades"
+        );
+    }
+
+    /// The fade blends foregrounds only: glyphs, backgrounds and hit
+    /// geometry are untouched, and clipping bounds the fade.
+    #[test]
+    fn scroll_edges_never_change_glyphs_geometry_or_clip() {
+        let theme = Theme::junie();
+        let page = Rect::new(0, 0, 10, 6);
+        let st = fade_state(10, 30, 6);
+        let buf = with_page(&theme, page, |ui| {
+            paint_fade_rows(ui, 6);
+            ui.scroll_edges(page, &st);
+        })
+        .1;
+        for y in 0..6 {
+            for x in 0..10 {
+                let c = buf.cell(Position::new(x, y)).unwrap();
+                assert_eq!(c.bg, FADE_BG, "backgrounds never blend");
+                assert_eq!(
+                    c.symbol(),
+                    "abcdefghij".get(x as usize..x as usize + 1).unwrap()
+                );
+            }
+        }
+        // clipping bounds the fade: rows outside the clip keep full contrast
+        let buf = with_page(&theme, page, |ui| {
+            paint_fade_rows(ui, 6);
+            ui.scroll_edges(Rect::new(0, 0, 10, 3), &st);
+        })
+        .1;
+        assert_eq!(
+            fade_grey(&buf, 0),
+            200,
+            "three clipped rows are all content"
+        );
     }
 }
