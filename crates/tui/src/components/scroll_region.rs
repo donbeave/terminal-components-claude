@@ -261,11 +261,22 @@ impl<'a> ScrollRegion<'a> {
                 moved(st.offset() != before)
             }
             Phase::Drag => {
-                let (_, thumb_len) = st.thumb(usize::from(track_len));
                 let capture_area = cx.capture_area().unwrap_or_default();
                 let origin = cx.capture_origin().unwrap_or(pos);
-                let grab = origin.y.saturating_sub(capture_area.y);
                 let track_y = cx.area(self.id).map_or(capture_area.y, |area| area.y);
+                if cx.capture_owner() != Some(self.id) {
+                    // A press on the bare track claims no capture (the
+                    // oracle's press only records a centred grab), so the
+                    // drag falls back to press semantics and the thumb
+                    // follows the pointer instead of snapping: without a
+                    // grab the oracle drag behaves like a press, and a
+                    // centred press is the same jump the track press made.
+                    let track_pos = usize::from(pos.y.saturating_sub(track_y));
+                    st.scroll_to(st.offset_for_track_pos(track_pos, usize::from(track_len)));
+                    return moved(st.offset() != before);
+                }
+                let (_, thumb_len) = st.thumb(usize::from(track_len));
+                let grab = origin.y.saturating_sub(capture_area.y);
                 let centered = thumb_drag_position(pos.y, track_y, grab, thumb_len);
                 st.scroll_to(st.offset_for_track_pos(centered, usize::from(track_len)));
                 moved(st.offset() != before)
