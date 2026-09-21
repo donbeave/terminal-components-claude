@@ -445,12 +445,12 @@ fn blend(top: Color, bottom: Color, alpha: f64) -> Color {
 /// Outcome of [`fade_mix`]: the per-cell color branch of the oracle fade
 /// (TASK-079; TASK-014 R-001 consumes this through its TASK-011 edge).
 ///
-/// `Blended(c)` paints `c`. `Dimmed` keeps `fg` and the caller adds `DIM`.
+/// `Blended(c)` paints `c`. `ApplyDim` keeps `fg` and the caller adds `DIM`.
 /// `Unchanged` keeps `fg` as-is.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum FadeOutcome {
     Blended(Color),
-    Dimmed,
+    ApplyDim,
     Unchanged,
 }
 
@@ -459,7 +459,7 @@ pub(crate) enum FadeOutcome {
 /// clamped to `[0.0, 255.0]` and cast per channel.
 ///
 /// `(Rgb, Rgb)` pairs blend at the caller-supplied amount (`0.55` outer,
-/// `0.80` inner). Any pair with a non-`Rgb` side yields `Dimmed` at exactly
+/// `0.80` inner). Any pair with a non-`Rgb` side yields `ApplyDim` at exactly
 /// `0.55f32` and `Unchanged` otherwise, failing closed on illegal amounts.
 /// Exact same-literal comparison is used; no epsilon.
 #[expect(
@@ -469,7 +469,7 @@ pub(crate) enum FadeOutcome {
 pub(crate) fn fade_mix(fg: Color, bg: Color, amount: f32) -> FadeOutcome {
     let (Color::Rgb(f_red, f_green, f_blue), Color::Rgb(b_red, b_green, b_blue)) = (fg, bg) else {
         if amount == 0.55f32 {
-            return FadeOutcome::Dimmed;
+            return FadeOutcome::ApplyDim;
         }
         return FadeOutcome::Unchanged;
     };
@@ -872,7 +872,7 @@ mod tests {
         colors.extend(rgb_samples);
 
         for (amount, expected_non_rgb) in [
-            (0.55f32, FadeOutcome::Dimmed),
+            (0.55f32, FadeOutcome::ApplyDim),
             (0.80f32, FadeOutcome::Unchanged),
         ] {
             for fg in &colors {
