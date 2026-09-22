@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import stat
 import subprocess
@@ -15,7 +14,7 @@ from ..accounting import run_account_tests
 from ..architecture import run_architecture
 from .context import Reject, load_context
 from .index import load_index
-from .json_util import sha256_bytes
+from .json_util import load_bytes, sha256_bytes
 from .operations import run_capture, run_close, run_oracle, run_preflight, run_required
 from .result import finish
 
@@ -61,8 +60,8 @@ def consume_native_handoff(context_path: Path, operation: str) -> None:
     if len(raw) > 4096 or raw.count(b"\n") != 1 or not raw.endswith(b"\n"):
         raise RuntimeError("native launch handoff is malformed")
     try:
-        handoff = json.loads(raw[:-1].decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        handoff = load_bytes(raw[:-1])
+    except (UnicodeDecodeError, ValueError) as error:
         raise RuntimeError("native launch handoff is not JSON") from error
     if not isinstance(handoff, dict) or set(handoff) != {
         "schema",
@@ -342,7 +341,7 @@ def _load_comparison_report(report_path: object) -> tuple[dict[str, object] | No
     except OSError:
         return None, None
     try:
-        report = json.loads(raw.decode("utf-8"))
+        report = load_bytes(raw)
     except (UnicodeDecodeError, ValueError):
         return None, None
     if not isinstance(report, dict):

@@ -6,11 +6,17 @@ import hashlib
 import json
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
 
 
 def canonical(value: Any) -> bytes:
-    return json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+    return json.dumps(
+        value,
+        allow_nan=False,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -30,7 +36,14 @@ def load_bytes(data: bytes) -> Any:
             result[key] = value
         return result
 
-    return json.loads(data, object_pairs_hook=unique)
+    def reject_constant(value: str) -> NoReturn:
+        raise ValueError(f"invalid JSON constant: {value}")
+
+    return json.loads(
+        data.decode("utf-8"),
+        object_pairs_hook=unique,
+        parse_constant=reject_constant,
+    )
 
 
 def load_path(path) -> Any:

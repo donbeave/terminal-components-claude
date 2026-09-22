@@ -4,6 +4,7 @@ use std::collections::{HashMap, HashSet};
 use std::fmt;
 
 use serde::de::{self, Deserializer, MapAccess, SeqAccess, Visitor};
+use serde::Deserialize;
 use serde_json::{Map, Value};
 
 /// Serialize JSON with sorted object keys and compact separators (no trailing newline).
@@ -60,11 +61,25 @@ pub fn canonical_json_line(value: &Value) -> String {
 /// duplicate object key.
 pub fn parse_json_strict(text: &str) -> Result<Value, String> {
     let mut de = serde_json::Deserializer::from_str(text);
-    de.deserialize_any(NoDupVisitor)
-        .map_err(|error| error.to_string())
+    let value = de
+        .deserialize_any(NoDupVisitor)
+        .map_err(|error| error.to_string())?;
+    de.end().map_err(|error| error.to_string())?;
+    Ok(value)
 }
 
 struct NoDupVisitor;
+
+struct StrictValue(Value);
+
+impl<'de> Deserialize<'de> for StrictValue {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_any(NoDupVisitor).map(Self)
+    }
+}
 
 impl<'de> Visitor<'de> for NoDupVisitor {
     type Value = Value;
@@ -115,8 +130,8 @@ impl<'de> Visitor<'de> for NoDupVisitor {
         A: SeqAccess<'de>,
     {
         let mut values = Vec::new();
-        while let Some(value) = seq.next_element()? {
-            values.push(value);
+        while let Some(value) = seq.next_element::<StrictValue>()? {
+            values.push(value.0);
         }
         Ok(Value::Array(values))
     }
@@ -127,13 +142,46 @@ impl<'de> Visitor<'de> for NoDupVisitor {
     {
         let mut object = Map::new();
         let mut seen = HashSet::new();
-        while let Some((key, value)) = map.next_entry::<String, Value>()? {
+        while let Some((key, value)) = map.next_entry::<String, StrictValue>()? {
             if !seen.insert(key.clone()) {
                 return Err(de::Error::custom(format!("duplicate JSON key: {key}")));
             }
-            object.insert(key, value);
+            object.insert(key, value.0);
         }
         Ok(Value::Object(object))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{canonical_json, parse_json_strict, sha256_canonical};
+    use serde_json::json;
+
+    #[test]
+    fn strict_parser_rejects_nested_duplicates() {
+        for input in [
+            r#"{"outer":{"key":1,"key":2}}"#,
+            r#"{"outer":[{"key":1,"key":2}]}"#,
+        ] {
+            assert!(parse_json_strict(input).is_err(), "accepted {input}");
+        }
+    }
+
+    #[test]
+    fn strict_parser_rejects_non_finite_and_trailing_values() {
+        for input in ["NaN", "Infinity", "-Infinity", "1 2", "{}[]"] {
+            assert!(parse_json_strict(input).is_err(), "accepted {input}");
+        }
+    }
+
+    #[test]
+    fn canonical_unicode_bytes_and_hash_are_stable() {
+        let value = json!({"z": "café 😀", "a": {"雪": "é"}});
+        assert_eq!(canonical_json(&value), r#"{"a":{"雪":"é"},"z":"café 😀"}"#);
+        assert_eq!(
+            sha256_canonical(&value),
+            "afa3e0356e44ebedd3b3c759b32bc6135b3553e816bcc1c408d3f8bc47e52bf3"
+        );
     }
 }
 
