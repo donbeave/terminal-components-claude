@@ -6,23 +6,24 @@
 
 #![expect(
     clippy::arithmetic_side_effects,
-    clippy::collapsible_if,
     clippy::too_many_lines,
     reason = "historical compatibility pages keep bounded fixture arithmetic and composition together"
 )]
 
 mod app;
+mod cli;
 mod data;
 mod pages;
 mod render_number;
 
-pub use app::{App, NAV_ENTRIES, NavEntry, PageId};
+pub use app::{App, Motion, NAV_ENTRIES, NavEntry, PageId};
 
-/// Run the showcase with command-line theme and colour selection.
+/// Run the showcase with command-line theme, colour, page, and motion selection.
 ///
 /// # Errors
 ///
-/// Returns terminal setup or teardown errors from the `junie-tui` runtime.
+/// Returns invalid-input errors for `--motion`/`--frame` and terminal setup
+/// or teardown errors from the `junie-tui` runtime.
 pub fn run() -> std::io::Result<()> {
     app::run()
 }

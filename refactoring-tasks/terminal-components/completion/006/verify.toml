@@ -1,0 +1,60 @@
+schema = "verify/v2"
+task_id = "TASK-006"
+writable_paths = ["tools/refactor-proof-adapters/components"]
+forbidden_paths = ["refactoring-tasks","docs/refactoring-plan","shots", "snapshots","baseline","tools/refactor-proof"]
+
+[[checks]]
+id = "CHK-001"
+phase = "precondition"
+shell = "tools/refactor-proof/bin/tc-proof preflight --context \"$RUN_DIR/contexts/CHK-001.json\""
+expected = { exit = 0 }
+requirements = ["R-004"]
+acceptance = ["AC-004"]
+
+[[checks]]
+id = "CHK-002"
+phase = "focused"
+shell = "tools/refactor-proof/bin/tc-proof required --context \"$RUN_DIR/contexts/CHK-002.json\""
+expected = { exit = 0 }
+requirements = ["R-001"]
+acceptance = ["AC-006"]
+
+[[checks]]
+id = "CHK-003"
+phase = "focused"
+shell = "tools/refactor-proof/bin/tc-proof oracle --context \"$RUN_DIR/contexts/CHK-003.json\" --namespace components"
+expected = { exit = 0 }
+requirements = ["R-001"]
+acceptance = ["AC-007"]
+
+[[checks]]
+id = "CHK-004"
+phase = "focused"
+shell = "tools/refactor-proof/bin/tc-proof compare --context \"$RUN_DIR/contexts/CHK-004.json\""
+expected = { exit = 0 }
+requirements = ["R-001"]
+acceptance = ["AC-001"]
+
+[[checks]]
+id = "CHK-005"
+phase = "regression"
+shell = "tools/refactor-proof/bin/tc-proof account-tests --context \"$RUN_DIR/contexts/CHK-005.json\""
+expected = { exit = 0 }
+requirements = ["R-003"]
+acceptance = ["AC-003"]
+
+[[checks]]
+id = "CHK-006"
+phase = "lint"
+shell = "tools/refactor-proof/bin/tc-proof architecture --context \"$RUN_DIR/contexts/CHK-006.json\""
+expected = { exit = 0 }
+requirements = ["R-002"]
+acceptance = ["AC-002"]
+
+[[checks]]
+id = "CHK-007"
+phase = "gate"
+shell = "tools/refactor-proof/bin/tc-proof close --context \"$RUN_DIR/contexts/CHK-007.json\""
+expected = { exit = 0 }
+requirements = ["R-005"]
+acceptance = ["AC-005"]

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exact Cargo/libtest inventory. Capture is evidence, never approval."""
+"""Exact cargo-nextest inventory. Capture is evidence, never approval."""
 import argparse
 import hashlib
 import json
@@ -49,7 +49,111 @@ def listed(text):
     return sorted(names)
 
 
+def nextest_listed(text, package_id, kind, target):
+    payload = None
+    for line in reversed(text.splitlines()):
+        try:
+            candidate = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(candidate, dict) and "rust-suites" in candidate:
+            payload = candidate
+            break
+    require(payload is not None, "missing nextest listing JSON")
+    candidates = []
+    for suite in payload["rust-suites"].values():
+        if suite.get("package-id") != package_id or suite.get("kind") != kind:
+            continue
+        binary_id = suite.get("binary-id", "")
+        binary_name = suite.get("binary-name")
+        exact_name = kind == "lib" and binary_name in (target, target.replace("-", "_"))
+        exact_name = exact_name or binary_name == target
+        exact_name = exact_name or binary_id.endswith(f"::{kind}/{target}")
+        if exact_name:
+            candidates.append(suite)
+    require(len(candidates) == 1, "nextest listing target is missing or ambiguous")
+    names = sorted(candidates[0].get("testcases", {}))
+    unique(names, "listed test identity")
+    return names
+
+
+def nextest_ignored(text, package_id, kind, target):
+    payload = None
+    for line in reversed(text.splitlines()):
+        try:
+            candidate = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(candidate, dict) and "rust-suites" in candidate:
+            payload = candidate
+            break
+    require(payload is not None, "missing nextest listing JSON")
+    names = nextest_listed(text, package_id, kind, target)
+    ignored = []
+    for suite in payload["rust-suites"].values():
+        cases = suite.get("testcases", {})
+        if not isinstance(cases, dict):
+            continue
+        for name in names:
+            info = cases.get(name)
+            if isinstance(info, dict) and info.get("ignored"):
+                ignored.append(name)
+    unique(ignored, "ignored listed identity")
+    return ignored
+
+
+def cargo_subcommand(argv):
+    if not argv:
+        return None
+    name = Path(argv[0]).name
+    if name == "rustc":
+        return "rustc"
+    if name != "cargo":
+        return name
+    index = 1
+    if index < len(argv) and argv[index].startswith("+"):
+        index += 1
+    if index >= len(argv):
+        return None
+    if argv[index].startswith("-"):
+        return None
+    return argv[index]
+
+
+def require_nextest_capture(captured):
+    require(captured.get("schema") == 1, "unknown schema")
+    require(captured.get("classification") == "captured-not-approved", "capture is not listing evidence")
+    require(captured.get("commands"), "capture recorded no commands")
+    for command in captured["commands"]:
+        sub = cargo_subcommand(command["argv"])
+        require(sub in {"rustc", "metadata", "nextest", None}, "capture invoked non-nextest cargo " + str(sub))
+        require("test" not in command["argv"] or sub == "nextest", "capture invoked cargo test")
+
+
 def executed(text, names, status_log=None):
+    if status_log is None:
+        events = []
+        for line in text.splitlines():
+            try:
+                candidate = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if (isinstance(candidate, dict) and candidate.get("type") == "test"
+                    and candidate.get("event") in {"ok", "failed", "ignored", "skipped", "leak", "timeout"}):
+                events.append(candidate)
+        if events:
+            results = {}
+            for event in events:
+                name = event.get("name", "")
+                name = name.split("$", 1)[1] if "$" in name else name
+                require(name in names and name not in results, "unknown/duplicate nextest identity")
+                status = event["event"]
+                results[name] = "ok" if status == "ok" else "ignored" if status in {"ignored", "skipped"} else "FAILED"
+            require(set(results) == set(names),
+                    "listed/executed identities differ: missing="
+                    + repr(sorted(set(names) - set(results)))
+                    + " extra=" + repr(sorted(set(results) - set(names))))
+            return results
     results = {}
     if status_log is not None:
         for line in status_log.splitlines():
@@ -65,7 +169,8 @@ def executed(text, names, status_log=None):
         match = re.fullmatch(r"test (.+) \.\.\. (ok|FAILED|ignored)(?:, .*)?", line)
         if match and status_log is None:
             name = match[1]
-            # rustdoc execution appends a mode absent from its --list identity.
+            # Legacy parser compatibility: rustdoc execution appends a mode
+            # absent from its --list identity. Current capture never invokes it.
             if name not in names:
                 name = re.sub(r" - (?:compile fail|should panic)$", "", name)
             require(name in names and name not in results, "unknown/duplicate executed identity")
@@ -90,7 +195,11 @@ def safe_env():
     allowed = ("PATH", "HOME", "TMPDIR", "RUSTUP_HOME", "CARGO_HOME", "RUSTUP_TOOLCHAIN",
                "SYSTEMROOT", "USERPROFILE", "SSL_CERT_FILE", "SSL_CERT_DIR")
     env = {key: os.environ[key] for key in allowed if key in os.environ}
-    env.update({"LC_ALL": "C", "CARGO_TERM_COLOR": "never", "RUST_BACKTRACE": "0"})
+    env.update({"LC_ALL": "C", "CARGO_TERM_COLOR": "never", "RUST_BACKTRACE": "0",
+                "NEXTEST_USER_CONFIG_FILE": "none", "MISE_NO_CONFIG": "1"})
+    cargo_home = env.get("CARGO_HOME")
+    if cargo_home and env.get("PATH"):
+        env["PATH"] = str(Path(cargo_home) / "bin") + os.pathsep + env["PATH"]
     return env
 
 
@@ -188,6 +297,7 @@ def capture(root, profiles, output, execute, toolchain):
     require(not output.resolve().is_relative_to(root.resolve()), "evidence must be outside source tree")
     validate_profiles(profiles)
     env = safe_env()
+    env["NEXTEST_EXPERIMENTAL_LIBTEST_JSON"] = "1"
     commands = []
     cargo = ["cargo"] + (["+" + toolchain] if toolchain else [])
 
@@ -236,13 +346,18 @@ def capture(root, profiles, output, execute, toolchain):
                 for entry in entries:
                     if entry.get("harness") is False:
                         custom.add((kind, entry.get("name", package["name"].replace("-", "_"))))
-            built = run(cargo + ["test", "--locked", "--no-run", "--all-targets",
-                                 "--message-format=json"] + flags)
+            built = run(cargo + ["nextest", "list", "--locked", "--all-targets", "--verbose",
+                                 "--message-format", "json", "--cargo-message-format", "json"] + flags)
             if built.returncode:
-                blocked.append({"profile": profile["id"], "reason": "Cargo test compilation failed"})
+                blocked.append({"profile": profile["id"], "reason": "cargo nextest listing/build failed"})
                 continue
-            artifacts, target_classes, target_blockers = target_inventory(
-                package, profile, [json.loads(line) for line in built.stdout.splitlines()], custom)
+            messages = []
+            for line in built.stdout.splitlines():
+                try:
+                    messages.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+            artifacts, target_classes, target_blockers = target_inventory(package, profile, messages, custom)
             classifications.extend(target_classes)
             blocked.extend(target_blockers)
             for key, artifact in sorted(artifacts.items()):
@@ -250,24 +365,21 @@ def capture(root, profiles, output, execute, toolchain):
                 require(exe.resolve().is_relative_to(Path(scratch).resolve()), "artifact outside isolated build")
                 sha = digest(exe.read_bytes())
                 selector = ["--lib"] if key[0] == "lib" else ["--" + key[0], key[1]]
-                execution_command = cargo + ["test", "--locked"] + flags + selector
-                listing = run(execution_command + ["--", "--list", "--format", "pretty"])
-                require(listing.returncode == 0, "libtest listing failed")
-                names = listed(listing.stdout)
+                execution_command = cargo + ["nextest", "run", "--locked", "--no-fail-fast",
+                                             "--run-ignored", "all", "--message-format",
+                                             "libtest-json-plus", "--show-progress", "none",
+                                             "--status-level", "none", "--final-status-level", "none",
+                                             "--test-threads", "1"] + flags + selector
+                listing = run(cargo + ["nextest", "list", "--locked", "--verbose",
+                                       "--message-format", "json"] + flags + selector)
+                require(listing.returncode == 0, "nextest listing failed")
+                names = nextest_listed(listing.stdout, package["id"], key[0], key[1])
                 statuses = None
                 status_sha256 = None
                 if execute:
-                    # The dedicated libtest status file cannot be interleaved by
-                    # subprocess stdout (which can split pretty result lines).
-                    status_path = Path(scratch) / f"statuses-{index}-{len(records)}.txt"
-                    require(not status_path.exists(), "refuse existing libtest status log")
-                    result = run(execution_command + ["--", "--format", "pretty", "--test-threads=1",
-                                                      "--logfile", str(status_path)])
-                    require(status_path.is_file() and not status_path.is_symlink(),
-                            "missing/unsafe libtest status log")
-                    status_bytes = status_path.read_bytes()
-                    status_sha256 = digest(status_bytes)
-                    statuses = executed(result.stdout, names, status_bytes.decode())
+                    result = run(execution_command)
+                    status_sha256 = digest(result.stdout.encode())
+                    statuses = executed(result.stdout, names)
                     require((result.returncode == 0) == all(v != "FAILED" for v in statuses.values()),
                             "execution exit status inconsistent")
                 require(digest(exe.read_bytes()) == sha, "executable changed during execution")
@@ -280,20 +392,9 @@ def capture(root, profiles, output, execute, toolchain):
                 if not target["doctest"]:
                     continue
                 require(target["kind"] == ["lib"], "unsupported rustdoc target kind")
-                listing = run(cargo + ["test", "--locked", "--doc"] + flags + ["--", "--list"])
-                if listing.returncode:
-                    blocked.append({"profile": profile["id"], "reason": "rustdoc listing failed"})
-                    continue
-                names = listed(listing.stdout)
-                statuses = None
-                if execute:
-                    result = run(cargo + ["test", "--locked", "--doc"] + flags + ["--", "--test-threads=1"])
-                    statuses = executed(result.stdout, names)
-                    require((result.returncode == 0) == all(v != "FAILED" for v in statuses.values()),
-                            "rustdoc exit status inconsistent")
-                records.append({"profile": profile["id"], "package": package["name"],
-                                "kind": "doc", "target": target["name"], "cwd": str(root.resolve()), "runtime_cwd": str(package_cwd), "listed": names,
-                                "executed": statuses})
+                blocked.append({"profile": profile["id"],
+                                "target": ["doc", target["name"]],
+                                "reason": "cargo-nextest 0.9.143 has no doctest runner; explicit adapter required"})
     require(source_fingerprint(root, env) == source, "source changed during capture")
     require(digest((root / "Cargo.lock").read_bytes()) == lock, "lock changed during capture")
     result = {"schema": 1, "classification": "captured-not-approved", "source_sha256": source,
@@ -306,6 +407,62 @@ def capture(root, profiles, output, execute, toolchain):
         json.dump(result, stream, indent=2)
         stream.write("\n")
     return result
+
+
+def bind_listing(captured, required):
+    require_nextest_capture(captured)
+    require(required.get("schema") == 1, "unknown schema")
+    require(required.get("approval") == "pending", "required.json must stay pending until capture is reviewed")
+    require(required["profiles"] == captured["profiles"], "feature profile matrix differs")
+    executed = False
+    targets = []
+    seen = []
+    for row in captured["targets"]:
+        key = (row["profile"], row["package"], row["kind"], row["target"])
+        seen.append(key)
+        unique(row["listed"], "listed test identity")
+        if row.get("executed") is not None:
+            executed = True
+        targets.append({
+            "profile": row["profile"],
+            "package": row["package"],
+            "kind": row["kind"],
+            "target": row["target"],
+            "identities": list(row["listed"]),
+            "ignored": {},
+            **({"empty_reason": "nextest listed zero tests for this compiled target"}
+               if not row["listed"] else {}),
+        })
+    unique(seen, "captured target")
+    listing = {
+        "schema": 1,
+        "classification": "listed-not-approved",
+        "approval": "pending",
+        "executed": executed,
+        "source_sha256": captured["source_sha256"],
+        "lock_sha256": captured["lock_sha256"],
+        "cargo": captured["cargo"],
+        "rustc": captured["rustc"],
+        "profiles": captured["profiles"],
+        "blocked": captured.get("blocked", []),
+        "classifications": captured.get("classifications", []),
+        "targets": [{"profile": t["profile"], "package": t["package"], "kind": t["kind"],
+                     "target": t["target"], "listed": t["identities"]} for t in targets],
+    }
+    bound = dict(required)
+    bound["approval"] = "pending"
+    bound["targets"] = targets
+    for obligation in bound["obligations"]:
+        require(obligation.get("review") in (None, ""), "pending required.json cannot carry reviews")
+        require(obligation.get("destinations") == [], "pending required.json cannot carry destinations")
+    return listing, bound
+
+
+def write_json(path, payload):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w") as stream:
+        json.dump(payload, stream, indent=2)
+        stream.write("\n")
 
 
 def verify(captured, required, catalog):
@@ -328,7 +485,7 @@ def verify(captured, required, catalog):
                 "missing Cargo test runtime cwd")
         if row["kind"] != "doc":
             require(re.fullmatch(r"[0-9a-f]{64}", row.get("status_log_sha256") or "") is not None,
-                    "missing dedicated libtest status attestation")
+                    "missing structured nextest execution attestation")
         unique(target["identities"], "required test identity")
         require(target["identities"] or target.get("empty_reason"), "empty target lacks explicit review")
         require(set(target["identities"]) == set(row["listed"]), "required/listed identities differ")
@@ -365,12 +522,77 @@ def main():
     check.add_argument("--required", type=Path, required=True)
     check.add_argument("--catalog", type=Path, default=Path(__file__).with_name("historical.json"))
     check.add_argument("--root", type=Path, required=True)
+    disc = sub.add_parser("discover")
+    disc.add_argument("--root", type=Path, required=True)
+    disc.add_argument("--output", type=Path, required=True)
+    disc.add_argument("--seed", type=Path)
+    rec_cmd = sub.add_parser("reconcile")
+    rec_cmd.add_argument("--root", type=Path, required=True)
+    rec_cmd.add_argument("--discovery", type=Path, required=True)
+    rec_cmd.add_argument("--required", type=Path, default=Path(__file__).with_name("required.json"))
+    rec_cmd.add_argument("--catalog", type=Path, default=Path(__file__).with_name("historical.json"))
+    rec_cmd.add_argument("--canonical", type=Path, required=True)
+    rec_cmd.add_argument("--output", type=Path, required=True)
+    bind = sub.add_parser("bind-listing")
+    bind.add_argument("--root", type=Path, required=True)
+    bind.add_argument("--capture", type=Path, required=True)
+    bind.add_argument("--required", type=Path, required=True)
+    bind.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     try:
         if args.command == "capture":
             result = capture(args.root.resolve(), json.loads(args.profiles.read_text()),
                              args.output, args.execute, args.toolchain)
             print(f"captured {len(result['targets'])} targets; {len(result['blocked'])} blockers; not approved")
+        elif args.command == "discover":
+            import source_discovery
+            root = args.root.resolve()
+            output = args.output
+            if output.exists():
+                raise Invalid("refuse existing output")
+            in_tree = output.resolve().is_relative_to(root)
+            allowed = (root / "tools/test-inventory").resolve()
+            require(not in_tree or output.resolve().is_relative_to(allowed),
+                    "discovery evidence must be outside source tree or under tools/test-inventory")
+            seed = args.seed.read_text() if args.seed else None
+            if seed is None:
+                default_seed = root / "docs/refactoring-plan/inline-test-source-scope.md"
+                if default_seed.is_file():
+                    seed = default_seed.read_text()
+            result = source_discovery.discover(root, seed)
+            source_discovery.write_discovery(result, output, root)
+            print(f"discovered {len(result['identities'])} identities; {len(result['blockers'])} blockers; not executed")
+        elif args.command == "reconcile":
+            import reconcile as rec
+            root = args.root.resolve()
+            output = args.output
+            in_tree = output.resolve().is_relative_to(root)
+            allowed = (root / "tools/test-inventory").resolve()
+            require(not in_tree or output.resolve().is_relative_to(allowed),
+                    "reconcile evidence must be outside source tree or under tools/test-inventory")
+            result = rec.reconcile(
+                json.loads(args.catalog.read_text()),
+                json.loads(args.discovery.read_text()),
+                rec.load_canonical(args.canonical),
+                json.loads(args.required.read_text()),
+            )
+            rec.write_reconcile(result, output)
+            print(f"reconciled {result['matched']} identities; {result['unresolved']} unresolved; approval pending")
+        elif args.command == "bind-listing":
+            root = args.root.resolve()
+            output = args.output
+            in_tree = output.resolve().is_relative_to(root)
+            allowed = (root / "tools/test-inventory").resolve()
+            require(not in_tree or output.resolve().is_relative_to(allowed),
+                    "listing bind must be outside source tree or under tools/test-inventory")
+            require(args.required.resolve().is_relative_to(allowed),
+                    "required.json bind is limited to tools/test-inventory")
+            captured = json.loads(args.capture.read_text())
+            listing, bound = bind_listing(captured, json.loads(args.required.read_text()))
+            require(bound["approval"] == "pending", "bind-listing cannot approve required.json")
+            write_json(output, listing)
+            write_json(args.required, bound)
+            print(f"bound {len(listing['targets'])} listed targets; approval pending; executed={listing['executed']}")
         else:
             captured = json.loads(args.capture.read_text())
             require(captured["source_sha256"] == source_fingerprint(args.root.resolve(), safe_env()),

@@ -1,5 +1,9 @@
 # Cross-cutting findings from the Slice 6 and Slice 7 plans
 
+> Historical planning evidence. Not current execution authority. Do not replay
+> its commands, branch/pin/model/merge/container instructions. Reconcile this
+> record against the current readiness report and current contracts.
+
 Both plans were produced read-only against the tree. Each item below is a **measured discrepancy** between a recorded number or claim and what the source actually says. They are listed separately from the plans because several affect work already in flight.
 
 ## Counts in `COMPONENT_ARCHITECTURE.md` §16.4 that are wrong
@@ -13,9 +17,9 @@ Both plans were produced read-only against the tree. Each item below is a **meas
 
 `architecture::every_named_test_exists` compares the documented inventory against the compiled list, so each of these fails the gate until corrected.
 
-## §29 is cited eight times and does not exist
+## Historical §29 absence finding — superseded
 
-`COMPONENT_ARCHITECTURE.md:9, 45, 1734, 1815, 1869, 3943, 6211, 6222` all reference "§29 / Adjudication Q"; the document ends at §28.8. `REFACTORING_STATE.md` lists "Record as §29" as an open task. Slice 6 quotes §29's `Slot<GlyphRole>` contract for `RowDecor`/`CellDecor` markers, so the plan depends on a section that is not written. `xtask doc-check`'s §21–§26 range and the inline markers will disagree until it lands.
+The cited absence was true only at the historical review snapshot. `3ed377e3` later added §29 / Adjudication Q, and the current `COMPONENT_ARCHITECTURE.md` contains the section and its `Slot<GlyphRole>` contract. The old `REFACTORING_STATE.md` entry was a historical open item, not a current gap. Do not reopen or restore it.
 
 ## Three live colour collisions in `Theme::junie()` that `rain::dim_buffer` reverse-maps
 
@@ -41,13 +45,13 @@ The last two are silent defects in today's handoff cross-fade, visible only in `
 
 Jackin's virtual clock advances by the **route's** nominal interval (`Route::tick_ms`: 33 ms for intro/outro/handoff/cockpit, 80 ms for Capsule), not by real time or by a uniform token. If the migration re-bases it on `design.motion.tick_ms` or on a wall-clock delta, every `h.ticks(n)` count (~40 sites), `FAILURE_TICKS = 77`, `RUNNING_FRAME = 20`, `OUTRO_FRAME = 150`, every fixture timestamp and the outro elapsed caption all break at once — and `rain::TICK_MS = 33` with `HANDOFF_LEN = 12` means a uniform 80 ms would run the intro at 2.4× the wrong speed.
 
-## A gate the architecture requires that cannot be run
+## Historical missing-gate finding — superseded
 
-§16.3 states that `xtask bless-guard` must run in CI on the committed tree, and it is the mechanism that enforces the change → capture → classify → bless order for every moved baseline. **The subcommand does not exist**: `xtask` dispatches only `doc-check`, `boundary` and `list`. No CI step was added for it, because adding a step for a missing subcommand would make the gate look present while proving nothing. This is a missing implementation, not an unresolved decision, and it needs an owner — the file is `xtask/**`, currently held by another agent.
+At the historical review snapshot, `xtask bless-guard` was absent and the gate could not run. `eeee5046` later added the subcommand and `f28a81e3` hardened it; the current generated CI invokes it in [`.github/workflows/ci-extra-gates.yml`](../../.github/workflows/ci-extra-gates.yml). This finding is retained as history, not a current missing implementation. The generated-workflow migration remains separately unreviewed preparation input.
 
 ## MSRV is now a measured fact
 
-`rust-version = "1.88"` was previously a declared field that nothing checked. The CI rebuild pinned the MSRV leg to the exact `1.88.0` toolchain and verified locally on it that `cargo check --workspace --all-targets --all-features` passes. The claim is now backed by a run rather than by a manifest line.
+`rust-version = "1.88"` was previously a declared field that nothing checked. A historical CI rebuild pinned an MSRV leg to the exact `1.88.0` toolchain and verified locally on it that `cargo check --workspace --all-targets --all-features` passed. The current branch instead pins Rust `1.98.1` with workspace `rust-version = "1.98"`; the historical run does not establish current toolchain acceptance, which remains subject to fresh exact-tree review.
 
 ## §26 items that are not expressible as CI steps
 

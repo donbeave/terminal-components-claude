@@ -4,10 +4,12 @@ members = [
     "crates/tui",
     "crates/tui-testing",
     "xtask",
+    "tools/refactor-proof",
     "apps/showcase",
     "apps/tablepro",
     "apps/jackin-preview",
     "apps/holla",
+    "tests/visual_baseline",
 ]
 default-members = [
     "crates/tui",
@@ -21,12 +23,13 @@ default-members = [
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.88"
+rust-version = "1.98"
 license = "MIT"
 repository = "https://github.com/donbeave/terminal-components-claude"
 
 [workspace.dependencies]
 junie-tui = { path = "crates/tui", default-features = false }
+signal-hook = { version = "=0.3.18", default-features = false }
 junie-tui-testing = { path = "crates/tui-testing" }
 ratatui-core = { version = "0.1.2", default-features = false, features = ["std", "underline-color"] }
 ratatui-crossterm = { version = "0.1.2" } # default = crossterm_0_29 + underline-color

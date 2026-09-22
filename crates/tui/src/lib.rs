@@ -51,7 +51,8 @@ pub use id::{Id, ItemKey, Part, PartRef};
 // runtime
 #[cfg(feature = "crossterm")]
 pub use runtime::session::{
-    DefaultTerminal, TerminalSession, chain_panic_hook, run, run_with_feedback_clock,
+    DefaultTerminal, TerminalColorPolicy, TerminalSession, chain_panic_hook, run,
+    run_with_feedback_clock, run_with_feedback_clock_and_color,
 };
 pub use runtime::{
     ActivationFeedback, ActivationKey, App, ClockError, FeedbackClock, FeedbackClockError, Moment,
@@ -62,7 +63,10 @@ pub use runtime::{
 pub use runtime::{ProjectedFrame, RenderModel};
 // phases
 #[cfg(feature = "testing")]
-pub use ui::StyledQuery;
+pub use ui::{
+    AttributedQuery, StyleProvenance, StyleTimingEntry, StyleTimingGuard, StyleTimingInterval,
+    StyleTimingMode, StyleTimingProbe, StyledQuery, caller_is_library_production,
+};
 pub use ui::{Cx, FrameRead, LayoutFacts, ReferenceState, ReferenceTarget, Ui};
 // events, intents, responses
 pub use event::{Axis, Chord, Input, Key, KeyCode, KeyModifiers, Mouse, MouseKind};

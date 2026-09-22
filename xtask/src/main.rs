@@ -24,6 +24,7 @@ use std::process::{Command, ExitCode};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use regex::Regex;
+use serde::Deserialize;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use walkdir::WalkDir;
@@ -1018,10 +1019,18 @@ fn provenance_dimensions(record: &Value, key: &str) -> Option<(u16, u16)> {
 }
 
 fn capture_path_matches(info: &serde_json::Map<String, Value>, relative: &str) -> bool {
+    if info.get("path").and_then(Value::as_str) != Some(relative) {
+        return false;
+    }
     let expected = root().join(relative);
-    let expected = expected.to_string_lossy();
-    info.get("path").and_then(Value::as_str) == Some(relative)
-        && info.get("resolved_path").and_then(Value::as_str) == Some(expected.as_ref())
+    match info.get("resolved_path").and_then(Value::as_str) {
+        Some(resolved) if resolved == expected.to_string_lossy().as_ref() => true,
+        Some(resolved) => {
+            let resolved_path = Path::new(resolved);
+            resolved_path == expected.as_path() || resolved_path.ends_with(relative)
+        }
+        None => false,
+    }
 }
 
 fn capture_legacy_path_matches(info: &serde_json::Map<String, Value>, relative: &str) -> bool {
@@ -1266,10 +1275,17 @@ fn validate_capture_provenance(
                 "{name}: application stderr is not recorded as empty"
             ));
         }
-        if let Some(stderr_path) = stderr_path
-            && let Err(error) = validate_empty_capture_file(&root().join(stderr_path))
-        {
-            errors.push(format!("{name}: {error}"));
+        if let Some(stderr_path) = stderr_path {
+            let stderr_file = root().join(&stderr_path);
+            if stderr_file.is_file() {
+                if let Err(error) = validate_empty_capture_file(&stderr_file) {
+                    errors.push(format!("{name}: {error}"));
+                }
+            } else if !stderr_path.starts_with("shots/.capture-state/") {
+                errors.push(format!(
+                    "{name}: capture stderr file is missing: {stderr_path}"
+                ));
+            }
         }
     }
 
@@ -2751,6 +2767,11 @@ fn no_deprecated_or_legacy_api_usage() -> Result<(), String> {
                     if allow.contains_key(&key) {
                         continue;
                     }
+                    // ADJ-13/TASK-009: rule 18 is decided on the parsed AST so
+                    // only the exact broker cell is admitted — never by path.
+                    if rule.n == 18 && rule18_broker_exception(&path, ln, &text) {
+                        continue;
+                    }
                     hits.push(format!(
                         "rule {} ({}): {key}: {}",
                         rule.n,
@@ -2767,11 +2788,1212 @@ fn no_deprecated_or_legacy_api_usage() -> Result<(), String> {
             allow.len()
         ));
     }
+    // Rule 18 globals the spelling scan cannot see: bare `Mutex`/`Atomic`
+    // statics, alias- or rename-wrapped cells, nested statics and
+    // unexpandable state macros. Evasion hits are never allow-listable.
+    if let Some(rule) = RULES.iter().find(|rule| rule.n == 18) {
+        hits.extend(rule18_global_evasion_hits(&roots, rule.allowed));
+    }
     if hits.is_empty() {
         Ok(())
     } else {
         Err(hits.join("\n"))
     }
+}
+
+// ─────────── rule 18 (ADJ-13): the exact broker exception ───────────
+//
+// The forbidden-pattern regex cannot tell the one audited broker cell from a
+// new global, so rule-18 hits are adjudicated against the parsed AST: only
+// the exact `SIGNAL_BROKER` static — file, effective configuration,
+// visibility, type, initializer, imports and owner struct — is admitted.
+// Bare `Mutex`/`Atomic` statics, alias- or rename-wrapped cells, nested
+// statics and unexpandable state macros never reach the regex spelling, so a
+// second AST pass (`rule18_global_evasion_hits`) resolves and rejects them.
+// Malformed or unresolvable source fails closed. There is no file-wide
+// allowlist: every other hit in every file stays a violation.
+
+/// The only file that may hold the broker cell.
+const RULE18_BROKER_PATH: &str = "crates/tui/src/runtime/session.rs";
+/// The only permitted mutable core global.
+const RULE18_BROKER_NAME: &str = "SIGNAL_BROKER";
+/// The only effective configuration of the broker cell (operand order free).
+const RULE18_BROKER_CFGS: &[&str] = &[
+    "all(unix,feature=\"crossterm\")",
+    "all(feature=\"crossterm\",unix)",
+];
+/// Sync names a broker-file `use` may bind (from `std`/`core` sync only).
+const RULE18_SYNC_USES: &[&str] = &[
+    "Arc",
+    "Mutex",
+    "MutexGuard",
+    "OnceLock",
+    "AtomicBool",
+    "Ordering",
+];
+/// Type roots that make a process global mutable or lazily shared.
+const RULE18_FORBIDDEN_ROOTS: &[&str] = &[
+    "OnceLock",
+    "LazyLock",
+    "Mutex",
+    "RwLock",
+    "AtomicBool",
+    "AtomicI8",
+    "AtomicI16",
+    "AtomicI32",
+    "AtomicI64",
+    "AtomicI128",
+    "AtomicU8",
+    "AtomicU16",
+    "AtomicU32",
+    "AtomicU64",
+    "AtomicU128",
+    "AtomicUsize",
+    "AtomicIsize",
+    "AtomicPtr",
+    "Cell",
+    "RefCell",
+    "UnsafeCell",
+    "SyncUnsafeCell",
+];
+
+/// Normalized structural shape of a type, e.g. `OnceLock<Mutex<SignalBroker>>`.
+/// Anything that is not a plain path with plain generic args fails closed.
+fn rule18_type_shape(ty: &syn::Type) -> Option<String> {
+    let syn::Type::Path(tp) = ty else {
+        return None;
+    };
+    if tp.qself.is_some() {
+        return None;
+    }
+    let mut out = String::new();
+    for (i, seg) in tp.path.segments.iter().enumerate() {
+        if i > 0 {
+            out.push_str("::");
+        }
+        out.push_str(&seg.ident.to_string());
+        match &seg.arguments {
+            syn::PathArguments::None => {}
+            syn::PathArguments::AngleBracketed(args) => {
+                out.push('<');
+                for (j, arg) in args.args.iter().enumerate() {
+                    if j > 0 {
+                        out.push(',');
+                    }
+                    let syn::GenericArgument::Type(inner) = arg else {
+                        return None;
+                    };
+                    out.push_str(&rule18_type_shape(inner)?);
+                }
+                out.push('>');
+            }
+            syn::PathArguments::Parenthesized(_) => return None,
+        }
+    }
+    Some(out)
+}
+
+/// Normalized `cfg(...)` predicate strings from every `cfg` attribute.
+fn rule18_cfg_predicates(attrs: &[syn::Attribute]) -> Vec<String> {
+    let mut out = Vec::new();
+    for attr in attrs {
+        if !attr.path().is_ident("cfg") {
+            continue;
+        }
+        let syn::Meta::List(list) = &attr.meta else {
+            continue;
+        };
+        out.push(
+            list.tokens
+                .to_string()
+                .chars()
+                .filter(|c| !c.is_whitespace())
+                .collect(),
+        );
+    }
+    out
+}
+
+/// Whether attributes select test compilation (`cfg(test)` in any nesting).
+/// String literals are stripped first so `feature = "latest"` cannot match.
+fn rule18_is_test_item(attrs: &[syn::Attribute]) -> bool {
+    rule18_cfg_predicates(attrs).iter().any(|pred| {
+        let mut code = String::with_capacity(pred.len());
+        let mut in_string = false;
+        for c in pred.chars() {
+            match c {
+                '"' => in_string = !in_string,
+                _ if !in_string => code.push(c),
+                _ => {}
+            }
+        }
+        code.split(|c: char| !c.is_alphanumeric() && c != '_')
+            .any(|word| word == "test")
+    })
+}
+
+/// Whether the shape names a forbidden shared-state root.
+fn rule18_shape_is_forbidden(shape: &str) -> bool {
+    shape
+        .split(|c: char| !c.is_alphanumeric() && c != '_')
+        .any(|word| RULE18_FORBIDDEN_ROOTS.contains(&word))
+}
+
+/// `(imported name, full source path, renamed)` entries of a `use` item.
+/// Globs are unresolvable and fail closed. A leading `::` is semantically
+/// irrelevant and ignored.
+fn rule18_use_walk(tree: &syn::UseTree, base: &str, out: &mut Vec<(String, String, bool)>) -> bool {
+    match tree {
+        syn::UseTree::Path(path) => {
+            let here = if base.is_empty() {
+                path.ident.to_string()
+            } else {
+                format!("{base}::{}", path.ident)
+            };
+            rule18_use_walk(&path.tree, &here, out)
+        }
+        syn::UseTree::Name(name) => {
+            let full = if base.is_empty() {
+                name.ident.to_string()
+            } else {
+                format!("{base}::{}", name.ident)
+            };
+            out.push((name.ident.to_string(), full, false));
+            true
+        }
+        syn::UseTree::Rename(rename) => {
+            let full = if base.is_empty() {
+                rename.ident.to_string()
+            } else {
+                format!("{base}::{}", rename.ident)
+            };
+            out.push((rename.rename.to_string(), full, true));
+            true
+        }
+        syn::UseTree::Glob(_) => false,
+        syn::UseTree::Group(group) => group
+            .items
+            .iter()
+            .all(|tree| rule18_use_walk(tree, base, out)),
+    }
+}
+
+fn rule18_use_entries(item: &syn::ItemUse) -> Option<Vec<(String, String, bool)>> {
+    let mut out = Vec::new();
+    rule18_use_walk(&item.tree, "", &mut out).then_some(out)
+}
+
+/// Substitute single-segment aliases/renames in a shape (transitive, capped).
+fn rule18_resolve_shape(shape: &str, substitutions: &BTreeMap<String, String>) -> String {
+    let mut current = shape.to_owned();
+    for _ in 0..16 {
+        let mut next = String::with_capacity(current.len());
+        let mut word = String::new();
+        let mut changed = false;
+        for c in current.chars().chain(['\0']) {
+            if c.is_alphanumeric() || c == '_' {
+                word.push(c);
+            } else {
+                if let Some(expansion) = substitutions.get(&word) {
+                    next.push_str(expansion);
+                    changed = true;
+                } else {
+                    next.push_str(&word);
+                }
+                word.clear();
+                if c != '\0' {
+                    next.push(c);
+                }
+            }
+        }
+        current = next;
+        if !changed {
+            break;
+        }
+    }
+    current
+}
+
+/// Non-test facts of one file for broker and evasion decisions.
+#[derive(Default)]
+struct Rule18Facts {
+    /// Every imported name and its source (plain and renamed).
+    uses: Vec<(String, String)>,
+    /// `as` renames only: imported name and its source.
+    renames: Vec<(String, String)>,
+    /// Type aliases: name and normalized shape (`""` when unresolvable).
+    aliases: BTreeMap<String, String>,
+    /// Local structs: private flag and `(field, shape)` pairs.
+    structs: BTreeMap<String, (bool, Vec<(String, String)>)>,
+}
+
+impl Rule18Facts {
+    /// Alias and rename substitutions for static-type resolution. Aliases
+    /// win ties; the combination is deterministic per file.
+    fn substitutions(&self) -> BTreeMap<String, String> {
+        let mut map = BTreeMap::new();
+        for (name, src) in &self.renames {
+            map.insert(name.clone(), src.clone());
+        }
+        for (name, shape) in &self.aliases {
+            map.insert(name.clone(), shape.clone());
+        }
+        map
+    }
+}
+
+fn rule18_collect_facts(items: &[syn::Item], in_test: bool, facts: &mut Rule18Facts) {
+    for item in items {
+        match item {
+            syn::Item::Mod(item) => {
+                let test = in_test || rule18_is_test_item(&item.attrs);
+                if let Some((_, inner)) = &item.content {
+                    rule18_collect_facts(inner, test, facts);
+                }
+            }
+            syn::Item::Use(item) if !in_test && !rule18_is_test_item(&item.attrs) => {
+                if let Some(entries) = rule18_use_entries(item) {
+                    for (name, src, renamed) in entries {
+                        if renamed {
+                            facts.renames.push((name.clone(), src.clone()));
+                        }
+                        facts.uses.push((name, src));
+                    }
+                }
+            }
+            syn::Item::Type(item) if !in_test && !rule18_is_test_item(&item.attrs) => {
+                facts.insert_alias(&item.ident.to_string(), &item.ty);
+            }
+            syn::Item::Struct(item) if !in_test && !rule18_is_test_item(&item.attrs) => {
+                let syn::Fields::Named(fields) = &item.fields else {
+                    continue;
+                };
+                let mut collected = Vec::new();
+                for field in &fields.named {
+                    let name = field
+                        .ident
+                        .as_ref()
+                        .map(ToString::to_string)
+                        .unwrap_or_default();
+                    collected.push((name, rule18_type_shape(&field.ty).unwrap_or_default()));
+                }
+                facts.structs.insert(
+                    item.ident.to_string(),
+                    (matches!(item.vis, syn::Visibility::Inherited), collected),
+                );
+            }
+            _ => {}
+        }
+    }
+}
+
+impl Rule18Facts {
+    fn insert_alias(&mut self, name: &str, ty: &syn::Type) {
+        self.aliases
+            .insert(name.to_owned(), rule18_type_shape(ty).unwrap_or_default());
+    }
+}
+
+/// Whether the initializer is exactly `OnceLock::new()` (optionally
+/// `std`/`core`-qualified), with no arguments or turbofish.
+fn rule18_is_broker_init(expr: &syn::Expr) -> bool {
+    let syn::Expr::Call(call) = expr else {
+        return false;
+    };
+    if !call.args.is_empty() {
+        return false;
+    }
+    let syn::Expr::Path(func) = call.func.as_ref() else {
+        return false;
+    };
+    if func.qself.is_some() {
+        return false;
+    }
+    let names: Vec<String> = func
+        .path
+        .segments
+        .iter()
+        .map(|segment| segment.ident.to_string())
+        .collect();
+    let names: Vec<&str> = names.iter().map(String::as_str).collect();
+    if !matches!(
+        names.as_slice(),
+        ["OnceLock", "new"]
+            | ["std", "sync", "OnceLock", "new"]
+            | ["core", "sync", "OnceLock", "new"]
+    ) {
+        return false;
+    }
+    func.path
+        .segments
+        .iter()
+        .all(|segment| matches!(segment.arguments, syn::PathArguments::None))
+}
+
+/// Whether a struct matches `(private, exact named fields)` irrespective of
+/// field order. Unresolvable shapes never match.
+fn rule18_struct_is_exact(facts: &Rule18Facts, name: &str, want: &[(&str, &str)]) -> bool {
+    let Some((private, fields)) = facts.structs.get(name) else {
+        return false;
+    };
+    if !private || fields.len() != want.len() {
+        return false;
+    }
+    let mut got: Vec<(&str, &str)> = fields
+        .iter()
+        .map(|(name, shape)| (name.as_str(), shape.as_str()))
+        .collect();
+    got.sort_unstable();
+    let mut want = want.to_vec();
+    want.sort_unstable();
+    got == want
+}
+
+/// Whether the static is the exact admitted broker cell: name, file,
+/// effective configuration, private visibility, exact type, exact
+/// initializer, `std`/`core` sync imports bound exactly once, a local
+/// private owner struct with exactly the specified fields, and no import
+/// shadowing the owner names.
+fn rule18_is_exact_broker(
+    path: &str,
+    item: &syn::ItemStatic,
+    cfgs: &[String],
+    facts: &Rule18Facts,
+) -> bool {
+    if path != RULE18_BROKER_PATH || item.ident != RULE18_BROKER_NAME {
+        return false;
+    }
+    if !matches!(item.vis, syn::Visibility::Inherited) {
+        return false;
+    }
+    if !matches!(item.mutability, syn::StaticMutability::None) {
+        return false;
+    }
+    if rule18_type_shape(&item.ty).as_deref() != Some("OnceLock<Mutex<SignalBroker>>") {
+        return false;
+    }
+    if !rule18_is_broker_init(&item.expr) {
+        return false;
+    }
+    if cfgs.len() != 1 || !RULE18_BROKER_CFGS.contains(&cfgs[0].as_str()) {
+        return false;
+    }
+    if item
+        .attrs
+        .iter()
+        .any(|attr| !(attr.path().is_ident("cfg") || attr.path().is_ident("doc")))
+    {
+        return false;
+    }
+    let mut oncelock = Vec::new();
+    let mut mutex = Vec::new();
+    for (name, src) in &facts.uses {
+        if name == "SignalBroker" || name == "InstallPhase" {
+            return false;
+        }
+        if name == "OnceLock" {
+            oncelock.push(src.as_str());
+        }
+        if name == "Mutex" {
+            mutex.push(src.as_str());
+        }
+    }
+    if oncelock.as_slice() != ["std::sync::OnceLock"]
+        && oncelock.as_slice() != ["core::sync::OnceLock"]
+    {
+        return false;
+    }
+    if mutex.as_slice() != ["std::sync::Mutex"] && mutex.as_slice() != ["core::sync::Mutex"] {
+        return false;
+    }
+    rule18_struct_is_exact(
+        facts,
+        "SignalBroker",
+        &[
+            ("inactive", "Arc<AtomicBool>"),
+            ("pending", "Arc<AtomicBool>"),
+            ("lease", "bool"),
+            ("install", "InstallPhase"),
+        ],
+    ) && rule18_struct_is_exact(
+        facts,
+        "InstallPhase",
+        &[
+            ("first", "Option<signal_hook::SigId>"),
+            ("second", "Option<signal_hook::SigId>"),
+        ],
+    )
+}
+
+/// Best-effort source line of an item for diagnostics. Location only: the
+/// verdict always comes from the AST, never from this spelling search.
+fn rule18_locate(text: &str, kind: &str, ident: &str) -> Option<usize> {
+    for (index, line) in text.lines().enumerate() {
+        if kind == "macro" {
+            if line.contains(&format!("{ident}!")) {
+                return Some(index + 1);
+            }
+            continue;
+        }
+        let code = code_line(line);
+        if kind == "use" {
+            let words: Vec<&str> = code
+                .split(|c: char| !c.is_alphanumeric() && c != '_')
+                .filter(|word| !word.is_empty())
+                .collect();
+            if words.first() == Some(&"use") && words.contains(&ident) {
+                return Some(index + 1);
+            }
+            continue;
+        }
+        let words: Vec<&str> = code
+            .split(|c: char| !c.is_alphanumeric() && c != '_')
+            .filter(|word| !word.is_empty())
+            .collect();
+        if words
+            .windows(2)
+            .any(|window| window[0] == kind && window[1] == ident)
+        {
+            return Some(index + 1);
+        }
+    }
+    None
+}
+
+fn rule18_at(path: &str, text: &str, kind: &str, ident: &str) -> String {
+    rule18_locate(text, kind, ident)
+        .map_or_else(|| path.to_owned(), |line| format!("{path}:{line}"))
+}
+
+/// Whether a `use` hit binds only sync primitives from `std`/`core` sync,
+/// with no duplicates, renames away, or unrelated names.
+fn rule18_admit_use(item: &syn::ItemUse) -> bool {
+    let Some(entries) = rule18_use_entries(item) else {
+        return false;
+    };
+    if entries.is_empty() {
+        return false;
+    }
+    let mut seen = BTreeSet::new();
+    for (name, src, _) in &entries {
+        if !seen.insert(name.clone()) {
+            return false;
+        }
+        if !RULE18_SYNC_USES.contains(&name.as_str()) {
+            return false;
+        }
+        let ok = match name.as_str() {
+            "AtomicBool" | "Ordering" => {
+                src == "std::sync::atomic::AtomicBool"
+                    || src == "std::sync::atomic::Ordering"
+                    || src == "core::sync::atomic::AtomicBool"
+                    || src == "core::sync::atomic::Ordering"
+            }
+            _ => src == &format!("std::sync::{name}") || src == &format!("core::sync::{name}"),
+        };
+        if !ok {
+            return false;
+        }
+    }
+    true
+}
+
+/// Identifier words of macro input with string literals stripped, so a
+/// message like `"static"` cannot accuse an innocent macro. Lifetime names
+/// (`'static`) are skipped: only storage declarations count.
+fn rule18_macro_words(tokens: &str) -> Vec<String> {
+    let mut code = String::with_capacity(tokens.len());
+    let mut in_string = false;
+    let mut escaped = false;
+    let mut chars = tokens.chars().peekable();
+    while let Some(c) = chars.next() {
+        if in_string {
+            if escaped {
+                escaped = false;
+            } else if c == '\\' {
+                escaped = true;
+            } else if c == '"' {
+                in_string = false;
+            }
+            continue;
+        }
+        if c == '"' {
+            in_string = true;
+        } else if c == '\'' {
+            // Skip a lifetime name (`'static`, `'a`); a lone quote (char
+            // literal) skips its content the same harmless way.
+            for next in chars.by_ref() {
+                if !(next.is_alphanumeric() || next == '_') {
+                    code.push(next);
+                    break;
+                }
+            }
+        } else {
+            code.push(c);
+        }
+    }
+    code.split(|c: char| !c.is_alphanumeric() && c != '_')
+        .filter(|word| !word.is_empty())
+        .map(str::to_owned)
+        .collect()
+}
+
+/// Whether a macro invocation can create process-global state: `thread_local`
+/// itself, or any macro whose input names `static` storage. Unexpandable
+/// definitions fail closed.
+fn rule18_macro_is_stateful(mac: &syn::Macro) -> bool {
+    if mac
+        .path
+        .segments
+        .last()
+        .is_some_and(|segment| segment.ident == "thread_local")
+    {
+        return true;
+    }
+    rule18_macro_words(&mac.tokens.to_string())
+        .iter()
+        .any(|word| word == "static")
+}
+
+/// Whether a `&` reference is a `&'static mut` borrow: the only reference
+/// form the rule-18 spelling can hit, and never legitimate here.
+fn rule18_is_static_mut_ref(ty: &syn::TypeReference) -> bool {
+    ty.mutability.is_some()
+        && ty
+            .lifetime
+            .as_ref()
+            .is_some_and(|lifetime| lifetime.ident == "static")
+}
+
+/// Whether a non-static type position offends: a non-broker `OnceLock`, any
+/// `LazyLock`, or a `&'static mut` borrow. Bare `Mutex`/`Atomic` spellings
+/// are invisible to the regex and surface through static resolution instead.
+fn rule18_type_use_offense(ty: &syn::Type) -> bool {
+    match ty {
+        syn::Type::Path(tp) => {
+            if tp.qself.is_none()
+                && let Some(last) = tp.path.segments.last()
+            {
+                let name = last.ident.to_string();
+                if name == "LazyLock" {
+                    return true;
+                }
+                if name == "OnceLock"
+                    && rule18_type_shape(ty).as_deref() != Some("OnceLock<Mutex<SignalBroker>>")
+                {
+                    return true;
+                }
+            }
+            tp.path.segments.iter().any(|seg| {
+                if let syn::PathArguments::AngleBracketed(args) = &seg.arguments {
+                    args.args.iter().any(|arg| {
+                        matches!(arg, syn::GenericArgument::Type(inner)
+                            if rule18_type_use_offense(inner))
+                    })
+                } else {
+                    false
+                }
+            })
+        }
+        syn::Type::Reference(inner) => {
+            rule18_is_static_mut_ref(inner) || rule18_type_use_offense(&inner.elem)
+        }
+        syn::Type::Ptr(inner) => rule18_type_use_offense(&inner.elem),
+        syn::Type::Array(inner) => rule18_type_use_offense(&inner.elem),
+        syn::Type::Slice(inner) => rule18_type_use_offense(&inner.elem),
+        syn::Type::Tuple(inner) => inner.elems.iter().any(rule18_type_use_offense),
+        syn::Type::Paren(inner) => rule18_type_use_offense(&inner.elem),
+        syn::Type::Group(inner) => rule18_type_use_offense(&inner.elem),
+        _ => false,
+    }
+}
+
+/// Body walk for function adjudication and evasion: nested statics are
+/// process globals wherever they hide, and state macros cannot be expanded.
+#[derive(Default)]
+struct Rule18BodyWalk {
+    nested_static: bool,
+    state_macro: bool,
+    type_offense: bool,
+}
+
+impl<'ast> syn::visit::Visit<'ast> for Rule18BodyWalk {
+    fn visit_item_static(&mut self, _: &'ast syn::ItemStatic) {
+        self.nested_static = true;
+    }
+
+    fn visit_macro(&mut self, mac: &'ast syn::Macro) {
+        if rule18_macro_is_stateful(mac) {
+            self.state_macro = true;
+        }
+    }
+
+    fn visit_type(&mut self, ty: &'ast syn::Type) {
+        if rule18_type_use_offense(ty) {
+            self.type_offense = true;
+        }
+        syn::visit::visit_type(self, ty);
+    }
+}
+
+/// Whether a signature mentions no offending type.
+fn rule18_sig_ok(sig: &syn::Signature) -> bool {
+    for input in &sig.inputs {
+        if let syn::FnArg::Typed(typed) = input
+            && rule18_type_use_offense(&typed.ty)
+        {
+            return false;
+        }
+    }
+    if let syn::ReturnType::Type(_, ty) = &sig.output
+        && rule18_type_use_offense(ty)
+    {
+        return false;
+    }
+    true
+}
+
+/// Whether a function merely uses the broker cell type: no nested statics,
+/// no state macros, and no offending type in signature or body. Functions
+/// cannot declare process globals except through the rejected forms, so
+/// expression positions need no verdict.
+fn rule18_admit_sig_block(sig: &syn::Signature, block: &syn::Block) -> bool {
+    let mut walk = Rule18BodyWalk::default();
+    syn::visit::visit_block(&mut walk, block);
+    if walk.nested_static || walk.state_macro || walk.type_offense {
+        return false;
+    }
+    rule18_sig_ok(sig)
+}
+
+/// Whether a `use` item mentions `OnceLock`/`LazyLock`: only such imports
+/// can produce a rule-18 hit, and only they need a purity verdict.
+fn rule18_use_mentions_cell(entries: &[(String, String, bool)]) -> bool {
+    entries.iter().any(|(name, src, _)| {
+        [name.as_str(), src.as_str()].iter().any(|text| {
+            text.split("::")
+                .any(|word| word == "OnceLock" || word == "LazyLock")
+        })
+    })
+}
+
+/// Whether the rule-18 hit is covered by the exact broker exception. The
+/// verdict is file-wide but never a path allowlist: the whole file is
+/// certified construct by construct, so any hit in a certified file is by
+/// construction one of the admitted shapes. Only the broker file is
+/// eligible, and malformed source fails closed.
+fn rule18_broker_exception(path: &str, lineno: usize, text: &str) -> bool {
+    let _ = lineno;
+    path == RULE18_BROKER_PATH && rule18_scan_file(path, text).is_empty()
+}
+
+/// Whether a resolved shape reaches forbidden state through local struct
+/// fields (transitive, capped). Unknown and foreign types are out of AST
+/// reach and stay the type checker's business.
+fn rule18_struct_expansion_forbidden(shape: &str, facts: &Rule18Facts) -> bool {
+    let substitutions = facts.substitutions();
+    let mut stack: Vec<String> = shape
+        .split(|c: char| !c.is_alphanumeric() && c != '_')
+        .filter(|word| facts.structs.contains_key(*word))
+        .map(str::to_owned)
+        .collect();
+    let mut seen = BTreeSet::new();
+    while let Some(name) = stack.pop() {
+        if !seen.insert(name.clone()) {
+            continue;
+        }
+        if seen.len() > 32 {
+            return true;
+        }
+        let Some((_, fields)) = facts.structs.get(&name) else {
+            continue;
+        };
+        for (_, field_shape) in fields {
+            let resolved = rule18_resolve_shape(field_shape, &substitutions);
+            if rule18_shape_is_forbidden(&resolved) {
+                return true;
+            }
+            for word in resolved.split(|c: char| !c.is_alphanumeric() && c != '_') {
+                if facts.structs.contains_key(word) {
+                    stack.push(word.to_owned());
+                }
+            }
+        }
+    }
+    false
+}
+
+/// Evaluate one non-test static: `static mut` is always a violation, the
+/// broker name is reserved for the exact cell, and any other static
+/// resolving to shared state is a violation.
+fn rule18_eval_static(
+    path: &str,
+    text: &str,
+    item: &syn::ItemStatic,
+    cfgs: &[String],
+    facts: &Rule18Facts,
+    hits: &mut Vec<String>,
+) {
+    let name = item.ident.to_string();
+    let at = rule18_at(path, text, "static", &name);
+    if matches!(item.mutability, syn::StaticMutability::Mut(_)) {
+        hits.push(format!(
+            "rule 18 (no process-global state): {at}: \
+             mutable process-global `{name}` is never admitted"
+        ));
+        return;
+    }
+    if name == RULE18_BROKER_NAME {
+        if !rule18_is_exact_broker(path, item, cfgs, facts) {
+            hits.push(format!(
+                "rule 18 (no process-global state): {at}: \
+                 SIGNAL_BROKER is not the exact admitted cell"
+            ));
+        }
+        return;
+    }
+    let shape = rule18_type_shape(&item.ty).unwrap_or_default();
+    let resolved = rule18_resolve_shape(&shape, &facts.substitutions());
+    if rule18_shape_is_forbidden(&resolved) || rule18_struct_expansion_forbidden(&resolved, facts) {
+        hits.push(format!(
+            "rule 18 (no process-global state): {at}: \
+             second process-global `{name}` resolves to shared state `{resolved}`"
+        ));
+    }
+}
+
+/// Evaluate one function body for nested statics and state macros.
+fn rule18_eval_body(
+    path: &str,
+    text: &str,
+    name: &str,
+    block: &syn::Block,
+    hits: &mut Vec<String>,
+) {
+    struct Visitor<'a> {
+        statics: &'a mut Vec<String>,
+        macros: &'a mut Vec<String>,
+    }
+    impl<'ast> syn::visit::Visit<'ast> for Visitor<'_> {
+        fn visit_item_static(&mut self, item: &'ast syn::ItemStatic) {
+            self.statics.push(item.ident.to_string());
+        }
+        fn visit_macro(&mut self, mac: &'ast syn::Macro) {
+            if rule18_macro_is_stateful(mac) {
+                let name = mac
+                    .path
+                    .segments
+                    .last()
+                    .map(|segment| segment.ident.to_string())
+                    .unwrap_or_else(|| "macro".to_owned());
+                self.macros.push(name);
+            }
+        }
+    }
+    let mut statics = Vec::new();
+    let mut macros = Vec::new();
+    syn::visit::visit_block(
+        &mut Visitor {
+            statics: &mut statics,
+            macros: &mut macros,
+        },
+        block,
+    );
+    for nested in statics {
+        hits.push(format!(
+            "rule 18 (no process-global state): {}: \
+             nested process-global `{nested}` in `{name}` is never the admitted cell",
+            rule18_at(path, text, "static", &nested)
+        ));
+    }
+    for invoked in macros {
+        hits.push(format!(
+            "rule 18 (no process-global state): {}: \
+             unexpandable state macro `{invoked}` in `{name}` fails closed",
+            rule18_at(path, text, "macro", &invoked)
+        ));
+    }
+}
+
+/// Evaluate one function: body first for precise nested messages, then the
+/// signature-and-body admission rule.
+fn rule18_eval_fn(
+    path: &str,
+    text: &str,
+    name: &str,
+    sig: &syn::Signature,
+    block: &syn::Block,
+    hits: &mut Vec<String>,
+) {
+    let before = hits.len();
+    rule18_eval_body(path, text, name, block, hits);
+    if hits.len() != before {
+        return;
+    }
+    if !rule18_admit_sig_block(sig, block) {
+        hits.push(format!(
+            "rule 18 (no process-global state): {}: \
+             function `{name}` uses process-global spellings outside the broker cell",
+            rule18_at(path, text, "fn", name)
+        ));
+    }
+}
+
+/// Evaluate every field type of a struct/enum/union for offending spellings.
+fn rule18_eval_fields(
+    path: &str,
+    text: &str,
+    kind: &str,
+    owner: &str,
+    fields: &syn::Fields,
+    hits: &mut Vec<String>,
+) {
+    let list: Vec<&syn::Field> = match fields {
+        syn::Fields::Named(fields) => fields.named.iter().collect(),
+        syn::Fields::Unnamed(fields) => fields.unnamed.iter().collect(),
+        syn::Fields::Unit => Vec::new(),
+    };
+    for (index, field) in list.iter().enumerate() {
+        if rule18_type_use_offense(&field.ty) {
+            let name = field
+                .ident
+                .as_ref()
+                .map(ToString::to_string)
+                .unwrap_or_else(|| format!("{index}"));
+            hits.push(format!(
+                "rule 18 (no process-global state): {}: \
+                 {kind} `{owner}` field `{name}` uses process-global spellings \
+                 outside the broker cell",
+                rule18_at(path, text, kind, owner)
+            ));
+        }
+    }
+}
+
+fn rule18_eval_file(
+    path: &str,
+    text: &str,
+    items: &[syn::Item],
+    cfgs: &mut Vec<String>,
+    facts: &Rule18Facts,
+    hits: &mut Vec<String>,
+) {
+    for item in items {
+        match item {
+            syn::Item::Mod(item) => {
+                if rule18_is_test_item(&item.attrs) {
+                    continue;
+                }
+                let before = cfgs.len();
+                cfgs.extend(rule18_cfg_predicates(&item.attrs));
+                if let Some((_, inner)) = &item.content {
+                    rule18_eval_file(path, text, inner, cfgs, facts, hits);
+                }
+                cfgs.truncate(before);
+            }
+            syn::Item::Static(item) => {
+                if rule18_is_test_item(&item.attrs) {
+                    continue;
+                }
+                let mut all = cfgs.clone();
+                all.extend(rule18_cfg_predicates(&item.attrs));
+                rule18_eval_static(path, text, item, &all, facts, hits);
+            }
+            syn::Item::Const(item) => {
+                if rule18_is_test_item(&item.attrs) {
+                    continue;
+                }
+                if rule18_type_use_offense(&item.ty) {
+                    let name = item.ident.to_string();
+                    hits.push(format!(
+                        "rule 18 (no process-global state): {}: \
+                         const `{name}` uses process-global spellings outside the broker cell",
+                        rule18_at(path, text, "const", &name)
+                    ));
+                }
+            }
+            syn::Item::Type(item) => {
+                if rule18_is_test_item(&item.attrs) {
+                    continue;
+                }
+                if rule18_type_use_offense(&item.ty) {
+                    let name = item.ident.to_string();
+                    hits.push(format!(
+                        "rule 18 (no process-global state): {}: \
+                         alias `{name}` wraps process-global spellings outside the broker cell",
+                        rule18_at(path, text, "type", &name)
+                    ));
+                }
+            }
+            syn::Item::Use(item) => {
+                if rule18_is_test_item(&item.attrs) {
+                    continue;
+                }
+                if let Some(entries) = rule18_use_entries(item) {
+                    if rule18_use_mentions_cell(&entries) && !rule18_admit_use(item) {
+                        let name = entries
+                            .first()
+                            .map(|entry| entry.0.clone())
+                            .unwrap_or_else(|| "use".to_owned());
+                        hits.push(format!(
+                            "rule 18 (no process-global state): {}: \
+                             import `{name}` binds process-global spellings outside std/core sync",
+                            rule18_at(path, text, "use", &name)
+                        ));
+                    }
+                }
+            }
+            syn::Item::Fn(item) => {
+                if rule18_is_test_item(&item.attrs) {
+                    continue;
+                }
+                rule18_eval_fn(
+                    path,
+                    text,
+                    &item.sig.ident.to_string(),
+                    &item.sig,
+                    &item.block,
+                    hits,
+                );
+            }
+            syn::Item::Struct(item) => {
+                if rule18_is_test_item(&item.attrs) {
+                    continue;
+                }
+                rule18_eval_fields(
+                    path,
+                    text,
+                    "struct",
+                    &item.ident.to_string(),
+                    &item.fields,
+                    hits,
+                );
+            }
+            syn::Item::Enum(item) => {
+                if rule18_is_test_item(&item.attrs) {
+                    continue;
+                }
+                let owner = item.ident.to_string();
+                for variant in &item.variants {
+                    rule18_eval_fields(
+                        path,
+                        text,
+                        "enum",
+                        &format!("{owner}::{}", variant.ident),
+                        &variant.fields,
+                        hits,
+                    );
+                }
+            }
+            syn::Item::Union(item) => {
+                if rule18_is_test_item(&item.attrs) {
+                    continue;
+                }
+                rule18_eval_fields(
+                    path,
+                    text,
+                    "union",
+                    &item.ident.to_string(),
+                    &syn::Fields::Named(item.fields.clone()),
+                    hits,
+                );
+            }
+            syn::Item::Impl(item) => {
+                if rule18_is_test_item(&item.attrs) {
+                    continue;
+                }
+                for inner in &item.items {
+                    match inner {
+                        syn::ImplItem::Fn(func) => {
+                            if rule18_is_test_item(&func.attrs) {
+                                continue;
+                            }
+                            rule18_eval_fn(
+                                path,
+                                text,
+                                &func.sig.ident.to_string(),
+                                &func.sig,
+                                &func.block,
+                                hits,
+                            );
+                        }
+                        syn::ImplItem::Const(item) => {
+                            if rule18_is_test_item(&item.attrs) {
+                                continue;
+                            }
+                            if rule18_type_use_offense(&item.ty) {
+                                let name = item.ident.to_string();
+                                hits.push(format!(
+                                    "rule 18 (no process-global state): {}: \
+                                     const `{name}` uses process-global spellings \
+                                     outside the broker cell",
+                                    rule18_at(path, text, "const", &name)
+                                ));
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            syn::Item::Trait(item) => {
+                if rule18_is_test_item(&item.attrs) {
+                    continue;
+                }
+                for inner in &item.items {
+                    match inner {
+                        syn::TraitItem::Fn(func) => {
+                            if rule18_is_test_item(&func.attrs) {
+                                continue;
+                            }
+                            if let Some(block) = &func.default {
+                                rule18_eval_fn(
+                                    path,
+                                    text,
+                                    &func.sig.ident.to_string(),
+                                    &func.sig,
+                                    block,
+                                    hits,
+                                );
+                            } else if !rule18_sig_ok(&func.sig) {
+                                let name = func.sig.ident.to_string();
+                                hits.push(format!(
+                                    "rule 18 (no process-global state): {}: \
+                                     function `{name}` uses process-global spellings \
+                                     outside the broker cell",
+                                    rule18_at(path, text, "fn", &name)
+                                ));
+                            }
+                        }
+                        syn::TraitItem::Const(item) => {
+                            if rule18_is_test_item(&item.attrs) {
+                                continue;
+                            }
+                            if rule18_type_use_offense(&item.ty) {
+                                let name = item.ident.to_string();
+                                hits.push(format!(
+                                    "rule 18 (no process-global state): {}: \
+                                     const `{name}` uses process-global spellings \
+                                     outside the broker cell",
+                                    rule18_at(path, text, "const", &name)
+                                ));
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            syn::Item::Macro(item) => {
+                if rule18_is_test_item(&item.attrs) {
+                    continue;
+                }
+                if rule18_macro_is_stateful(&item.mac) {
+                    let name = item
+                        .mac
+                        .path
+                        .segments
+                        .last()
+                        .map(|segment| segment.ident.to_string())
+                        .unwrap_or_else(|| "macro".to_owned());
+                    hits.push(format!(
+                        "rule 18 (no process-global state): {}: \
+                         unexpandable state macro `{name}` fails closed",
+                        rule18_at(path, text, "macro", &name)
+                    ));
+                }
+            }
+            syn::Item::ForeignMod(item) => {
+                if rule18_is_test_item(&item.attrs) {
+                    continue;
+                }
+                for inner in &item.items {
+                    if let syn::ForeignItem::Static(item) = inner {
+                        if rule18_is_test_item(&item.attrs) {
+                            continue;
+                        }
+                        let name = item.ident.to_string();
+                        let at = rule18_at(path, text, "static", &name);
+                        if name == RULE18_BROKER_NAME {
+                            hits.push(format!(
+                                "rule 18 (no process-global state): {at}: \
+                                 SIGNAL_BROKER is not the exact admitted cell"
+                            ));
+                            continue;
+                        }
+                        let shape = rule18_type_shape(&item.ty).unwrap_or_default();
+                        let resolved = rule18_resolve_shape(&shape, &facts.substitutions());
+                        if rule18_shape_is_forbidden(&resolved) {
+                            hits.push(format!(
+                                "rule 18 (no process-global state): {at}: \
+                                 foreign process-global `{name}` resolves to shared state \
+                                 `{resolved}`"
+                            ));
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+/// Tokens worth parsing for: files without any cannot hold rule-18 state.
+const RULE18_EVASION_PREFILTER: &[&str] = &[
+    "static",
+    "thread_local",
+    "Mutex",
+    "Atomic",
+    "OnceLock",
+    "LazyLock",
+    "RwLock",
+    "UnsafeCell",
+    "RefCell",
+    "macro_rules",
+];
+
+/// Full rule-18 verdict for one file: every non-test static is resolved
+/// through local aliases and renames (plus local-struct expansion), and
+/// every other construct is held to the broker-cell spellings. Immutable
+/// constants pass; unparseable files fail closed.
+fn rule18_scan_file(path: &str, text: &str) -> Vec<String> {
+    let mut hits = Vec::new();
+    let ast = match syn::parse_file(text) {
+        Ok(ast) => ast,
+        Err(error) => {
+            hits.push(format!(
+                "rule 18 (no process-global state): {path}: \
+                 unparseable source fails closed: {error}"
+            ));
+            return hits;
+        }
+    };
+    let mut facts = Rule18Facts::default();
+    rule18_collect_facts(&ast.items, false, &mut facts);
+    let mut cfgs = Vec::new();
+    rule18_eval_file(path, text, &ast.items, &mut cfgs, &facts, &mut hits);
+    hits
+}
+
+/// AST evasion scan over the rule-18 scan roots. Evasion hits are never
+/// allow-listable.
+fn rule18_global_evasion_hits(roots: &[PathBuf], allowed: &[&str]) -> Vec<String> {
+    let mut hits = Vec::new();
+    for dir in roots {
+        for file in rust_files(dir) {
+            let path = rel(&file);
+            if allowed.iter().any(|a| path.contains(a)) {
+                continue;
+            }
+            let text = read(&file);
+            if !RULE18_EVASION_PREFILTER
+                .iter()
+                .any(|token| text.contains(token))
+            {
+                continue;
+            }
+            hits.extend(rule18_scan_file(&path, &text));
+        }
+    }
+    hits
 }
 
 // ─────────────────────── the named-test inventory (§21 item 28) ───────────────────────
@@ -2866,10 +4088,10 @@ fn doc_table_names(text: &str) -> BTreeSet<String> {
 
 /// Every `#[test]`-annotated function name in the workspace's sources.
 ///
-/// §21 item 28 words this as `cargo test --workspace -- --list`. This scans
+/// §21 item 28 words this as `cargo nextest list --workspace`. This scans
 /// the sources for the same thing — every `#[test] fn name` — because the
-/// check runs *inside* `cargo test --test architecture` and a nested
-/// `cargo test --workspace --test perf --test perf_collections --release -- --list` would rebuild the
+/// check runs *inside* `cargo nextest run --test architecture` and a nested
+/// `cargo nextest list --workspace --test perf --test perf_collections --release` would rebuild the
 /// world in a second profile on every architecture run. The two enumerate the
 /// same set; source scanning additionally sees `cfg`-gated tests, which for a
 /// one-directional "the name exists" check is the safer direction.
@@ -3881,12 +5103,16 @@ fn metadata() -> Result<cargo_metadata::Metadata, String> {
 }
 
 const LIB: &str = "junie-tui";
-const DECLARED: [&str; 5] = [
+const DECLARED: [&str; 6] = [
     "ratatui-core",
     "ratatui-crossterm",
     "unicode-width",
     "unicode-segmentation",
     "bitflags",
+    // ADJ-13/TASK-009: the Unix job-control signal broker only. Optional,
+    // cfg(unix), activated solely by the `crossterm` backend feature; the
+    // backend-free closure never contains it (`core_is_backend_free`).
+    "signal-hook",
 ];
 /// §22.7 (2a): absent from the **entire** normal closure.
 const FORBIDDEN_ANYWHERE: [&str; 5] = [
@@ -3902,7 +5128,11 @@ const FORBIDDEN_ANYWHERE: [&str; 5] = [
 /// `ratatui-crossterm`** — they are crossterm's choice, not ours, and §22.4's
 /// decision is about *our* containers (enforced by forbidden-pattern rule 26
 /// over our source).
-const ONLY_UNDER_CROSSTERM: [&str; 8] = [
+///
+/// `signal-hook` is deliberately absent: ADJ-13/TASK-009 adds a direct,
+/// optional, cfg(unix) `signal-hook` edge for the job-control broker
+/// (see `DECLARED`), so beneath-crossterm is no longer its only path.
+const ONLY_UNDER_CROSSTERM: [&str; 7] = [
     "smallvec",
     "parking_lot",
     "parking_lot_core",
@@ -3910,7 +5140,6 @@ const ONLY_UNDER_CROSSTERM: [&str; 8] = [
     "scopeguard",
     "libc",
     "mio",
-    "signal-hook",
 ];
 
 /// `cargo tree -p junie-tui -e normal` lines: `(name, version, features)`.
@@ -4129,6 +5358,48 @@ static APPS: LazyLock<&'static [AppPackage<'static>]> = LazyLock::new(|| {
 /// shipped application, and is excluded from `binary_names_are_preserved` by
 /// **package name** so that a second tooling binary still fails.
 const TOOLING: &str = "xtask";
+
+/// Registry for qualified proof-harness packages excluded from shipped-app
+/// binary accounting. Owned by `tools/refactor-proof/architecture-exemption.json`.
+#[derive(Debug, Deserialize)]
+struct BinaryNamesExemption {
+    package: String,
+    bins: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ArchitectureExemptionRegistry {
+    binary_names_exemption: BinaryNamesExemption,
+}
+
+fn proof_harness_exemption() -> Result<Option<BinaryNamesExemption>, String> {
+    let path = root().join("tools/refactor-proof/architecture-exemption.json");
+    if !path.is_file() {
+        return Ok(None);
+    }
+    let text = fs::read_to_string(&path)
+        .map_err(|error| format!("cannot read proof harness registry {}: {error}", rel(&path)))?;
+    let registry: ArchitectureExemptionRegistry = serde_json::from_str(&text).map_err(|error| {
+        format!(
+            "cannot parse proof harness registry {}: {error}",
+            rel(&path)
+        )
+    })?;
+    let exemption = registry.binary_names_exemption;
+    let mut bins = exemption.bins;
+    bins.sort();
+    bins.dedup();
+    if bins.is_empty() {
+        return Err(format!(
+            "proof harness registry {} declares no bins",
+            rel(&path)
+        ));
+    }
+    Ok(Some(BinaryNamesExemption {
+        package: exemption.package,
+        bins,
+    }))
+}
 
 /// The `bin` target names of the **legacy root package**, as cargo resolves
 /// them — which includes autodiscovery, not only explicit `[[bin]]` sections.
@@ -5341,8 +6612,10 @@ fn showcase_covers_every_public_component() -> Result<(), String> {
 /// name moves rather than changes.
 fn binary_names_are_preserved() -> Result<(), String> {
     let md = metadata()?;
+    let proof_harness = proof_harness_exemption()?;
     let mut found: BTreeMap<String, Vec<BinaryTarget>> = BTreeMap::new();
     let mut tooling: Vec<String> = Vec::new();
+    let mut harness: Vec<String> = Vec::new();
     for p in md.workspace_packages() {
         for t in &p.targets {
             if !t.kind.contains(&cargo_metadata::TargetKind::Bin) {
@@ -5350,6 +6623,13 @@ fn binary_names_are_preserved() -> Result<(), String> {
             }
             if p.name.as_str() == TOOLING {
                 tooling.push(t.name.clone());
+                continue;
+            }
+            if proof_harness
+                .as_ref()
+                .is_some_and(|exemption| p.name.as_str() == exemption.package)
+            {
+                harness.push(t.name.clone());
                 continue;
             }
             found.entry(t.name.clone()).or_default().push(BinaryTarget {
@@ -5372,6 +6652,22 @@ fn binary_names_are_preserved() -> Result<(), String> {
         errors.push(format!(
             "the `{TOOLING}` package declares bins {tooling:?}, expected exactly [\"{TOOLING}\"] \
              — the tooling exclusion covers that one binary and nothing else"
+        ));
+    }
+    if let Some(exemption) = &proof_harness {
+        let mut harness = harness;
+        harness.sort();
+        if harness != exemption.bins {
+            errors.push(format!(
+                "the `{}` proof-harness package declares bins {harness:?}, expected {:?} \
+                 — the registry in tools/refactor-proof/architecture-exemption.json is authoritative",
+                exemption.package, exemption.bins
+            ));
+        }
+    } else if !harness.is_empty() {
+        errors.push(format!(
+            "unexpected proof-harness bins {harness:?}: add tools/refactor-proof/architecture-exemption.json \
+             or remove the undeclared package binaries"
         ));
     }
     for a in APPS.iter() {
@@ -5426,8 +6722,14 @@ fn binary_names_are_preserved() -> Result<(), String> {
                 format!("{}({pkg})", a.bin)
             })
             .collect();
+        let harness_note = proof_harness.as_ref().map_or(String::new(), |exemption| {
+            format!(
+                " — plus `{}` proof-harness bins {:?}",
+                exemption.package, exemption.bins
+            )
+        });
         println!(
-            "binary_names_are_preserved: {} — plus the `{TOOLING}` tooling binary",
+            "binary_names_are_preserved: {} — plus the `{TOOLING}` tooling binary{harness_note}",
             where_from.join(", ")
         );
         Ok(())
@@ -5774,7 +7076,8 @@ fn first_facade_line(text: &str, segment: &str) -> usize {
 /// **Honest statement of what is vacuous today.** `apps/` does not exist, so
 /// the path scan and the `#[path]`/`include!` prohibition have no input and
 /// are **vacuous until Slice 5**; they were demonstrated red on a scratch
-/// `apps/showcase` tree outside the repository, per `COORDINATION.md`. What is
+/// `apps/showcase` tree outside the repository, per the campaign proof
+/// contract. What is
 /// not vacuous today is the due-set assertion: an application whose root
 /// `[[bin]]` has been dropped must have an `apps/<app>/src` that this scan
 /// actually read, so the check cannot pass by scanning nothing.
@@ -6826,7 +8129,7 @@ fn msrv_and_edition_are_unchanged() -> Result<(), String> {
             .rust_version
             .as_ref()
             .map(|v| format!("{}.{}", v.major, v.minor));
-        if msrv.as_deref() != Some("1.88") {
+        if msrv.as_deref() != Some("1.98") {
             errors.push(format!("{}: rust-version {:?}", p.name, p.rust_version));
         }
     }
@@ -8811,8 +10114,9 @@ fn resolve_rev(rev: &str, source: &str) -> Result<String, String> {
     Err(format!(
         "bless-guard base revision `{rev}` (from {source}) does not resolve. Falling back to HEAD \
          here would compare the tree with itself and pass vacuously, which is the failure this \
-         gate exists to prevent, so the guard stops instead. In CI the checkout needs \
-         `fetch-depth: 0`; locally set BLESS_GUARD_BASE to a revision that exists."
+         gate exists to prevent, so the guard stops instead. The mise bless-guard task unshallows \
+         only when `git rev-parse --is-shallow-repository` is true; locally set BLESS_GUARD_BASE \
+         to a revision that exists."
     ))
 }
 
@@ -8830,7 +10134,7 @@ fn bless_guard_base_from(
         return resolve_rev(&format!("origin/{}", v.trim()), "GITHUB_BASE_REF");
     }
     Err(
-        "bless-guard has no base revision. Set BLESS_GUARD_BASE explicitly (or provide GITHUB_BASE_REF on a pull request); comparing against HEAD is refused because it passes vacuously. CI checkouts must use `fetch-depth: 0`."
+        "bless-guard has no base revision. Set BLESS_GUARD_BASE explicitly (or provide GITHUB_BASE_REF on a pull request); comparing against HEAD is refused because it passes vacuously."
             .to_owned(),
     )
 }
@@ -9586,6 +10890,239 @@ mod tests {
         assert_eq!(lines, vec![1, 7, 10]);
     }
 
+    /// Minimal broker-file fixture: the exact admitted cell plus its owner
+    /// structs and sync imports. Mutants below alter one aspect each.
+    fn rule18_broker_fixture() -> String {
+        "use std::sync::Arc;\n\
+         use std::sync::Mutex;\n\
+         use std::sync::MutexGuard;\n\
+         use std::sync::OnceLock;\n\
+         use std::sync::atomic::AtomicBool;\n\
+         use std::sync::atomic::Ordering;\n\
+         struct SignalBroker {\n\
+         \x20   inactive: Arc<AtomicBool>,\n\
+         \x20   pending: Arc<AtomicBool>,\n\
+         \x20   lease: bool,\n\
+         \x20   install: InstallPhase,\n\
+         }\n\
+         struct InstallPhase {\n\
+         \x20   first: Option<signal_hook::SigId>,\n\
+         \x20   second: Option<signal_hook::SigId>,\n\
+         }\n\
+         #[cfg(all(unix, feature = \"crossterm\"))]\n\
+         static SIGNAL_BROKER: OnceLock<Mutex<SignalBroker>> = OnceLock::new();\n"
+            .to_owned()
+    }
+
+    #[test]
+    fn rule18_admits_the_exact_broker_and_nothing_else() {
+        // Positive control: the real production file certifies clean.
+        let session = read(&root().join(RULE18_BROKER_PATH));
+        assert!(
+            rule18_scan_file(RULE18_BROKER_PATH, &session).is_empty(),
+            "production session.rs must certify"
+        );
+        assert!(rule18_broker_exception(RULE18_BROKER_PATH, 225, &session));
+        assert!(rule18_scan_file(RULE18_BROKER_PATH, &rule18_broker_fixture()).is_empty());
+
+        // One-aspect mutants, each rejected.
+        let mutants = [
+            (
+                "pub static",
+                "static SIGNAL_BROKER",
+                "pub static SIGNAL_BROKER",
+            ),
+            (
+                "static mut",
+                "static SIGNAL_BROKER",
+                "static mut SIGNAL_BROKER",
+            ),
+            (
+                "wrong inner type",
+                "OnceLock<Mutex<SignalBroker>>",
+                "OnceLock<Mutex<u32>>",
+            ),
+            (
+                "lazy cell",
+                "OnceLock<Mutex<SignalBroker>>",
+                "LazyLock<Mutex<SignalBroker>>",
+            ),
+            (
+                "missing cfg",
+                "#[cfg(all(unix, feature = \"crossterm\"))]\n",
+                "",
+            ),
+            (
+                "wrong cfg",
+                "all(unix, feature = \"crossterm\")",
+                "all(unix)",
+            ),
+            ("wrong init", "= OnceLock::new();", "= Default::default();"),
+            (
+                "renamed import",
+                "use std::sync::OnceLock;",
+                "use std::sync::OnceLock as Cell;",
+            ),
+            (
+                "foreign import",
+                "use std::sync::Mutex;",
+                "use evil::Mutex;",
+            ),
+            (
+                "duplicate import",
+                "use std::sync::Mutex;",
+                "use std::sync::Mutex;\nuse std::sync::Mutex;",
+            ),
+            (
+                "imported owner",
+                "use std::sync::Arc;",
+                "use std::sync::Arc;\nuse other::SignalBroker;",
+            ),
+            (
+                "extra owner field",
+                "install: InstallPhase,",
+                "install: InstallPhase,\ncache: u32,",
+            ),
+            ("narrowed owner", "lease: bool,", ""),
+        ];
+        for (name, from, to) in mutants {
+            let mutant = rule18_broker_fixture().replacen(from, to, 1);
+            assert_ne!(mutant, rule18_broker_fixture(), "{name} must differ");
+            assert!(
+                !rule18_scan_file(RULE18_BROKER_PATH, &mutant).is_empty(),
+                "{name} must be rejected"
+            );
+            assert!(
+                !rule18_broker_exception(RULE18_BROKER_PATH, 225, &mutant),
+                "{name} must not be admitted"
+            );
+        }
+    }
+
+    #[test]
+    fn rule18_rejects_second_and_wrapped_globals() {
+        let cases = [
+            (
+                "bare mutex static",
+                "static SECOND: Mutex<u32> = Mutex::new(0);\n",
+                "second process-global",
+            ),
+            (
+                "atomic static",
+                "static FLAG: AtomicBool = AtomicBool::new(false);\n",
+                "second process-global",
+            ),
+            (
+                "second lazy cell",
+                "static CACHE: LazyLock<String> = LazyLock::new(String::new);\n",
+                "second process-global",
+            ),
+            (
+                "alias-wrapped cell",
+                "type Cell = OnceLock<Mutex<u32>>;\n",
+                "wraps process-global spellings",
+            ),
+            (
+                "alias-wrapped mutex",
+                "type Guard = Mutex<u32>;\nstatic HIDDEN: Guard = Guard::new(0);\n",
+                "resolves to shared state",
+            ),
+            (
+                "rename-wrapped mutex",
+                "use std::sync::Mutex as Guard;\nstatic HIDDEN: Guard<u32> = Guard::new(0);\n",
+                "resolves to shared state",
+            ),
+            (
+                "foreign cell import",
+                "use evil::OnceLock;\n",
+                "outside std/core sync",
+            ),
+            (
+                "struct-wrapped mutex",
+                "struct Holder { lock: Mutex<u32> }\nstatic HIDDEN: Holder = Holder::zero();\n",
+                "resolves to shared state",
+            ),
+            (
+                "nested static",
+                "fn build() -> u32 { static INNER: u32 = 1; INNER }\n",
+                "nested process-global",
+            ),
+            (
+                "thread-local",
+                "thread_local! { static TLS: u32 = 0; }\n",
+                "unexpandable state macro",
+            ),
+            (
+                "lazy-static style",
+                "lazy_static! { static CACHED: String = String::new(); }\n",
+                "unexpandable state macro",
+            ),
+            (
+                "macro defining storage",
+                "macro_rules! def { () => { static MADE: u32 = 0; }; }\n",
+                "unexpandable state macro",
+            ),
+            (
+                "static mut",
+                "static mut COUNTER: u32 = 0;\n",
+                "mutable process-global",
+            ),
+            (
+                "broker name elsewhere",
+                "static SIGNAL_BROKER: u32 = 0;\n",
+                "not the exact admitted cell",
+            ),
+            (
+                "once cell field",
+                "struct Holder { cell: OnceLock<u32> }\n",
+                "outside the broker cell",
+            ),
+            (
+                "static mut borrow",
+                "fn take(slot: &'static mut u32) {}\n",
+                "outside the broker cell",
+            ),
+            ("malformed source", "fn broken( {}\n", "fails closed"),
+        ];
+        for (name, src, expect) in cases {
+            let hits = rule18_scan_file("crates/tui/src/other.rs", src);
+            assert_eq!(hits.len(), 1, "{name}: expected one hit, got {hits:?}");
+            assert!(
+                hits[0].contains(expect),
+                "{name}: {hits:?} must mention {expect:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn rule18_keeps_immutable_constants_and_broker_users() {
+        // Immutable constants pass.
+        let src = "struct FieldError { code: u32 }\n\
+             static INVALID_VALUE: FieldError = FieldError { code: 1 };\n";
+        assert!(rule18_scan_file("crates/tui/src/input.rs", src).is_empty());
+        // `&'static` borrows and innocent macros pass.
+        let src = "fn name() -> &'static str { \"x\" }\n\
+             macro_rules! id { ($p:literal) => { $crate::Id::root($p) }; }\n\
+             fn fmt() { let _ = format!(\"static\"); }\n";
+        assert!(rule18_scan_file("crates/tui/src/other.rs", src).is_empty());
+        // Test items are out of scan scope.
+        let src = "#[cfg(test)]\n\
+             mod tests {\n\
+             \x20   static MUTANT: Mutex<u32> = Mutex::new(0);\n\
+             }\n";
+        assert!(rule18_scan_file("crates/tui/src/other.rs", src).is_empty());
+        // A function using exactly the broker cell type passes.
+        let src = "fn lock(cell: &'static OnceLock<Mutex<SignalBroker>>) {}\n";
+        assert!(rule18_scan_file("crates/tui/src/other.rs", src).is_empty());
+        // A broker-named static outside the broker file still fails.
+        let hits = rule18_scan_file("crates/tui/src/other.rs", &rule18_broker_fixture());
+        assert!(
+            hits.iter()
+                .any(|hit| hit.contains("not the exact admitted cell")),
+            "broker shapes outside the broker file must fail: {hits:?}"
+        );
+    }
+
     #[test]
     fn boundary_literal_mask_preserves_real_code_and_hides_examples() {
         let source = r#"const SAMPLE: &str = "\
@@ -9964,7 +11501,7 @@ captures / classification: `(pending — filled when the change lands)`
         )]
     }
 
-    /// The red half of the COORDINATION.md demonstration: a moved key with no
+    /// The red half of the campaign proof demonstration: a moved key with no
     /// ledger entry accounting for it must fail. A guard hard-wired to `Ok(())`
     /// fails this test.
     #[test]
@@ -10204,47 +11741,203 @@ captures / classification: `(pending — filled when the change lands)`
         .expect("no digest key moved or was added");
     }
 
-    /// §49.6: the guard's base falls back to `HEAD` when nothing sets one, and
-    /// CI runs on **push to `main`** as well as on pull requests. On the push
-    /// leg there is no `GITHUB_BASE_REF`, so without an explicit base a clean
-    /// checkout is diffed against itself and the guard reports `0 moved,
-    /// 0 added` on every direct commit — which is what it did for this whole
-    /// session. The push leg must therefore name a base explicitly.
+    /// §49.6: CI runs bless-guard on **push** as well as pull requests. On the
+    /// push leg there is no `GITHUB_BASE_REF`. ci-main is `main` only, so
+    /// extra-gates (campaign branch + PR) owns cargo extra-gates. Profile
+    /// `tools = ["rust"]` renders `install_args: rust` before the follow-up
+    /// `install: false` step. Job env plus the POSIX mise task supply
+    /// `BLESS_GUARD_BASE`. `cargo run -p xtask -- bless-guard` lives in mise.
     #[test]
     fn the_ci_push_leg_gives_the_bless_guard_a_base() {
-        let ci = read(&root().join(".github/workflows/ci.yml"));
+        let root = root();
         assert!(
-            ci.contains("  push:"),
-            "the workflow no longer has a push leg; this check is about that leg"
+            !root.join(".github/workflows/ci.yml").is_file(),
+            "retired .github/workflows/ci.yml must stay gone"
         );
-        let lines: Vec<&str> = ci.lines().collect();
-        // the `run:` step, not the gate→requirement comment block at the head
-        // of the file, which names the same command
-        let run = lines
-            .iter()
-            .position(|l| {
-                l.trim_start()
-                    .strip_prefix("run: cargo run ")
-                    .is_some_and(|args| {
-                        args.split_whitespace()
-                            .collect::<Vec<_>>()
-                            .windows(4)
-                            .any(|words| words == ["-p", "xtask", "--", "bless-guard"])
-                    })
-            })
-            .expect("ci.yml has a step that runs the bless guard");
-        let start = run.saturating_sub(8);
-        let window = lines.get(start..run).unwrap_or_default().join("\n");
+
+        let extra = fs::read_to_string(root.join(".github/workflows/ci-extra-gates.yml"))
+            .expect("generated .github/workflows/ci-extra-gates.yml");
         assert!(
-            window.contains("BLESS_GUARD_BASE:"),
-            "the bless-guard step must set BLESS_GUARD_BASE; without it the push leg diffs \
-             the tree against itself. Step context:\n{window}"
+            extra.contains("\n  push:\n    branches: [main, \"refactor/holla-parity\"]\n"),
+            "extra-gates push must include the campaign branch; workflow:\n{extra}"
         );
         assert!(
-            window.contains("github.event.before"),
-            "BLESS_GUARD_BASE on the push leg must be `${{{{ github.event.before }}}}` — the \
-             commit the push moved `main` off. Step context:\n{window}"
+            extra.contains("run: mise run lychee"),
+            "extra-gates must keep lychee; workflow:\n{extra}"
         );
+        for cargo_task in [
+            "boundary",
+            "bless-guard",
+            "doc-check",
+            "rustdoc",
+            "perf",
+            "workspace-nextest",
+        ] {
+            let needle = format!("run: mise run {cargo_task}");
+            assert!(
+                extra.contains(&needle),
+                "extra-gates must run cargo task `{cargo_task}` on campaign push:\n{extra}"
+            );
+        }
+        assert!(
+            extra.contains("install_args: rust\n") || extra.contains("install_args: \"rust "),
+            "extra-gates cargo jobs must install rustc via install_args; workflow:\n{extra}"
+        );
+        assert!(
+            extra.contains("BLESS_GUARD_BASE:"),
+            "extra-gates bless-guard job must set BLESS_GUARD_BASE; workflow:\n{extra}"
+        );
+        assert!(
+            !contains_words(&extra, &["-p", "xtask", "--", "bless-guard"]),
+            "workflow YAML must not invoke xtask directly. extra-gates:\n{extra}"
+        );
+
+        let project = fs::read_to_string(root.join(".github/ci/project.toml"))
+            .expect("generated .github/ci/project.toml");
+        let unit = toml_array_table_with_id(&project, "unit", "rust-xtask");
+        for task in [
+            "boundary",
+            "bless-guard",
+            "doc-check",
+            "rustdoc",
+            "perf",
+            "workspace-nextest",
+            "lychee",
+        ] {
+            let command = format!("mise run {task}");
+            assert!(
+                !unit.contains(&command),
+                "extra-gates owns `{command}`; rust-xtask must not duplicate it:\n{unit}"
+            );
+        }
+
+        let mise = fs::read_to_string(root.join("mise.toml")).expect("mise.toml");
+        let task = toml_table_body(&mise, "tasks.bless-guard");
+        assert!(
+            !task.contains("pipefail"),
+            "mise bless-guard must not set pipefail (dash rejects it); task:\n{task}"
+        );
+        assert!(
+            task.contains("git rev-parse --is-shallow-repository"),
+            "mise bless-guard unshallows only a shallow clone; task:\n{task}"
+        );
+        assert!(
+            task.contains("git fetch --unshallow"),
+            "mise bless-guard must fetch history when shallow; task:\n{task}"
+        );
+        assert!(
+            task.contains("GITHUB_BASE_REF") && task.contains("GITHUB_SHA"),
+            "mise bless-guard must compute BLESS_GUARD_BASE from GITHUB_BASE_REF / GITHUB_SHA; task:\n{task}"
+        );
+        assert!(
+            contains_words(task, &["cargo", "run"])
+                && contains_words(task, &["-p", "xtask", "--", "bless-guard"]),
+            "mise bless-guard must run `cargo run … -p xtask -- bless-guard`; task:\n{task}"
+        );
+    }
+
+    /// Extra-gates runs `mise run rustdoc` with POSIX `sh`. An unquoted
+    /// `RUSTDOCFLAGS=-D warnings` assignment is parsed as `warnings` as a
+    /// command (`sh: 1: warnings: not found`).
+    #[test]
+    fn mise_rustdoc_exports_quoted_deny_warnings() {
+        let mise = fs::read_to_string(root().join("mise.toml")).expect("mise.toml");
+        let task = toml_table_body(&mise, "tasks.rustdoc");
+        assert!(
+            !task.contains("RUSTDOCFLAGS=-D warnings"),
+            "unquoted RUSTDOCFLAGS=-D warnings breaks POSIX sh; task:\n{task}"
+        );
+        assert!(
+            task.contains("export RUSTDOCFLAGS=\"-D warnings\""),
+            "mise rustdoc must export quoted RUSTDOCFLAGS; task:\n{task}"
+        );
+        assert!(
+            contains_words(task, &["cargo", "doc"])
+                && contains_words(
+                    task,
+                    &["--locked", "--workspace", "--all-features", "--no-deps"]
+                ),
+            "mise rustdoc must run cargo doc --locked --workspace --all-features --no-deps; task:\n{task}"
+        );
+    }
+
+    /// The library's `[dev-dependencies]` edge on the testing crate is legal
+    /// Cargo, but a mutual `depends_on` in generated `project.toml` is a CI
+    /// cycle (`velnor-workflow plan` refuses it).
+    #[test]
+    fn rust_library_and_testing_ci_units_are_not_cyclic() {
+        let project = fs::read_to_string(root().join(".github/ci/project.toml"))
+            .expect("generated .github/ci/project.toml");
+        let library = toml_array_table_with_id(&project, "unit", "rust-junie-tui");
+        let testing = toml_array_table_with_id(&project, "unit", "rust-junie-tui-testing");
+        let library_depends_on_testing =
+            unit_depends_on_contains(library, "rust-junie-tui-testing");
+        let testing_depends_on_library = unit_depends_on_contains(testing, "rust-junie-tui");
+        assert!(
+            !(library_depends_on_testing && testing_depends_on_library),
+            "rust-junie-tui and rust-junie-tui-testing must not mutually depend;\n library:\n{library}\n testing:\n{testing}"
+        );
+        assert!(
+            !library_depends_on_testing,
+            "library CI unit must not depend on the testing crate:\n{library}"
+        );
+        assert!(
+            testing_depends_on_library,
+            "testing crate CI unit must still depend on the library:\n{testing}"
+        );
+        assert!(
+            library.contains("crates/tui-testing/**/*.rs")
+                && library.contains("crates/tui-testing/src/**")
+                && library.contains("crates/tui-testing/tests/**"),
+            "library CI unit must retain testing-crate impact and freshness coverage:\n{library}"
+        );
+    }
+
+    fn unit_depends_on_contains(body: &str, id: &str) -> bool {
+        let needle = format!("\"{id}\"");
+        body.lines().any(|line| {
+            let trimmed = line.trim_start();
+            trimmed.starts_with("depends_on") && trimmed.contains(&needle)
+        })
+    }
+
+    fn toml_array_table_with_id<'a>(text: &'a str, array: &str, id: &str) -> &'a str {
+        let header = format!("[[{array}]]\n");
+        let id_line = format!("id = \"{id}\"\n");
+        let mut search = text;
+        loop {
+            let Some(start) = search.find(&header) else {
+                panic!("missing [[{array}]] for {id}");
+            };
+            let rest = &search[start + header.len()..];
+            let body = match rest.find(&format!("\n{header}")) {
+                Some(i) => &rest[..i],
+                None => rest,
+            };
+            if body.starts_with(&id_line) || body.contains(&format!("\n{id_line}")) {
+                return body;
+            }
+            search = rest;
+        }
+    }
+
+    fn toml_table_body<'a>(text: &'a str, table: &str) -> &'a str {
+        let header = format!("[{table}]\n");
+        let start = text
+            .find(&header)
+            .unwrap_or_else(|| panic!("missing [{table}]"));
+        let rest = &text[start + header.len()..];
+        match rest.find("\n[") {
+            Some(i) => &rest[..i],
+            None => rest,
+        }
+    }
+
+    fn contains_words(text: &str, want: &[&str]) -> bool {
+        text.split_whitespace()
+            .collect::<Vec<_>>()
+            .windows(want.len())
+            .any(|words| words == want)
     }
 
     #[test]

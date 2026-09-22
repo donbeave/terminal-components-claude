@@ -1,31 +1,47 @@
 # Goal — restore the historical UI/TUI while finishing the refactor
 
-This is the canonical continuation goal. Read this file before acting. Treat
+> **Current status (2026-09-18):** Product execution is not authorized. The
+> sole current readiness authority is
+> [`docs/refactoring-plan/execution-readiness-report.md`](docs/refactoring-plan/execution-readiness-report.md),
+> which is **NO-GO**. This file states product intent; it is not a campaign
+> ledger, taskfmt pin, or execution approval.
+
+Nothing in this product-intent document authorizes campaign execution. The
+readiness report, current contracts, and `AGENTS.md` control execution.
+
+This is the canonical product-intent goal. It is not an execution prompt.
+Read the current readiness report and execution policy before acting. Treat
 older execution prompts as historical unless they agree with this contract.
 
 ## Mission
 
 Keep the current refactor's architecture, public `junie-tui` API, package
 boundaries, security fixes, and product improvements. Restore the user-visible
-Showcase, TablePro, and Jackin Preview experience to the known-good
-pre-refactor behavior.
+Showcase, TablePro, Jackin Preview, and Holla experiences to their verified
+product contracts. The three former applications have historical pre-refactor
+captures; Holla has its own current reference suites and must not be omitted
+from campaign-wide integration checks.
 
 The refactor concept is correct. The rendering migration was not. The old
 look, geometry, copy, glyphs, spacing, colors, focus treatment, cursor
 placement, keyboard behavior, mouse behavior, scrolling, resizing, overlays,
 and state transitions are the contract. Do not redesign the products.
 
-Small approved additions are allowed: extra sections, extra state visibility,
-and minor product polish may remain when they do not displace or restyle the
-historical experience. Record every such addition. Everything else that
-differs from the historical evidence is a regression until proven otherwise.
+Small approved additions are allowed only when they do not alter any output
+covered by the frozen `visual-baseline` oracle. Extra sections, state
+visibility, or minor polish may remain outside that covered surface, but must
+be recorded. A proposed defect fix that changes a baseline-covered result
+requires independent evidence that the frozen oracle is invalid or does not
+cover the behavior; absent that evidence, the difference is a regression.
+Everything else that differs from the historical evidence is a regression
+until proven otherwise.
 
 ## Current facts
 
 The current repository already has the intended architectural direction:
 
 - Workspace packages: `crates/tui`, `crates/tui-testing`, `apps/showcase`,
-  `apps/tablepro`, `apps/jackin-preview`, and `xtask`.
+  `apps/tablepro`, `apps/jackin-preview`, `apps/holla`, and `xtask`.
 - Public library: `junie-tui` / `junie_tui` under `crates/tui`.
 - Current application code: `apps/*/src`; current tests: `apps/*/tests`.
 - Shared rendering and interaction code: `crates/tui/src/theme/`,
@@ -41,16 +57,19 @@ Known current evidence:
 - Historical evidence contains 499 real-terminal captures in
   `baseline/before/`, with `.ansi`, `.txt`, `.cursor`, `.html`, and `.png`
   artifacts plus exact key/mouse recipes in `baseline/before/MANIFEST.md`.
-- The historical source copy is
-  `/Users/donbeave/Projects/donbeave/terminal-components-claude` at `d5e7075`.
-  The requested `cc14dd6beae526884aabdf897e309be837b4f504` state is the same
-  known-good UI/source state for the relevant files.
-- Current `shots/capture-matrix.tsv` covers only 96 app matrix cells and its
-  provenance is stale relative to current `HEAD`.
+- The historical source copy is the repository state at commit
+  `d5e7075f436f0e437c7d12cf3d1e638e763b26f6`. The requested
+  `cc14dd6beae526884aabdf897e309be837b4f504` state is the same known-good
+  UI/source state for the relevant files; a local historical checkout was used
+  only as read-only evidence.
+- Current `shots/capture-matrix.tsv` covers 112 app matrix cells: 32 each for
+  Showcase, TablePro, and Jackin Preview, plus 16 Holla reference-default
+  cells. Its provenance is stale relative to current `HEAD`.
 - `apps/showcase/tests/baselines/showcase.txt`,
   `apps/tablepro/tests/baselines/tablepro.txt`, and
   `apps/jackin-preview/tests/baselines/jackin.txt` are refactor-era
-  self-baselines. They are not historical approval.
+  self-baselines. `apps/holla/tests/baselines/app.txt` is Holla's current
+  reference-default self-baseline. None is historical approval.
 - Current app visual tests do not read `baseline/before/**`.
 - `Scene::assert_against` compares a digest, not a full artifact contract.
   `.txt`, `.ansi`, `.cursor`, and human-reviewed `.png`/`.html` comparisons
@@ -75,11 +94,12 @@ Evidence:
   sidebar, inspector, main, footer, compact-layout, and hit/focus behavior at
   the old `src/bin/showcase/app.rs` shell/render functions.
 - TablePro was rewritten around the new facade (`5042a40`; current update/draw
-  at `apps/tablepro/src/app.rs:1016` and `:1190`). The historical connection
+  at `apps/tablepro/src/app.rs:2870` and `:3106`). The historical connection
   surface, workbench split, explorer, result grid, tabs, dialogs, and editor
   geometry must be restored.
 - Jackin's journeys/screens were rewritten (`444a8f4`; current route/update
-  and draw paths at `apps/jackin-preview/src/app.rs:2544` and `:3257`). The
+  begins at `apps/jackin-preview/src/app.rs:3156` and draw paths begin around
+  `apps/jackin-preview/src/app.rs:3909`). The
   historical manager, editor, accounts, usage, cockpit, Capsule, menus,
   dialogs, and responsive states must be restored.
 - Facade-only enforcement (`1378c31`) cemented the divergence by making the
@@ -91,18 +111,20 @@ runtime/components. Do not paper over digest mismatches by blessing them.
 
 ## Authority and non-goals
 
-Authority, highest first:
+This file defines product intent only. Campaign authority, highest first, is:
 
-1. This goal and explicit user-approved additions.
-2. Historical source at `d5e7075` / `cc14dd6`.
-3. `baseline/before/MANIFEST.md` and its captured artifacts.
-4. Historical interaction tests and source behavior.
-5. Current product semantics and current security fixes.
-6. Current refactor docs, current self-baselines, and current rendered output.
+1. Repository policy in `AGENTS.md` and explicit current user instructions.
+2. The frozen `visual-baseline/snapshots` product oracle.
+3. Current source, tests, task contracts, deterministic proof, and verified
+   architecture requirements.
+4. The current execution-readiness report for campaign status and process.
+5. Historical source at `d5e7075` / `cc14dd6`, its manifest, and captured
+   artifacts, used as provenance and parity evidence.
+6. This goal for product intent and non-goals.
 
 Do not:
 
-- redesign Showcase, TablePro, Jackin, or the Junie/Paper visual language;
+- redesign Showcase, TablePro, Jackin, Holla, or the Junie/Paper visual language;
 - replace historical output with a cleaner-looking or more generic shell;
 - delete product screens, fields, menus, states, or interactions to make a
   digest pass;
@@ -131,11 +153,12 @@ Required roles:
    order, focus, hit, cursor, scroll, and layer differences.
 3. Showcase investigator/builder.
 4. TablePro investigator/builder.
-5. Jackin investigator/builder.
-6. Parity-harness builder: make old-vs-current comparisons executable and
+5. Holla investigator/builder.
+6. Jackin investigator/builder.
+7. Parity-harness builder: make old-vs-current comparisons executable and
    fail closed.
-7. Independent visual/interaction reviewer.
-8. Final gate reviewer.
+8. Independent visual/interaction reviewer.
+9. Final gate reviewer.
 
 No two builders may edit the same file at once. Use separate worktrees or an
 explicit ownership table. One integrator merges/reconciles changes. Every
@@ -176,7 +199,8 @@ Run both implementations for identical recipes. Compare:
   wrapping, blank space, and paint order;
 - `.ansi`: foreground/background colors and modifiers;
 - `.cursor`: position and visibility;
-- `.png`/`.html`: independent human visual review;
+- `.png`/`.html`: deterministic exact comparison wherever canonical artifacts
+  exist, with independent human visual review as supplementary evidence;
 - event result and state after every input step;
 - focus order, hover/pressed/selected/disabled/editing/error/busy states;
 - wheel, drag, mouse click, resize, overlay dismissal, and scroll ownership.
@@ -191,8 +215,9 @@ plus explicitly recorded additions.
 
 ## Phase 2 — restore shared visual contracts
 
-Fix shared causes before scattering app-specific patches. Compare the old
-`src/theme.rs` and `src/widgets/` behavior with the current equivalents.
+Fix shared causes before scattering app-specific patches. Compare the
+historical `src/theme.rs` and `src/widgets/` behavior with the current
+equivalents under `crates/tui/src/theme/` and `crates/tui/src/components/`.
 
 Preserve exactly unless an approved bug fix requires otherwise:
 
@@ -266,6 +291,15 @@ unreachable controls separately, including safe handling of short identifiers
 and any advertised binding that can be made reachable without changing the
 historical contract.
 
+### Holla
+
+Keep Holla as the fourth supported application. Preserve its context-adaptive
+launcher flow, deterministic scenario fixtures, simulated host/database/action
+domains, keyboard and overlay behavior, and reference-default capture contract
+under `apps/holla`. Bring every shared-component change through the same exact
+frozen-oracle visual and behavioral gates; Holla's current 16-cell matrix does
+not replace the full `visual-baseline/snapshots` oracle.
+
 ## Phase 4 — tests and evidence
 
 Add parity tests at the narrowest useful layers:
@@ -298,19 +332,19 @@ rtk cargo fmt --all -- --check
 rtk git diff --check
 rtk cargo check --workspace --all-features
 rtk cargo build --workspace --all-targets --all-features
-rtk cargo test --workspace --all-targets --all-features
+rtk cargo nextest run --workspace --all-targets --all-features
 rtk cargo clippy --workspace --all-targets --all-features -- -D warnings
 RUSTDOCFLAGS="-D warnings" rtk cargo doc --workspace --all-features --no-deps
-rtk cargo test --workspace --doc --all-features
 rtk cargo run -p xtask -- doc-check
 rtk cargo run -p xtask -- boundary
-rtk cargo test -p junie-tui --test render --test render_components
-rtk cargo test -p showcase --test visual
-rtk cargo test -p tablepro --test visual
-rtk cargo test -p jackin-preview --test visual
+rtk cargo nextest run -p junie-tui --test render --test render_components
+rtk cargo nextest run -p showcase --test visual
+rtk cargo nextest run -p tablepro --test visual
+rtk cargo nextest run -p jackin-preview --test visual
+rtk cargo nextest run -p holla --test visual
 ```
 
-Run all three real binaries. Replay the full historical capture recipe and
+Run all four real binaries. Replay the full historical capture recipe and
 run the parity comparator. Use a fresh provenance-backed capture matrix. Run
 the complete workspace gates with a validated comparison base:
 
@@ -329,7 +363,7 @@ Stop only when all are proven with fresh evidence:
 
 1. All 499 historical recipes have a current replay or an explicit, reviewed
    reason they cannot run; no missing mapping is silently skipped.
-2. Showcase, TablePro, and Jackin match historical geometry, copy, glyphs,
+2. Showcase, TablePro, Jackin Preview, and Holla match historical geometry, copy, glyphs,
    colors, modifiers, cursor, focus, input behavior, overlays, scrolling,
    resizing, and state transitions, except recorded approved additions or
    isolated reviewed bug fixes.
@@ -338,30 +372,28 @@ Stop only when all are proven with fresh evidence:
    self-output.
 5. New component/runtime APIs remain in use; no return to duplicate legacy
    production paths is needed.
-6. Product semantics, SQL safety, Jackin simulation, and secret redaction
-   remain intact.
+6. Product semantics, SQL safety, Jackin simulation, Holla scenario behavior,
+   and secret redaction remain intact.
 7. Fresh captures have current provenance; stale `shots` evidence is replaced
    or clearly marked historical.
 8. Full build, test, clippy, doc, boundary, capture, comparator, and review
    gates pass.
-9. `REFACTORING_STATE.md` gets one current appended checkpoint; do not rewrite
-   historical entries. It lists remaining work as none only when the proof is
-   real.
+9. Record current execution evidence in
+   `docs/refactoring-plan/execution-readiness-report.md`; do not turn the
+   historical root state ledger into an active execution authority.
 10. The final report names every changed file, every approved visual change,
     every command/capture/review result, and any intentionally retained known
     defect.
 
 ## Documentation cleanup
 
-`REFACTORING_GOAL.md` and `COMPONENT_ARCHITECTURE.md` remain architecture
-reference documents. They do not override this parity-first execution order.
-`REFACTORING_STATE.md` is an evidence ledger, not proof by itself.
-
-The old `docs/REFACTORING_AUDIT_REPORT.md`,
-`docs/REFACTORING_EXECUTION_GOAL_PROMPT.md`, `CONTINUE_PROMPT.md`, and
-`RESUME_PROMPT.md` contain superseded migration assumptions. Mark them as
-historical or redirect them to this file. Do not leave contradictory active
-instructions such as “apps are not migrated” or obsolete model-routing rules.
+`COMPONENT_ARCHITECTURE.md` and `DESIGN.md` remain active architecture/design
+references. They do not override this parity-first execution order.
+Retired root goals, handoffs, state/coordination files, superseded reports,
+and continuation prompts were removed from this branch. Git history preserves
+their historical bytes if provenance must be inspected; they are not active
+instructions or proof. Current policy, status, and execution contracts live
+under `AGENTS.md` and `docs/refactoring-plan/`.
 
 ## Final handoff
 
