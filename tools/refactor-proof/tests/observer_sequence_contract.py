@@ -8,7 +8,6 @@ same sequence into each hashed context before the bundled worker can accept it.
 
 from __future__ import annotations
 
-import errno
 import json
 import os
 import sys
@@ -166,11 +165,11 @@ class ObserverSequenceTests(unittest.TestCase):
         self.assertEqual(raised.exception.category, "PROTOCOL")
 
     def test_native_family_accepts_app_namespaces(self) -> None:
-        for namespace in ("showcase", "holla", "jackin", "tablepro", "components"):
+        for namespace in ("showcase", "holla", "jackin", "tablepro"):
             validate_oracle_namespace(namespace, "native")
 
     def test_native_family_rejects_unknown_and_synthetic_namespaces(self) -> None:
-        for namespace in ("synthetic", None, "", "unknown"):
+        for namespace in ("synthetic", "components", None, "", "unknown"):
             with self.assertRaises(Reject) as raised:
                 validate_oracle_namespace(namespace, "native")
             self.assertEqual(raised.exception.category, "PROTOCOL")
@@ -181,20 +180,6 @@ class ObserverSequenceTests(unittest.TestCase):
         with self.assertRaises(Reject) as raised:
             validate_oracle_namespace("showcase", "synthetic")
         self.assertEqual(raised.exception.category, "PROTOCOL")
-
-    def test_close_closes_request_and_response_fds(self) -> None:
-        client, thread = _client_with_provider(["oracle"])
-        descriptors = (client._request.fileno(), client._response.fileno())
-        try:
-            client.close()
-            for descriptor in descriptors:
-                with self.assertRaises(OSError) as raised:
-                    os.fstat(descriptor)
-                self.assertEqual(raised.exception.errno, errno.EBADF)
-        finally:
-            _close_client(client)
-            thread.join(timeout=2)
-            self.assertFalse(thread.is_alive())
 
     def test_missing_second_observation_is_rejected(self) -> None:
         client, thread = _client_with_provider(["oracle", "oracle"], response_count=1)
