@@ -18,11 +18,13 @@ from ..runner.context import (
     validate_source_authority,
     validate_tool,
 )
+from ..runner.index import validate_index
 from ..runner.json_util import canonical, load_path, sha256_bytes, sha256_canonical
 from ..runner.observer import ObserverError
 from ..runner.result import finish
 from ..runner.validate import (
     validate_capture_payload,
+    validate_index_close_outputs,
     validate_native_extension,
     validate_oracle_repeat,
 )
@@ -58,6 +60,49 @@ ALLOWED_SYSTEM_SYMLINKS = {
     Path("/home"): Path("/System/Volumes/Data/home"),
     Path("/tmp"): Path("/private/tmp"),
     Path("/var"): Path("/private/var"),
+}
+QUALIFICATION_INDEX_KEYS = {
+    "schema",
+    "run_id",
+    "task_id",
+    "tree",
+    "trust_sha256",
+    "members",
+}
+QUALIFICATION_INDEX_MEMBER_KEYS = {
+    "check_id",
+    "context_path",
+    "context_sha256",
+    "schema",
+    "operation",
+    "lane",
+    "namespace",
+    "required_ids",
+    "output_id",
+}
+QUALIFICATION_INDEX_LAYOUT = (
+    ("CHK-001", "preflight", None),
+    ("CHK-002", "capture", "direct"),
+    ("CHK-003", "capture", "pty"),
+    ("CHK-004", "close", None),
+)
+QUALIFICATION_CLOSE_RECORD_KEYS = {
+    "check_id",
+    "status",
+    "context_sha256",
+    "output_id",
+    "report_sha256",
+}
+CURRENT_INDEX_KEYS = {
+    "schema",
+    "task_id",
+    "run_id",
+    "worktree_commit",
+    "scope_base",
+    "contexts",
+    "results",
+    "observer_sequences",
+    "observer",
 }
 
 
@@ -114,6 +159,52 @@ def qualification_validated_executable(value: object, label: str) -> Path:
     return path
 
 
+def _qualification_hex(value: object, length: int) -> bool:
+    return (
+        isinstance(value, str)
+        and len(value) == length
+        and all(character in "0123456789abcdef" for character in value)
+    )
+
+
+def _qualification_check_parents(path: Path, category: str) -> None:
+    if not path.is_absolute():
+        raise Reject(category)
+    current = Path(path.anchor)
+    for component in path.parts[1:-1]:
+        current /= component
+        try:
+            metadata = current.lstat()
+        except OSError:
+            raise Reject(category) from None
+        if stat.S_ISLNK(metadata.st_mode):
+            allowed = ALLOWED_SYSTEM_SYMLINKS.get(current)
+            if allowed is None or current.resolve() != allowed:
+                raise Reject(category)
+        elif not stat.S_ISDIR(metadata.st_mode):
+            raise Reject(category)
+
+
+def _qualification_regular_file(path: Path, category: str) -> None:
+    _qualification_check_parents(path, category)
+    try:
+        metadata = path.lstat()
+    except OSError:
+        raise Reject(category) from None
+    if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1:
+        raise Reject(category)
+
+
+def _qualification_regular_directory(path: Path, category: str) -> None:
+    _qualification_check_parents(path, category)
+    try:
+        metadata = path.lstat()
+    except OSError:
+        raise Reject(category) from None
+    if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISDIR(metadata.st_mode):
+        raise Reject(category)
+
+
 def validate_qualification_schema(context: dict[str, Any]) -> None:
     schema = context.get("schema")
     keys = set(context)
@@ -138,70 +229,138 @@ def validate_qualification_schema(context: dict[str, Any]) -> None:
 def qualification_load_index() -> tuple[dict[str, Any], str]:
     index_path = os.environ.get("TC_PROOF_CONTEXT_INDEX")
     index_hash = os.environ.get("TC_PROOF_CONTEXT_INDEX_SHA256")
-    if not index_path or not index_hash:
+    if not index_path or not _qualification_hex(index_hash, 64):
         raise Reject("CONTEXT_INDEX")
     path = Path(index_path)
-    raw = path.read_bytes()
+    if path.name != "context-index.json":
+        raise Reject("CONTEXT_INDEX")
+    _qualification_regular_file(path, "CONTEXT_INDEX")
+    try:
+        raw = path.read_bytes()
+        index = load_path(path)
+    except (OSError, TypeError, ValueError):
+        raise Reject("CONTEXT_INDEX") from None
     if sha256_bytes(raw) != index_hash:
         raise Reject("CONTEXT_INDEX")
-    return load_path(path), index_hash
+    if not isinstance(index, dict):
+        raise Reject("CONTEXT_INDEX")
+    return index, index_hash
 
 
-def qualification_validate_index(context: dict[str, Any], context_hash: str) -> None:
-    index, index_hash = qualification_load_index()
-    if set(index) != {"schema", "run_id", "task_id", "tree", "trust_sha256", "members"}:
+def _validate_group070_index(
+    context: dict[str, Any],
+    context_hash: str,
+    index: dict[str, Any],
+    index_path: Path,
+) -> None:
+    if set(index) != QUALIFICATION_INDEX_KEYS:
         raise Reject("CONTEXT_INDEX")
     if index["schema"] != "tc-proof-context-index/v1":
         raise Reject("CONTEXT_INDEX")
-    if index["run_id"] != context["run_id"]:
+    if (
+        not isinstance(index.get("run_id"), str)
+        or not index["run_id"]
+        or not isinstance(index.get("task_id"), str)
+        or not index["task_id"]
+        or not _qualification_hex(index.get("tree"), 40)
+        or not _qualification_hex(index.get("trust_sha256"), 64)
+    ):
         raise Reject("CONTEXT_INDEX")
-    if index["task_id"] != os.environ.get("TC_PROOF_TASK_ID"):
-        raise Reject("CONTEXT_INDEX")
-    if index["tree"] != context["tree"]:
+    if (
+        index["run_id"] != context.get("run_id")
+        or index["run_id"] != os.environ.get("TC_PROOF_RUN_ID")
+        or index["task_id"] != os.environ.get("TC_PROOF_TASK_ID")
+        or index["tree"] != context.get("tree")
+        or os.environ.get("TC_PROOF_CONTEXT_SHA256") != context_hash
+    ):
         raise Reject("CONTEXT_INDEX")
     members = index["members"]
-    if len(members) != 4:
+    if not isinstance(members, list) or len(members) != len(QUALIFICATION_INDEX_LAYOUT):
         raise Reject("CONTEXT_INDEX")
-    if len({member["output_id"] for member in members}) != 4:
+    if any(not isinstance(member, dict) for member in members):
         raise Reject("CONTEXT_INDEX")
-    contexts_dir = Path(members[0]["context_path"]).parent
-    expected_files = {member["check_id"] + ".json" for member in members}
-    if not contexts_dir.is_dir() or {path.name for path in contexts_dir.iterdir()} != expected_files:
+    contexts_dir = index_path.parent / "contexts"
+    _qualification_regular_directory(contexts_dir, "CONTEXT_INDEX")
+    expected_ids = {check_id for check_id, _, _ in QUALIFICATION_INDEX_LAYOUT}
+    expected_files = {check_id + ".json" for check_id in expected_ids}
+    try:
+        actual_files = {path.name for path in contexts_dir.iterdir()}
+    except OSError:
+        raise Reject("CONTEXT_INDEX") from None
+    if actual_files != expected_files:
         raise Reject("CONTEXT_INDEX")
     check_id = os.environ.get("TC_PROOF_CHECK_ID")
+    if check_id not in expected_ids:
+        raise Reject("CONTEXT_INDEX")
+    result_value = os.environ.get("TC_PROOF_RESULT")
+    if not isinstance(result_value, str) or not result_value:
+        raise Reject("CONTEXT_INDEX")
+    result_path = Path(result_value)
+    if result_path.name != f"{check_id}.result.json":
+        raise Reject("CONTEXT_INDEX")
+    output_dir = result_path.parent
+    _qualification_regular_directory(output_dir, "CONTEXT_INDEX")
+    selected_index = next(
+        index
+        for index, (expected_id, _, _) in enumerate(QUALIFICATION_INDEX_LAYOUT)
+        if expected_id == check_id
+    )
+    expected_outputs = {
+        expected_id + ".result.json"
+        for expected_id, _, _ in QUALIFICATION_INDEX_LAYOUT[:selected_index]
+    }
+    try:
+        actual_outputs = {path.name for path in output_dir.iterdir()}
+    except OSError:
+        raise Reject("CONTEXT_INDEX") from None
+    if actual_outputs != expected_outputs:
+        raise Reject("CONTEXT_INDEX")
+    for output_name in expected_outputs:
+        _qualification_regular_file(output_dir / output_name, "CONTEXT_INDEX")
+
     optional = {"qualification"}
     required_child = (ALLOWED_QUALIFICATION_V1_KEYS | QUALIFICATION_V2_EXTRA_KEYS) - optional
-    member_fields = {
-        "check_id",
-        "context_path",
-        "context_sha256",
-        "schema",
-        "operation",
-        "lane",
-        "namespace",
-        "required_ids",
-        "output_id",
-    }
     selected = None
-    for member in members:
-        if set(member) != member_fields:
+    selected_child = None
+    for member, (expected_id, expected_operation, expected_lane) in zip(
+        members, QUALIFICATION_INDEX_LAYOUT
+    ):
+        if set(member) != QUALIFICATION_INDEX_MEMBER_KEYS:
+            raise Reject("CONTEXT_INDEX")
+        if (
+            member.get("check_id") != expected_id
+            or member.get("schema") != QUALIFICATION_V2
+            or member.get("operation") != expected_operation
+            or member.get("lane") != expected_lane
+            or member.get("namespace") is not None
+            or member.get("output_id") != f"{expected_id}.result.json"
+            or not isinstance(member.get("required_ids"), list)
+            or not _qualification_hex(member.get("context_sha256"), 64)
+            or not isinstance(member.get("context_path"), str)
+        ):
             raise Reject("CONTEXT_INDEX")
         child_path = Path(member["context_path"])
-        if not child_path.is_file() or child_path.is_symlink() or child_path.stat().st_nlink != 1:
+        expected_path = contexts_dir / f"{expected_id}.json"
+        if child_path != expected_path:
             raise Reject("CONTEXT_INDEX")
-        child_raw = child_path.read_bytes()
+        _qualification_regular_file(child_path, "CONTEXT_INDEX")
+        try:
+            child_raw = child_path.read_bytes()
+        except OSError:
+            raise Reject("CONTEXT_INDEX") from None
         if sha256_bytes(child_raw) != member["context_sha256"]:
             raise Reject("CONTEXT_INDEX")
         try:
             child = load_path(child_path)
-        except ValueError:
+        except (OSError, TypeError, ValueError):
             raise Reject("CONTEXT_INDEX") from None
+        if not isinstance(child, dict):
+            raise Reject("CONTEXT_INDEX")
         child_keys = set(child)
         if child_keys - required_child - optional or required_child - child_keys:
             raise Reject("CONTEXT_INDEX")
         if (
             child.get("schema") != QUALIFICATION_V2
-            or member.get("schema") != QUALIFICATION_V2
             or child.get("schema") != member.get("schema")
         ):
             raise Reject("CONTEXT_INDEX")
@@ -216,23 +375,68 @@ def qualification_validate_index(context: dict[str, Any], context_hash: str) -> 
             raise Reject("CONTEXT_INDEX")
         if member["operation"] == "capture" and child.get("lane") != member["lane"]:
             raise Reject("CONTEXT_INDEX")
+        try:
+            required_members = validate_required_members(child)
+            expected_required_ids = [
+                name
+                for name in required_members
+                if member["operation"] == "capture"
+                and len(name.split("/")) == 4
+                and name.split("/")[1] == member["lane"]
+            ]
+        except (KeyError, Reject, TypeError):
+            raise Reject("CONTEXT_INDEX") from None
+        if member["required_ids"] != expected_required_ids:
+            raise Reject("CONTEXT_INDEX")
         if member["check_id"] == check_id:
             selected = member
+            selected_child = child
     if selected is None:
         raise Reject("CONTEXT_INDEX")
-    if context_hash != selected["context_sha256"]:
+    if context_hash != selected["context_sha256"] or context != selected_child:
         raise Reject("CONTEXT_INDEX")
-    _ = index_hash
+
+
+def qualification_validate_index(context: dict[str, Any], context_hash: str) -> None:
+    index, _ = qualification_load_index()
+    index_keys = set(index)
+    if index_keys == CURRENT_INDEX_KEYS:
+        try:
+            validate_index(context, context_hash)
+        except Reject:
+            raise
+        except (KeyError, OSError, TypeError, ValueError):
+            raise Reject("CONTEXT_INDEX") from None
+        return
+    if index_keys != QUALIFICATION_INDEX_KEYS:
+        raise Reject("CONTEXT_INDEX")
+    _validate_group070_index(
+        context,
+        context_hash,
+        index,
+        Path(os.environ["TC_PROOF_CONTEXT_INDEX"]),
+    )
 
 
 def qualification_validate_close_records(event: dict[str, Any]) -> None:
     records = event.get("records")
-    if not isinstance(records, list):
+    if not isinstance(records, list) or len(records) != 3:
         raise Reject("CLOSURE")
-    if [row["check_id"] for row in records] != ["CHK-001", "CHK-002", "CHK-003"]:
+    if [row.get("check_id") if isinstance(row, dict) else None for row in records] != [
+        "CHK-001",
+        "CHK-002",
+        "CHK-003",
+    ]:
         raise Reject("CLOSURE")
-    if any(row.get("status") != "passed" for row in records):
-        raise Reject("CLOSURE")
+    for row in records:
+        if (
+            not isinstance(row, dict)
+            or set(row) != QUALIFICATION_CLOSE_RECORD_KEYS
+            or row.get("status") != "passed"
+            or not _qualification_hex(row.get("context_sha256"), 64)
+            or not _qualification_hex(row.get("report_sha256"), 64)
+        ):
+            raise Reject("CLOSURE")
 
 
 def qualification_validate_index_close_outputs(
@@ -240,16 +444,63 @@ def qualification_validate_index_close_outputs(
     index: dict[str, Any],
     output_dir: Path,
 ) -> None:
-    records = event.get("records", [])
+    records = event.get("records")
+    if not isinstance(records, list):
+        raise Reject("CLOSURE")
+    qualification_validate_close_records(event)
+    output_dir = Path(output_dir)
+    _qualification_regular_directory(output_dir, "CLOSURE")
+    if (
+        set(index) != QUALIFICATION_INDEX_KEYS
+        or not isinstance(index.get("members"), list)
+        or len(index["members"]) != len(QUALIFICATION_INDEX_LAYOUT)
+        or any(
+            not isinstance(member, dict)
+            or set(member) != QUALIFICATION_INDEX_MEMBER_KEYS
+            for member in index["members"]
+        )
+    ):
+        raise Reject("CLOSURE")
+    for member, (expected_id, expected_operation, expected_lane) in zip(
+        index["members"], QUALIFICATION_INDEX_LAYOUT
+    ):
+        if (
+            member.get("check_id") != expected_id
+            or member.get("schema") != QUALIFICATION_V2
+            or member.get("operation") != expected_operation
+            or member.get("lane") != expected_lane
+            or member.get("namespace") is not None
+            or member.get("output_id") != f"{expected_id}.result.json"
+            or not isinstance(member.get("required_ids"), list)
+            or not _qualification_hex(member.get("context_sha256"), 64)
+        ):
+            raise Reject("CLOSURE")
     members = {member["check_id"]: member for member in index["members"]}
+    if set(members) != {check_id for check_id, _, _ in QUALIFICATION_INDEX_LAYOUT}:
+        raise Reject("CLOSURE")
+    expected_names = {
+        members[check_id]["output_id"] for check_id in ("CHK-001", "CHK-002", "CHK-003")
+    }
+    try:
+        actual_names = {path.name for path in output_dir.iterdir()}
+    except OSError:
+        raise Reject("CLOSURE") from None
+    if actual_names != expected_names:
+        raise Reject("CLOSURE")
     for row in records:
-        member = members.get(row["check_id"])
-        if member is None:
+        if not isinstance(row, dict) or set(row) != QUALIFICATION_CLOSE_RECORD_KEYS:
+            raise Reject("CLOSURE")
+        member = members.get(row.get("check_id"))
+        if member is None or row.get("output_id") != member.get("output_id"):
             raise Reject("CLOSURE")
         output = output_dir / member["output_id"]
-        if not output.is_file():
+        _qualification_regular_file(output, "CLOSURE")
+        try:
+            report = load_path(output)
+        except (OSError, TypeError, ValueError):
+            raise Reject("CLOSURE") from None
+        if not isinstance(report, dict):
             raise Reject("CLOSURE")
-        report = load_path(output)
         if sha256_canonical(report) != row.get("report_sha256"):
             raise Reject("CLOSURE")
         if row.get("context_sha256") != member["context_sha256"]:
@@ -442,9 +693,14 @@ def run_qualification_close(context_path: Path) -> int:
                 count=1,
             )
             digests = [client.digest(event) for event in events]
-            qualification_validate_close_records(events[0])
             output_dir = Path(os.environ["TC_PROOF_RESULT"]).parent
-            qualification_validate_index_close_outputs(events[0], index, output_dir)
+            if set(index) == CURRENT_INDEX_KEYS:
+                validate_index_close_outputs(
+                    events[0], index, output_dir, context.get("check_id")
+                )
+            else:
+                qualification_validate_close_records(events[0])
+                qualification_validate_index_close_outputs(events[0], index, output_dir)
             return finish("passed", None, {"observations": events}, digests, operation, reported)
         validate_close_evidence(context)
         client = QualificationObserver.from_env()
