@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import base64
+import copy
 import json
 import sys
 import tempfile
@@ -306,12 +307,16 @@ class BrokerTests(unittest.TestCase):
             '#[cfg(all(unix, feature = "crossterm"))]\n'
             "static SIGNAL_BROKER: std::sync::OnceLock<std::sync::Mutex<SignalBroker>> = std::sync::OnceLock::new();\n"
             '#[cfg(all(unix, feature = "crossterm"))]\n'
+            "struct InstallPhase {\n"
+            "    first: Option<signal_hook::SigId>,\n"
+            "    second: Option<signal_hook::SigId>,\n"
+            "}\n"
+            '#[cfg(all(unix, feature = "crossterm"))]\n'
             "struct SignalBroker {\n"
             "    inactive: std::sync::Arc<std::sync::atomic::AtomicBool>,\n"
             "    pending: std::sync::Arc<std::sync::atomic::AtomicBool>,\n"
-            "    leased: bool,\n"
-            "    inactive_registration: Option<signal_hook::SigId>,\n"
-            "    pending_registration: Option<signal_hook::SigId>,\n"
+            "    lease: bool,\n"
+            "    install: InstallPhase,\n"
             "}\n"
         )
         body = {
@@ -323,14 +328,22 @@ class BrokerTests(unittest.TestCase):
                         {"kind": "static", "name": "SIGNAL_BROKER", "visibility": "", "type": "OnceLock<Mutex<SignalBroker>>"},
                         {
                             "kind": "struct",
+                            "name": "InstallPhase",
+                            "visibility": "",
+                            "fields": [
+                                {"name": "first", "type": "Option<signal_hook::SigId>"},
+                                {"name": "second", "type": "Option<signal_hook::SigId>"},
+                            ],
+                        },
+                        {
+                            "kind": "struct",
                             "name": "SignalBroker",
                             "visibility": "",
                             "fields": [
-                                {"name": "inactive"},
-                                {"name": "pending"},
-                                {"name": "leased"},
-                                {"name": "inactive_registration"},
-                                {"name": "pending_registration"},
+                                {"name": "inactive", "type": "std::sync::Arc<std::sync::atomic::AtomicBool>"},
+                                {"name": "pending", "type": "std::sync::Arc<std::sync::atomic::AtomicBool>"},
+                                {"name": "lease", "type": "bool"},
+                                {"name": "install", "type": "InstallPhase"},
                             ],
                         },
                     ],
@@ -348,6 +361,8 @@ class BrokerTests(unittest.TestCase):
             '#[cfg(all(unix, feature = "crossterm"))]\n'
             "static SIGNAL_BROKER: std::sync::OnceLock<std::sync::Mutex<SignalBroker>> = std::sync::OnceLock::new();\n"
             '#[cfg(all(unix, feature = "crossterm"))]\n'
+            "struct InstallPhase { first: Option<signal_hook::SigId>, second: Option<signal_hook::SigId> }\n"
+            '#[cfg(all(unix, feature = "crossterm"))]\n'
             "struct SignalBroker {\n"
             "    inactive: bool,\n"
             "    pending: bool,\n"
@@ -362,6 +377,15 @@ class BrokerTests(unittest.TestCase):
                     "source": source,
                     "facts": [
                         {"kind": "static", "name": "SIGNAL_BROKER", "visibility": "", "type": "OnceLock<Mutex<SignalBroker>>"},
+                        {
+                            "kind": "struct",
+                            "name": "InstallPhase",
+                            "visibility": "",
+                            "fields": [
+                                {"name": "first", "type": "Option<signal_hook::SigId>"},
+                                {"name": "second", "type": "Option<signal_hook::SigId>"},
+                            ],
+                        },
                         {
                             "kind": "struct",
                             "name": "SignalBroker",
@@ -390,7 +414,14 @@ class BrokerTests(unittest.TestCase):
             '#[cfg(all(unix, feature = "crossterm"))]\n'
             "static SIGNAL_BROKER: std::sync::OnceLock<std::sync::Mutex<SignalBroker>> = std::sync::OnceLock::new();\n"
             '#[cfg(all(unix, feature = "crossterm"))]\n'
-            "struct SignalBroker { inactive: bool, pending: bool, leased: bool }\n"
+            "struct InstallPhase { first: Option<signal_hook::SigId>, second: Option<signal_hook::SigId> }\n"
+            '#[cfg(all(unix, feature = "crossterm"))]\n'
+            "struct SignalBroker {\n"
+            "    inactive: std::sync::Arc<std::sync::atomic::AtomicBool>,\n"
+            "    pending: std::sync::Arc<std::sync::atomic::AtomicBool>,\n"
+            "    lease: bool,\n"
+            "    install: InstallPhase,\n"
+            "}\n"
         )
         body = {
             "files": [
@@ -412,9 +443,23 @@ class BrokerTests(unittest.TestCase):
                         {"kind": "static", "name": "SIGNAL_BROKER", "visibility": "", "type": "OnceLock<Mutex<SignalBroker>>"},
                         {
                             "kind": "struct",
+                            "name": "InstallPhase",
+                            "visibility": "",
+                            "fields": [
+                                {"name": "first", "type": "Option<signal_hook::SigId>"},
+                                {"name": "second", "type": "Option<signal_hook::SigId>"},
+                            ],
+                        },
+                        {
+                            "kind": "struct",
                             "name": "SignalBroker",
                             "visibility": "",
-                            "fields": [{"name": "inactive"}, {"name": "pending"}, {"name": "leased"}],
+                            "fields": [
+                                {"name": "inactive", "type": "std::sync::Arc<std::sync::atomic::AtomicBool>"},
+                                {"name": "pending", "type": "std::sync::Arc<std::sync::atomic::AtomicBool>"},
+                                {"name": "lease", "type": "bool"},
+                                {"name": "install", "type": "InstallPhase"},
+                            ],
                         },
                     ],
                 },
@@ -447,6 +492,130 @@ def _adj13_profile(required: list[str]) -> dict:
         "exception_path": SESSION,
     }
 
+
+def _valid_broker_observation() -> dict:
+    source = (
+        '#[cfg(all(unix, feature = "crossterm"))]\n'
+        "static SIGNAL_BROKER: std::sync::OnceLock<std::sync::Mutex<SignalBroker>> = std::sync::OnceLock::new();\n"
+        '#[cfg(all(unix, feature = "crossterm"))]\n'
+        "struct InstallPhase {\n"
+        "    first: Option<signal_hook::SigId>,\n"
+        "    second: Option<signal_hook::SigId>,\n"
+        "}\n"
+        '#[cfg(all(unix, feature = "crossterm"))]\n'
+        "struct SignalBroker {\n"
+        "    inactive: std::sync::Arc<std::sync::atomic::AtomicBool>,\n"
+        "    pending: std::sync::Arc<std::sync::atomic::AtomicBool>,\n"
+        "    lease: bool,\n"
+        "    install: InstallPhase,\n"
+        "}\n"
+    )
+    return {
+        "schema": "tc-protected-source-syntax/v1",
+        "files": [
+            {
+                "path": SESSION,
+                "source": source,
+                "facts": [
+                    {"kind": "static", "name": "SIGNAL_BROKER", "visibility": "", "type": "OnceLock<Mutex<SignalBroker>>"},
+                    {
+                        "kind": "struct",
+                        "name": "InstallPhase",
+                        "visibility": "",
+                        "fields": [
+                            {"name": "first", "type": "Option<signal_hook::SigId>"},
+                            {"name": "second", "type": "Option<signal_hook::SigId>"},
+                        ],
+                    },
+                    {
+                        "kind": "struct",
+                        "name": "SignalBroker",
+                        "visibility": "",
+                        "fields": [
+                            {"name": "inactive", "type": "std::sync::Arc<std::sync::atomic::AtomicBool>"},
+                            {"name": "pending", "type": "std::sync::Arc<std::sync::atomic::AtomicBool>"},
+                            {"name": "lease", "type": "bool"},
+                            {"name": "install", "type": "InstallPhase"},
+                        ],
+                    },
+                ],
+            }
+        ],
+    }
+
+
+class BrokerSchemaAdversarialTests(unittest.TestCase):
+    def _rejects(self, body: dict) -> None:
+        with self.assertRaises(Reject) as raised:
+            validate_broker_observation(body, _adj13_profile([SESSION]))
+        self.assertEqual(raised.exception.category, "ARCHITECTURE")
+
+    def _fact(self, body: dict, kind: str, name: str) -> dict:
+        return next(fact for fact in body["files"][0]["facts"] if fact.get("kind") == kind and fact.get("name") == name)
+
+    def test_valid_storage_alias_resolves_to_exact_type(self) -> None:
+        body = _valid_broker_observation()
+        facts = body["files"][0]["facts"]
+        self._fact(body, "static", "SIGNAL_BROKER")["type"] = "BrokerStorage"
+        facts.insert(0, {"kind": "alias", "name": "BrokerStorage", "type": "OnceLock<Mutex<SignalBroker>>"})
+        validate_broker_observation(body, _adj13_profile([SESSION]))
+
+    def test_wrong_storage_alias_is_rejected(self) -> None:
+        body = _valid_broker_observation()
+        facts = body["files"][0]["facts"]
+        self._fact(body, "static", "SIGNAL_BROKER")["type"] = "BrokerStorage"
+        facts.insert(0, {"kind": "alias", "name": "BrokerStorage", "type": "u32"})
+        self._rejects(body)
+
+    def test_substring_storage_spelling_is_rejected(self) -> None:
+        body = _valid_broker_observation()
+        self._fact(body, "static", "SIGNAL_BROKER")["type"] = "NotOnceLock<Mutex<SignalBroker>>"
+        self._rejects(body)
+
+    def test_missing_broker_field_is_rejected(self) -> None:
+        body = _valid_broker_observation()
+        self._fact(body, "struct", "SignalBroker")["fields"].pop()
+        self._rejects(body)
+
+    def test_install_phase_requires_first_and_second_in_order(self) -> None:
+        body = _valid_broker_observation()
+        phase = self._fact(body, "struct", "InstallPhase")
+        phase["fields"].reverse()
+        self._rejects(body)
+
+    def test_wrong_install_phase_type_is_rejected(self) -> None:
+        body = _valid_broker_observation()
+        phase = self._fact(body, "struct", "InstallPhase")
+        phase["fields"][1]["type"] = "u32"
+        self._rejects(body)
+
+    def test_duplicate_file_is_rejected(self) -> None:
+        body = _valid_broker_observation()
+        body["files"].append(copy.deepcopy(body["files"][0]))
+        self._rejects(body)
+
+    def test_duplicate_broker_fact_is_rejected(self) -> None:
+        body = _valid_broker_observation()
+        static = self._fact(body, "static", "SIGNAL_BROKER")
+        body["files"][0]["facts"].append(copy.deepcopy(static))
+        self._rejects(body)
+
+    def test_extra_fact_key_is_rejected(self) -> None:
+        body = _valid_broker_observation()
+        self._fact(body, "static", "SIGNAL_BROKER")["unexpected"] = True
+        self._rejects(body)
+
+    def test_malformed_type_ast_is_rejected(self) -> None:
+        body = _valid_broker_observation()
+        self._fact(body, "static", "SIGNAL_BROKER")["type"] = {
+            "path": [{"name": "OnceLock", "arguments": [{"unsupported": "const"}]}]
+        }
+        self._rejects(body)
+
+    def test_parse_error_is_rejected(self) -> None:
+        body = _valid_broker_observation()
+        body["files"][0]["parse_error"] = "unexpected token"
+        self._rejects(body)
 
 class DispatchTests(unittest.TestCase):
     def test_qualification_schema_allows_architecture_profile(self) -> None:
@@ -486,7 +655,14 @@ class DispatchTests(unittest.TestCase):
             '#[cfg(all(unix, feature = "crossterm"))]\n'
             "static SIGNAL_BROKER: std::sync::OnceLock<std::sync::Mutex<SignalBroker>> = std::sync::OnceLock::new();\n"
             '#[cfg(all(unix, feature = "crossterm"))]\n'
-            "struct SignalBroker { inactive: bool, pending: bool, leased: bool }\n"
+            "struct InstallPhase { first: Option<signal_hook::SigId>, second: Option<signal_hook::SigId> }\n"
+            '#[cfg(all(unix, feature = "crossterm"))]\n'
+            "struct SignalBroker {\n"
+            "    inactive: std::sync::Arc<std::sync::atomic::AtomicBool>,\n"
+            "    pending: std::sync::Arc<std::sync::atomic::AtomicBool>,\n"
+            "    lease: bool,\n"
+            "    install: InstallPhase,\n"
+            "}\n"
         )
         event = _syntax_event(
             [
@@ -497,9 +673,23 @@ class DispatchTests(unittest.TestCase):
                         {"kind": "static", "name": "SIGNAL_BROKER", "visibility": "", "type": "OnceLock<Mutex<SignalBroker>>"},
                         {
                             "kind": "struct",
+                            "name": "InstallPhase",
+                            "visibility": "",
+                            "fields": [
+                                {"name": "first", "type": "Option<signal_hook::SigId>"},
+                                {"name": "second", "type": "Option<signal_hook::SigId>"},
+                            ],
+                        },
+                        {
+                            "kind": "struct",
                             "name": "SignalBroker",
                             "visibility": "",
-                            "fields": [{"name": "inactive"}, {"name": "pending"}, {"name": "leased"}],
+                            "fields": [
+                                {"name": "inactive", "type": "std::sync::Arc<std::sync::atomic::AtomicBool>"},
+                                {"name": "pending", "type": "std::sync::Arc<std::sync::atomic::AtomicBool>"},
+                                {"name": "lease", "type": "bool"},
+                                {"name": "install", "type": "InstallPhase"},
+                            ],
                         },
                     ],
                 }
@@ -527,7 +717,11 @@ class DispatchTests(unittest.TestCase):
                             "kind": "struct",
                             "name": "SignalBroker",
                             "visibility": "",
-                            "fields": [{"name": "inactive"}, {"name": "pending"}, {"name": "leased"}],
+                            "fields": [
+                                {"name": "inactive", "type": "std::sync::Arc<std::sync::atomic::AtomicBool>"},
+                                {"name": "pending", "type": "std::sync::Arc<std::sync::atomic::AtomicBool>"},
+                                {"name": "leased", "type": "bool"},
+                            ],
                         },
                     ],
                 }
