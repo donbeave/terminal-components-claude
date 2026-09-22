@@ -36,7 +36,9 @@ ALLOWED_V1_KEYS = {
     "qualification",
     "observer_sequence",
 }
-OPTIONAL_EXTENSION_KEYS = {"architecture_profile", "branch_host_projection"}
+ARCHITECTURE_EXTENSION_KEYS = frozenset(
+    {"architecture_profile", "branch_host_projection"}
+)
 NATIVE_ORACLE_NAMESPACES = frozenset({"showcase", "holla", "jackin", "tablepro", "components"})
 OBSERVER_OPERATIONS = {
     "account-tests",
@@ -55,6 +57,13 @@ class Reject(Exception):
     def __init__(self, category: str) -> None:
         self.category = category
         super().__init__(category)
+
+
+def allowed_context_keys(operation: object) -> frozenset[str]:
+    """Return the exact v1 context keys owned by one operation."""
+    if operation == "architecture":
+        return frozenset(ALLOWED_V1_KEYS) | ARCHITECTURE_EXTENSION_KEYS
+    return frozenset(ALLOWED_V1_KEYS)
 
 
 def expanded_members(axes: dict[str, list[Any]]) -> list[str]:
@@ -86,7 +95,11 @@ def bind_context(context: dict[str, Any], raw_hash: str) -> None:
 def validate_schema(context: dict[str, Any]) -> None:
     schema = context.get("schema")
     keys = set(context)
-    optional = {"qualification"} | OPTIONAL_EXTENSION_KEYS
+    optional = {"qualification"} | (
+        ARCHITECTURE_EXTENSION_KEYS
+        if context.get("operation") == "architecture"
+        else set()
+    )
     if schema != V1_SCHEMA:
         raise Reject("INTEGRITY")
     required = ALLOWED_V1_KEYS - optional
@@ -118,6 +131,7 @@ def validate_observer_sequence(context: dict[str, Any], operation: Any) -> list[
             not isinstance(item, str) or item not in OBSERVER_OPERATIONS
             for item in sequence
         )
+        or not isinstance(operation, str)
         or operation not in OBSERVER_OPERATIONS
         or sequence[0] != operation
     ):

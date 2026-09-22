@@ -38,12 +38,24 @@ fn parse_compare_args(args: &[String]) -> PathBuf {
         };
         match option {
             "--context" => {
+                if context.is_some() {
+                    eprintln!("tc-proof: duplicate option: --context");
+                    usage();
+                }
                 index = index.saturating_add(1);
-                context = Some(args.get(index).map_or_else(|| usage(), PathBuf::from));
+                context = Some(
+                    args.get(index)
+                        .filter(|value| !value.starts_with('-'))
+                        .map_or_else(|| usage(), PathBuf::from),
+                );
             }
             "--help" | "-h" => {
                 print!("{HELP}");
                 std::process::exit(0);
+            }
+            other if !other.starts_with('-') => {
+                eprintln!("tc-proof: unexpected positional argument: {other}");
+                usage();
             }
             other => {
                 eprintln!("tc-proof: unknown option: {other}");
@@ -61,6 +73,14 @@ fn value_after(args: &[String], index: &mut usize, option: &str) -> Result<Strin
         .filter(|value| !value.starts_with('-'))
         .cloned()
         .ok_or_else(|| format!("{option} requires a value"))
+}
+
+fn set_once<T>(slot: &mut Option<T>, value: T, option: &str) -> Result<(), String> {
+    if slot.is_some() {
+        return Err(format!("duplicate option: {option}"));
+    }
+    *slot = Some(value);
+    Ok(())
 }
 
 #[expect(
@@ -94,77 +114,132 @@ fn parse_prepare_args(args: &[String]) -> Result<verifier::PrepareOptions, Strin
         };
         match option {
             "--task-dir" => {
-                task_dir = Some(PathBuf::from(value_after(args, &mut index, "--task-dir")?));
+                set_once(
+                    &mut task_dir,
+                    PathBuf::from(value_after(args, &mut index, "--task-dir")?),
+                    "--task-dir",
+                )?;
             }
             "--run-dir" => {
-                run_dir = Some(PathBuf::from(value_after(args, &mut index, "--run-dir")?));
+                set_once(
+                    &mut run_dir,
+                    PathBuf::from(value_after(args, &mut index, "--run-dir")?),
+                    "--run-dir",
+                )?;
             }
             "--worktree" => {
-                worktree = Some(PathBuf::from(value_after(args, &mut index, "--worktree")?));
+                set_once(
+                    &mut worktree,
+                    PathBuf::from(value_after(args, &mut index, "--worktree")?),
+                    "--worktree",
+                )?;
             }
-            "--scope-base" => scope_base = Some(value_after(args, &mut index, "--scope-base")?),
-            "--oracle-tag" => oracle_tag = Some(value_after(args, &mut index, "--oracle-tag")?),
+            "--scope-base" => set_once(
+                &mut scope_base,
+                value_after(args, &mut index, "--scope-base")?,
+                "--scope-base",
+            )?,
+            "--oracle-tag" => set_once(
+                &mut oracle_tag,
+                value_after(args, &mut index, "--oracle-tag")?,
+                "--oracle-tag",
+            )?,
             "--oracle-commit" => {
-                oracle_commit = Some(value_after(args, &mut index, "--oracle-commit")?);
+                set_once(
+                    &mut oracle_commit,
+                    value_after(args, &mut index, "--oracle-commit")?,
+                    "--oracle-commit",
+                )?;
             }
-            "--tool" => tool = Some(PathBuf::from(value_after(args, &mut index, "--tool")?)),
+            "--tool" => set_once(
+                &mut tool,
+                PathBuf::from(value_after(args, &mut index, "--tool")?),
+                "--tool",
+            )?,
             "--comparator" => {
-                comparator = Some(PathBuf::from(value_after(
-                    args,
-                    &mut index,
+                set_once(
+                    &mut comparator,
+                    PathBuf::from(value_after(args, &mut index, "--comparator")?),
                     "--comparator",
-                )?));
+                )?;
             }
             "--taskfmt" => {
-                taskfmt = Some(PathBuf::from(value_after(args, &mut index, "--taskfmt")?));
+                set_once(
+                    &mut taskfmt,
+                    PathBuf::from(value_after(args, &mut index, "--taskfmt")?),
+                    "--taskfmt",
+                )?;
             }
             "--native-build-receipt" => {
-                native_build_receipt = Some(PathBuf::from(value_after(
-                    args,
-                    &mut index,
+                set_once(
+                    &mut native_build_receipt,
+                    PathBuf::from(value_after(args, &mut index, "--native-build-receipt")?),
                     "--native-build-receipt",
-                )?));
+                )?;
             }
             "--taskfmt-source" => {
-                taskfmt_source = Some(PathBuf::from(value_after(
-                    args,
-                    &mut index,
+                set_once(
+                    &mut taskfmt_source,
+                    PathBuf::from(value_after(args, &mut index, "--taskfmt-source")?),
                     "--taskfmt-source",
-                )?));
+                )?;
             }
             "--taskfmt-revision" => {
-                taskfmt_revision = Some(value_after(args, &mut index, "--taskfmt-revision")?);
+                set_once(
+                    &mut taskfmt_revision,
+                    value_after(args, &mut index, "--taskfmt-revision")?,
+                    "--taskfmt-revision",
+                )?;
             }
             "--taskfmt-version" => {
-                taskfmt_version = Some(value_after(args, &mut index, "--taskfmt-version")?);
+                set_once(
+                    &mut taskfmt_version,
+                    value_after(args, &mut index, "--taskfmt-version")?,
+                    "--taskfmt-version",
+                )?;
             }
             "--taskfmt-sha256" => {
-                taskfmt_sha256 = Some(value_after(args, &mut index, "--taskfmt-sha256")?);
+                set_once(
+                    &mut taskfmt_sha256,
+                    value_after(args, &mut index, "--taskfmt-sha256")?,
+                    "--taskfmt-sha256",
+                )?;
             }
             "--observer-provider" => {
-                observer_provider = Some(PathBuf::from(value_after(
-                    args,
-                    &mut index,
+                set_once(
+                    &mut observer_provider,
+                    PathBuf::from(value_after(args, &mut index, "--observer-provider")?),
                     "--observer-provider",
-                )?));
+                )?;
             }
             "--dependency-receipt" => dependency_receipts.push(PathBuf::from(value_after(
                 args,
                 &mut index,
                 "--dependency-receipt",
             )?)),
-            "--run-id" => run_id = Some(value_after(args, &mut index, "--run-id")?),
+            "--run-id" => set_once(
+                &mut run_id,
+                value_after(args, &mut index, "--run-id")?,
+                "--run-id",
+            )?,
             "--observer-nonce" => {
-                observer_nonce = Some(value_after(args, &mut index, "--observer-nonce")?);
+                set_once(
+                    &mut observer_nonce,
+                    value_after(args, &mut index, "--observer-nonce")?,
+                    "--observer-nonce",
+                )?;
             }
             "--observer-socket" => {
-                observer_socket = Some(PathBuf::from(value_after(
-                    args,
-                    &mut index,
+                set_once(
+                    &mut observer_socket,
+                    PathBuf::from(value_after(args, &mut index, "--observer-socket")?),
                     "--observer-socket",
-                )?));
+                )?;
             }
             "--help" | "-h" => return Err(HELP.to_string()),
+            option if !option.starts_with('-') => {
+                return Err(format!("unexpected positional argument: {option}"));
+            }
             option => return Err(format!("unknown prepare option: {option}")),
         }
         index = index.saturating_add(1);
@@ -203,7 +278,7 @@ fn parse_launch_args(args: &[String]) -> Result<verifier::LaunchOptions, String>
     let mut run_dir = None;
     let mut check_id = None;
     let mut observer_socket = None;
-    let mut timeout_ms = 120_000_u64;
+    let mut timeout_ms = None;
     let prefix = args
         .get(..separator)
         .ok_or_else(|| "invalid launch option range".to_string())?;
@@ -214,22 +289,34 @@ fn parse_launch_args(args: &[String]) -> Result<verifier::LaunchOptions, String>
         };
         match option {
             "--run-dir" => {
-                run_dir = Some(PathBuf::from(value_after(prefix, &mut index, "--run-dir")?));
+                set_once(
+                    &mut run_dir,
+                    PathBuf::from(value_after(prefix, &mut index, "--run-dir")?),
+                    "--run-dir",
+                )?;
             }
-            "--check-id" => check_id = Some(value_after(prefix, &mut index, "--check-id")?),
+            "--check-id" => set_once(
+                &mut check_id,
+                value_after(prefix, &mut index, "--check-id")?,
+                "--check-id",
+            )?,
             "--observer-socket" => {
-                observer_socket = Some(PathBuf::from(value_after(
-                    prefix,
-                    &mut index,
+                set_once(
+                    &mut observer_socket,
+                    PathBuf::from(value_after(prefix, &mut index, "--observer-socket")?),
                     "--observer-socket",
-                )?));
+                )?;
             }
             "--timeout-ms" => {
-                timeout_ms = value_after(prefix, &mut index, "--timeout-ms")?
+                let parsed = value_after(prefix, &mut index, "--timeout-ms")?
                     .parse()
                     .map_err(|_| "invalid --timeout-ms".to_string())?;
+                set_once(&mut timeout_ms, parsed, "--timeout-ms")?;
             }
             "--help" | "-h" => return Err(HELP.to_string()),
+            option if !option.starts_with('-') => {
+                return Err(format!("unexpected positional argument: {option}"));
+            }
             option => return Err(format!("unknown launch option: {option}")),
         }
         index = index.saturating_add(1);
@@ -242,7 +329,7 @@ fn parse_launch_args(args: &[String]) -> Result<verifier::LaunchOptions, String>
         run_dir: run_dir.ok_or_else(|| "missing --run-dir".to_string())?,
         check_id: check_id.ok_or_else(|| "missing --check-id".to_string())?,
         observer_socket,
-        timeout: Duration::from_millis(timeout_ms),
+        timeout: Duration::from_millis(timeout_ms.unwrap_or(120_000)),
         program: PathBuf::from(program),
         args: args
             .get(separator.saturating_add(2)..)
@@ -260,9 +347,16 @@ fn parse_validate_args(args: &[String]) -> Result<PathBuf, String> {
         };
         match option {
             "--run-dir" => {
-                run_dir = Some(PathBuf::from(value_after(args, &mut index, "--run-dir")?));
+                set_once(
+                    &mut run_dir,
+                    PathBuf::from(value_after(args, &mut index, "--run-dir")?),
+                    "--run-dir",
+                )?;
             }
             "--help" | "-h" => return Err(HELP.to_string()),
+            option if !option.starts_with('-') => {
+                return Err(format!("unexpected positional argument: {option}"));
+            }
             option => return Err(format!("unknown validate option: {option}")),
         }
         index = index.saturating_add(1);

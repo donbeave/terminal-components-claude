@@ -8,7 +8,7 @@ import stat
 from pathlib import Path
 from typing import Any
 
-from .context import ALLOWED_V1_KEYS, Reject, V1_SCHEMA, load_context
+from .context import ALLOWED_V1_KEYS, Reject, V1_SCHEMA, allowed_context_keys, load_context
 from .json_util import load_path, sha256_bytes
 
 
@@ -95,8 +95,7 @@ def validate_index(context: dict[str, Any], context_hash: str) -> None:
     if {path.name for path in results_dir.iterdir()} != expected_files:
         raise Reject("CONTEXT_INDEX")
     check_id = os.environ.get("TC_PROOF_CHECK_ID")
-    optional = {"qualification", "architecture_profile", "branch_host_projection"}
-    required_child = ALLOWED_V1_KEYS - optional
+    required_child = ALLOWED_V1_KEYS - {"qualification"}
     member_fields = {
         "check_id",
         "path",
@@ -156,8 +155,10 @@ def validate_index(context: dict[str, Any], context_hash: str) -> None:
             child = load_path(child_path)
         except ValueError:
             raise Reject("CONTEXT_INDEX") from None
+        if not isinstance(child, dict):
+            raise Reject("CONTEXT_INDEX")
         child_keys = set(child)
-        if child_keys - required_child - optional or required_child - child_keys:
+        if child_keys - allowed_context_keys(child.get("operation")) or required_child - child_keys:
             raise Reject("CONTEXT_INDEX")
         if child.get("schema") != V1_SCHEMA:
             raise Reject("CONTEXT_INDEX")

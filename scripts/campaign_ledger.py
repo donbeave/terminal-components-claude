@@ -30,6 +30,7 @@ REVIEW_SCHEMA = "campaign-review/v1"
 PROOF_PREPARATION_SCHEMA = "campaign-proof-preparation/v1"
 CONTEXT_INDEX_SCHEMA = "tc-proof-context-index/v1"
 CONTEXT_SCHEMA = "tc-proof-context/v1"
+COMPARE_CONTEXT_SCHEMA = "tc-proof-compare-context/v1"
 PREPARATION_RESULT_SCHEMA = "tc-proof-preparation-result/v1"
 OBSERVER_SCHEMA = "tc-proof-observer-capability/v1"
 NATIVE_BUILD_SCHEMA = "tc-proof-native-build/v1"
@@ -39,6 +40,56 @@ PREPARATION_REVIEW_SCHEMA = "campaign-preparation-review/v1"
 PREPARATION_EVIDENCE_SCHEMA = "campaign-preparation-evidence/v1"
 PREFLIGHT_REPORT_SCHEMA = "campaign-preflight-report/v1"
 PREPARATION_RECORD_KEY = "preparation"
+
+_PROOF_CONTEXT_BASE_KEYS = frozenset(
+    {
+        "schema",
+        "run_id",
+        "task_id",
+        "check_id",
+        "worktree_commit",
+        "scope_base",
+        "operation",
+        "tree",
+        "oracle_commit",
+        "oracle_tree",
+        "bundle",
+        "bundle_sha256",
+        "tool",
+        "dependencies",
+        "adapter",
+        "lane",
+        "axes",
+        "members",
+        "inventory",
+        "evidence",
+        "configuration",
+        "qualification",
+        "observer_sequence",
+    }
+)
+_ARCHITECTURE_EXTENSION_KEYS = frozenset(
+    {"architecture_profile", "branch_host_projection"}
+)
+_PROOF_CONTEXT_OPERATIONS = frozenset(
+    {
+        "account-tests",
+        "architecture",
+        "capture",
+        "close",
+        "compare",
+        "external",
+        "oracle",
+        "preflight",
+        "required",
+    }
+)
+
+
+def _proof_context_allowed_keys(operation: object) -> frozenset[str]:
+    if operation == "architecture":
+        return _PROOF_CONTEXT_BASE_KEYS | _ARCHITECTURE_EXTENSION_KEYS
+    return _PROOF_CONTEXT_BASE_KEYS
 
 FROZEN_ORACLE_TAG = "refs/tags/visual-baseline"
 FROZEN_ORACLE_COMMIT = "4a79c0a2d40fca46fc406b77157ce3b3f12ec16b"
@@ -1686,33 +1737,7 @@ def _validate_external_proof_preparation(
             if name == "context":
                 _unknown(
                     record,
-                    {
-                        "schema",
-                        "run_id",
-                        "task_id",
-                        "check_id",
-                        "worktree_commit",
-                        "scope_base",
-                        "operation",
-                        "tree",
-                        "oracle_commit",
-                        "oracle_tree",
-                        "bundle",
-                        "bundle_sha256",
-                        "tool",
-                        "dependencies",
-                        "adapter",
-                        "lane",
-                        "axes",
-                        "members",
-                        "inventory",
-                        "evidence",
-                        "configuration",
-                        "qualification",
-                        "observer_sequence",
-                        "architecture_profile",
-                        "branch_host_projection",
-                    },
+                    _proof_context_allowed_keys(record.get("operation")),
                     f"proof_preparation.context.{check_id}",
                 )
                 _required(
@@ -2145,33 +2170,7 @@ def _validate_proof_context_bindings(
     )
     _unknown(
         context,
-        {
-            "schema",
-            "run_id",
-            "task_id",
-            "check_id",
-            "worktree_commit",
-            "scope_base",
-            "operation",
-            "tree",
-            "oracle_commit",
-            "oracle_tree",
-            "bundle",
-            "bundle_sha256",
-            "tool",
-            "dependencies",
-            "adapter",
-            "lane",
-            "axes",
-            "members",
-            "inventory",
-            "evidence",
-            "configuration",
-            "qualification",
-            "observer_sequence",
-            "architecture_profile",
-            "branch_host_projection",
-        },
+        _proof_context_allowed_keys(context.get("operation")),
         f"proof preparation.context.{check_id}",
     )
     _required(context, required, f"proof preparation.context.{check_id}")
@@ -2186,14 +2185,18 @@ def _validate_proof_context_bindings(
         or context["scope_base"] != scope_base
     ):
         _reject(f"{field} identity mismatch")
-    _string(context["operation"], f"{field}.operation")
+    operation = _string(context["operation"], f"{field}.operation")
+    if operation not in _PROOF_CONTEXT_OPERATIONS:
+        _reject(f"{field}.operation is unknown")
     sequence = context["observer_sequence"]
     if not isinstance(sequence, list) or not sequence or any(
-        not isinstance(item, str) or not item for item in sequence
+        not isinstance(item, str) or item not in _PROOF_CONTEXT_OPERATIONS for item in sequence
     ):
         _reject(f"{field} observer_sequence is invalid")
     if sequence[0] != context["operation"]:
         _reject(f"{field} observer_sequence does not start with the operation")
+    if len(sequence) > 8:
+        _reject(f"{field} observer_sequence is too long")
     if context["tree"] != candidate_tree:
         _reject(f"{field} source tree is not bound to the candidate")
     if context["oracle_commit"] != FROZEN_ORACLE_COMMIT:
@@ -2206,13 +2209,13 @@ def _validate_proof_context_bindings(
 
     qualification = _mapping(context["qualification"], f"{field}.qualification")
     family = qualification.get("family")
-    if context["operation"] == "oracle":
+    if operation == "oracle":
         if family not in {"native", "synthetic"}:
             _reject(f"{field} qualification family is missing or invalid")
         expected_len = 1 if family == "native" else 2
         if sequence != ["oracle"] * expected_len:
             _reject(f"{field} observer_sequence does not match qualification family")
-    elif sequence != [context["operation"]]:
+    elif sequence != [operation]:
         _reject(f"{field} observer_sequence must contain exactly its operation")
     elif family is not None:
         _reject(f"{field} qualification family is only valid for oracle")
@@ -2413,20 +2416,38 @@ def _validate_proof_context_bindings(
         _reject(f"{field} trust manifest lacks the bound check")
 
     comparator_qualification = qualification.get("comparator")
+    if operation == "compare" and comparator_qualification is None:
+        _reject(f"{field}.qualification.comparator is required for compare")
+    if operation != "compare" and comparator_qualification is not None:
+        _reject(f"{field}.qualification.comparator is only valid for compare")
     if comparator_qualification is not None:
         comparator_qualification = _mapping(
             comparator_qualification, f"{field}.qualification.comparator"
         )
+        _unknown(
+            comparator_qualification,
+            {"schema", "context", "report_path"},
+            f"{field}.qualification.comparator",
+        )
+        _required(
+            comparator_qualification,
+            ("schema", "context", "report_path"),
+            f"{field}.qualification.comparator",
+        )
+        if comparator_qualification["schema"] != COMPARE_CONTEXT_SCHEMA:
+            _reject(f"{field}.qualification.comparator schema mismatch")
         nested = _mapping(
             comparator_qualification.get("context"),
             f"{field}.qualification.comparator.context",
         )
         if (
-            nested.get("run_id") != str(run_path)
+            nested.get("schema") != COMPARE_CONTEXT_SCHEMA
+            or nested.get("run_id") != str(run_path)
             or nested.get("task_id") != task_id
             or nested.get("check_id") != check_id
             or nested.get("candidate_source_tree") != candidate_tree
             or nested.get("oracle_commit") != FROZEN_ORACLE_COMMIT
+            or nested.get("report_path") != comparator_qualification["report_path"]
         ):
             _reject(f"{field} comparator context binding mismatch")
         report_path = Path(

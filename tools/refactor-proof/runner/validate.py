@@ -7,7 +7,7 @@ import stat
 from pathlib import Path
 from typing import Any
 
-from .context import ALLOWED_V1_KEYS, OPTIONAL_EXTENSION_KEYS, Reject, expanded_members
+from .context import ALLOWED_V1_KEYS, Reject, allowed_context_keys, expanded_members
 from .json_util import load_path, sha256_bytes
 
 
@@ -139,6 +139,24 @@ _RUNTIME_RESULT_KEYS = {
     "outputs",
 }
 
+_OBSERVATION_KEYS = {
+    "schema",
+    "nonce",
+    "run_id",
+    "task_id",
+    "check_id",
+    "request_id",
+    "operation",
+    "source_commit",
+    "tree",
+    "exit",
+    "stdout",
+    "stderr",
+    "files",
+    "payload",
+    "records",
+}
+
 _ALLOWED_SYSTEM_SYMLINKS = {
     Path("/etc"): Path("/private/etc"),
     Path("/home"): Path("/System/Volumes/Data/home"),
@@ -244,6 +262,74 @@ def validate_close_records(event: dict[str, Any], expected_check_ids: list[str])
             raise Reject("CLOSURE")
 
 
+def _validate_current_observation(
+    event: Any,
+    *,
+    index: dict[str, Any],
+    context: dict[str, Any],
+    capability: dict[str, Any],
+    check_id: str,
+    request_id: int,
+    operation: str,
+) -> None:
+    """Validate the complete current nine-field observer identity envelope.
+
+    The legacy accounting observer deliberately has a smaller five-field
+    request ABI and is validated by ``accounting.qualification``.  This
+    helper is called only for current ``tc-proof-context/v1`` records.
+    """
+    if not isinstance(event, dict) or set(event) != _OBSERVATION_KEYS:
+        raise Reject("CLOSURE")
+    if event.get("schema") != "tc-proof-observation/v1":
+        raise Reject("CLOSURE")
+    nonce = os.environ.get("TC_PROOF_OBSERVER_NONCE")
+    source_commit = os.environ.get("TC_PROOF_ORACLE_COMMIT")
+    source_tree = os.environ.get("TC_PROOF_SOURCE_TREE")
+    if not isinstance(nonce, str) or not nonce:
+        raise Reject("CLOSURE")
+    if not isinstance(source_commit, str) or not isinstance(source_tree, str):
+        raise Reject("CLOSURE")
+    expected = {
+        "nonce": nonce,
+        "run_id": index.get("run_id"),
+        "task_id": index.get("task_id"),
+        "check_id": check_id,
+        "request_id": request_id,
+        "operation": operation,
+        "source_commit": source_commit,
+        "tree": source_tree,
+    }
+    if any(event.get(key) != value for key, value in expected.items()):
+        raise Reject("CLOSURE")
+    if (
+        context.get("run_id") != index.get("run_id")
+        or context.get("task_id") != index.get("task_id")
+        or context.get("check_id") != check_id
+        or context.get("oracle_commit") != source_commit
+        or context.get("tree") != source_tree
+        or capability.get("nonce_sha256") != sha256_bytes(nonce.encode())
+    ):
+        raise Reject("CLOSURE")
+    if event.get("exit") != 0:
+        raise Reject("CLOSURE")
+    if not isinstance(event.get("stdout"), str) or not isinstance(event.get("stderr"), str):
+        raise Reject("CLOSURE")
+    files = event.get("files")
+    if not isinstance(files, dict) or any(
+        not isinstance(name, str) or not isinstance(value, str)
+        for name, value in files.items()
+    ):
+        raise Reject("CLOSURE")
+    if (
+        not isinstance(event.get("payload"), dict)
+        or not event["payload"]
+        or not isinstance(event.get("records"), list)
+        or not event["records"]
+        or any(not isinstance(row, dict) or not row for row in event["records"])
+    ):
+        raise Reject("CLOSURE")
+
+
 def validate_index_close_outputs(
     event: dict[str, Any],
     index: dict[str, Any],
@@ -305,10 +391,10 @@ def validate_index_close_outputs(
 
     context_entries: dict[str, tuple[Path, str, dict[str, Any]]] = {}
     required_context = ALLOWED_V1_KEYS
-    allowed_context = required_context | {"qualification"} | OPTIONAL_EXTENSION_KEYS
     for check_id, member in zip(context_ids, contexts):
         context_path, context_hash = _bound_member(member, check_id, contexts_dir)
         context = _object(context_path)
+        allowed_context = allowed_context_keys(context.get("operation"))
         if (
             set(context) - allowed_context
             or required_context - set(context)
@@ -378,6 +464,21 @@ def validate_index_close_outputs(
     ):
         raise Reject("CLOSURE")
 
+    current_context = context_entries[current_check_id][2]
+    current_sequence = current_context.get("observer_sequence")
+    if current_context.get("schema") == "tc-proof-context/v1":
+        if current_sequence != ["close"]:
+            raise Reject("CLOSURE")
+        _validate_current_observation(
+            event,
+            index=index,
+            context=current_context,
+            capability=capability,
+            check_id=current_check_id,
+            request_id=0,
+            operation="close",
+        )
+
     expected_names = {f"{check_id}.result.json" for check_id in expected_ids}
     report_names: set[str] = set()
     for _, _, context in context_entries.values():
@@ -433,6 +534,30 @@ def validate_index_close_outputs(
             or row["result_sha256"] != sha256_bytes(raw)
         ):
             raise Reject("CLOSURE")
+
+        observations = report["outputs"].get("observations")
+        if observations is None:
+            if context["operation"] not in {"external", "compare"}:
+                raise Reject("CLOSURE")
+        else:
+            sequence = context.get("observer_sequence")
+            if (
+                not isinstance(sequence, list)
+                or not sequence
+                or not isinstance(observations, list)
+                or len(observations) != len(sequence)
+            ):
+                raise Reject("CLOSURE")
+            for request_id, observed_operation in enumerate(sequence):
+                _validate_current_observation(
+                    observations[request_id],
+                    index=index,
+                    context=context,
+                    capability=capability,
+                    check_id=check_id,
+                    request_id=request_id,
+                    operation=observed_operation,
+                )
 
     for report_name in report_names:
         _regular_file(output_dir / report_name)

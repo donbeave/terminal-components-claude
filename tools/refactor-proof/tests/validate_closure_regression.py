@@ -9,7 +9,9 @@ import os
 import sys
 import tempfile
 import unittest
+from copy import copy
 from pathlib import Path
+from unittest.mock import patch
 
 # Keep the regression command runnable from the repository root, matching the
 # documented native qualification command. The bundled worker is not an
@@ -20,6 +22,8 @@ if str(PROOF_ROOT) not in sys.path:
 
 from runner.context import ALLOWED_V1_KEYS, Reject
 from runner.validate import validate_index_close_outputs
+
+NONCE = "closure-observer-nonce"
 
 
 def _write_json(path: Path, value: dict[str, object]) -> str:
@@ -49,6 +53,7 @@ def _fixture(base_dir: Path | None = None) -> tuple[Path, dict[str, object], dic
     results: list[dict[str, str]] = []
     context_hashes: dict[str, str] = {}
     for check_id in ("CHK-001", "CHK-002"):
+        operation = "close" if check_id == "CHK-001" else "external"
         context: dict[str, object] = {key: None for key in ALLOWED_V1_KEYS}
         context.update(
             {
@@ -58,8 +63,10 @@ def _fixture(base_dir: Path | None = None) -> tuple[Path, dict[str, object], dic
                 "check_id": check_id,
                 "worktree_commit": worktree_commit,
                 "scope_base": scope_base,
-                "operation": "direct",
-                "observer_sequence": ["direct"],
+                "operation": operation,
+                "observer_sequence": [operation],
+                "tree": "c" * 40,
+                "oracle_commit": "d" * 40,
                 "qualification": {},
             }
         )
@@ -89,8 +96,11 @@ def _fixture(base_dir: Path | None = None) -> tuple[Path, dict[str, object], dic
         "worktree_commit": worktree_commit,
         "scope_base": scope_base,
         "transport": "inherited-pipe/v1",
-        "nonce_sha256": "c" * 64,
-        "sequences": {check_id: ["direct"] for check_id in ("CHK-001", "CHK-002")},
+        "nonce_sha256": hashlib.sha256(NONCE.encode()).hexdigest(),
+        "sequences": {
+            "CHK-001": ["close"],
+            "CHK-002": ["external"],
+        },
         "provider": {"path": "/usr/bin/true", "sha256": "e" * 64},
     }
     observer_path = root / "observer.json"
@@ -103,14 +113,17 @@ def _fixture(base_dir: Path | None = None) -> tuple[Path, dict[str, object], dic
         "scope_base": scope_base,
         "contexts": contexts,
         "results": results,
-        "observer_sequences": {check_id: ["direct"] for check_id in ("CHK-001", "CHK-002")},
+        "observer_sequences": {
+            "CHK-001": ["close"],
+            "CHK-002": ["external"],
+        },
         "observer": {"path": str(observer_path), "sha256": observer_hash},
     }
 
     output = {
         "schema": "tc-proof-runner-result/v1",
         "run_id": str(root),
-        "operation": "direct",
+        "operation": "external",
         "context_sha256": context_hashes["CHK-002"],
         "status": "passed",
         "category": None,
@@ -120,6 +133,20 @@ def _fixture(base_dir: Path | None = None) -> tuple[Path, dict[str, object], dic
     output_path = output_dir / "CHK-002.result.json"
     output_hash = _write_json(output_path, output)
     event = {
+        "schema": "tc-proof-observation/v1",
+        "nonce": NONCE,
+        "run_id": str(root),
+        "task_id": task_id,
+        "check_id": "CHK-001",
+        "request_id": 0,
+        "operation": "close",
+        "source_commit": "d" * 40,
+        "tree": "c" * 40,
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "files": {},
+        "payload": {"closed": True},
         "records": [
             {
                 "check_id": "CHK-002",
@@ -132,11 +159,57 @@ def _fixture(base_dir: Path | None = None) -> tuple[Path, dict[str, object], dic
     return root, index, event, output_dir
 
 
+def _validate_fixture(
+    root: Path,
+    index: dict[str, object],
+    event: dict[str, object],
+    output_dir: Path,
+) -> None:
+    with patch.dict(
+        os.environ,
+        {
+            "TC_PROOF_OBSERVER_NONCE": NONCE,
+            "TC_PROOF_ORACLE_COMMIT": "d" * 40,
+            "TC_PROOF_SOURCE_TREE": "c" * 40,
+        },
+        clear=False,
+    ):
+        validate_index_close_outputs(event, index, output_dir, "CHK-001")
+
+
 class ClosurePathTests(unittest.TestCase):
+    def test_current_close_identity_replay_is_rejected(self) -> None:
+        root, index, event, output_dir = _fixture()
+        try:
+            forged_values = {
+                "nonce": "replayed-nonce",
+                "run_id": "another-run",
+                "task_id": "TASK-999",
+                "check_id": "CHK-002",
+                "request_id": 1,
+                "operation": "capture",
+                "source_commit": "e" * 40,
+                "tree": "f" * 40,
+            }
+            for key, value in forged_values.items():
+                with self.subTest(key=key):
+                    forged = copy(event)
+                    forged[key] = value
+                    with self.assertRaises(Reject) as raised:
+                        _validate_fixture(root, index, forged, output_dir)
+                    self.assertEqual(raised.exception.category, "CLOSURE")
+        finally:
+            for path in sorted(root.rglob("*"), reverse=True):
+                if path.is_symlink() or path.is_file():
+                    path.unlink()
+                elif path.is_dir():
+                    path.rmdir()
+            root.rmdir()
+
     def test_valid_closure_is_accepted(self) -> None:
         root, index, event, output_dir = _fixture()
         try:
-            validate_index_close_outputs(event, index, output_dir, "CHK-001")
+            _validate_fixture(root, index, event, output_dir)
         finally:
             for path in sorted(root.rglob("*"), reverse=True):
                 if path.is_symlink() or path.is_file():
@@ -155,7 +228,7 @@ class ClosurePathTests(unittest.TestCase):
                     directory.rename(real_directory)
                     directory.symlink_to(real_directory, target_is_directory=True)
                     with self.assertRaises(Reject) as raised:
-                        validate_index_close_outputs(event, index, output_dir, "CHK-001")
+                        _validate_fixture(root, index, event, output_dir)
                     self.assertEqual(raised.exception.category, "CLOSURE")
                 finally:
                     for path in sorted(root.rglob("*"), reverse=True):
@@ -173,7 +246,7 @@ class ClosurePathTests(unittest.TestCase):
         try:
             root, index, event, output_dir = _fixture(alias_parent)
             with self.assertRaises(Reject) as raised:
-                validate_index_close_outputs(event, index, output_dir, "CHK-001")
+                _validate_fixture(root, index, event, output_dir)
             self.assertEqual(raised.exception.category, "CLOSURE")
         finally:
             if root is not None:
@@ -191,7 +264,7 @@ class ClosurePathTests(unittest.TestCase):
             with self.subTest(base_dir=base_dir):
                 root, index, event, output_dir = _fixture(base_dir)
                 try:
-                    validate_index_close_outputs(event, index, output_dir, "CHK-001")
+                    _validate_fixture(root, index, event, output_dir)
                 finally:
                     for path in sorted(root.rglob("*"), reverse=True):
                         if path.is_symlink() or path.is_file():
@@ -213,7 +286,7 @@ class ClosurePathTests(unittest.TestCase):
                     alias = root / f"alias-{source.name}"
                     os.link(source, alias)
                     with self.assertRaises(Reject) as raised:
-                        validate_index_close_outputs(event, index, output_dir, "CHK-001")
+                        _validate_fixture(root, index, event, output_dir)
                     self.assertEqual(raised.exception.category, "CLOSURE")
                 finally:
                     for path in sorted(root.rglob("*"), reverse=True):
