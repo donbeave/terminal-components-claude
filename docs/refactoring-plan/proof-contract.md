@@ -170,6 +170,108 @@ passed result. The protocol is an integrity and execution-observation control
 for the native same-user threat model; it does not claim arbitrary filesystem isolation from a hostile process running as the
 same user. Seatbelt or container isolation is not part of this contract.
 
+## Production-bound capture and exact artifact closure
+
+Candidate and oracle evidence MUST come from the real production-bound capture
+path. A candidate capture MUST build and launch the application from the
+candidate worktree at the bound source commit and tree, then drive its real
+PTY, update, draw, input, resize, settle, and cleanup path. An oracle capture
+MUST identify the corresponding production-bound capture recorded by the
+protected `visual-baseline` store. Importing an oracle artifact is read-only;
+it never permits regenerating, blessing, or replacing the oracle.
+
+Detached widget fixtures, synthetic frames, static/headless renders, copied
+oracle bytes, hard-coded output, and a comparator or test that fabricates a
+frame are not production-bound captures. A capture whose producer, source
+identity, or execution observer cannot be independently verified is rejected.
+
+The acceptance membership is exact, not count-only. The frozen matrix contains
+exactly 7,550 keys and exactly 30,200 artifacts: four artifacts for every key
+(ANSI, plain text, PNG, and HTML), across every application, fixture, route,
+state, interaction checkpoint, captured variant, terminal size
+(72x20, 80x24, 100x30, 120x40, and 160x50), and color mode (truecolor,
+256-color, 16-color, `none`, and `nocolor`). The candidate membership,
+oracle membership, and comparison membership MUST each equal the read-only
+oracle manifest set exactly. Missing, extra, duplicate, substituted, or
+unknown keys or artifact paths fail closed; a smaller applicable subset is not
+an acceptance run. The verifier MUST bind the manifest and artifact-membership
+digests into the evidence rather than proving only the two counts.
+
+## Receipt, comparator, and execution ABI
+
+Every accepted capture and comparison MUST be represented by a strict,
+versioned JSON object. The accepted schemas are
+`tc-proof-capture-receipt/v1` and `tc-proof-comparator-report/v1`; their
+objects use `additionalProperties: false`, reject duplicate members, and have
+the exact required member sets below. A missing member, extra member, wrong
+type, non-canonical encoding, or unbound hash is a failed gate.
+
+The capture-receipt set is:
+
+```text
+schema, run_id, task_id, check_id, role, matrix_key, artifact,
+source_commit, source_tree, tool_sha256, oracle_commit, oracle_tree,
+oracle_sha256, producer_sha256, reviewer_sha256, evidence_sha256,
+command, argv, argv_sha256, observer, exit
+```
+
+The comparator-report set is:
+
+```text
+schema, run_id, task_id, check_id, matrix_key, artifact,
+source_commit, source_tree, tool_sha256, oracle_commit, oracle_tree,
+oracle_sha256, producer_sha256, reviewer_sha256, evidence_sha256,
+command, argv, argv_sha256, observer, comparison, exit
+```
+
+`source_commit` and `source_tree` identify the captured production source;
+`oracle_commit`, `oracle_tree`, and `oracle_sha256` identify the immutable
+expected oracle artifact; `tool_sha256` identifies the exact comparator or
+capture tool; `producer_sha256` identifies the executable or script that
+produced the bytes; `reviewer_sha256` identifies the independent review
+receipt; and `evidence_sha256` identifies the exact evidence bytes. Hashes
+MUST be lowercase hexadecimal SHA-256 values except that Git commit/tree
+identities use their full object IDs. The reviewer hash MUST not be produced
+by the capture producer or comparator itself.
+
+`command` is the bound logical operation. `argv` is the exact ordered argument
+vector, including the executable, with no shell interpolation or omitted
+environment-selected argument. `argv_sha256` is the SHA-256 of the canonical
+JSON encoding of that vector. The recorded executable bytes MUST match
+`tool_sha256`; a command string, path, or exit status alone cannot substitute
+for the executable and argv binding.
+
+`observer` is also strict and contains exactly `transport`, `nonce_sha256`,
+`request_sha256`, and `response_sha256`. It MUST use
+`inherited-pipe/v1`. Observer request and response records MUST bind the same
+run, task, check, operation, source commit, source tree, nonce, request order,
+and numerical exit as the receipt. Missing, replayed, forged, empty, or
+cross-run observer evidence fails closed.
+
+All proof documents, receipts, comparator reports, and observer records use
+one canonical JSON ABI: UTF-8 bytes, one JSON value, lexicographically sorted
+object keys, no insignificant whitespace, no BOM, no trailing newline, no
+duplicate object names, and only finite JSON numbers. Hashes cover those exact
+serialized bytes. A schema's member set is part of its ABI; changing field
+order, spelling, type, or canonicalization is a schema change and requires a
+new version.
+
+Every `operation=architecture` context and its accepted evidence MUST contain
+a non-empty `architecture_profile` using
+`tc-proof-architecture-profile/v1`. The profile MUST be the machine-readable
+profile generated from the bound candidate source and MUST carry its source
+commit/tree, producer, reviewer, evidence hash, and numerical exit. Omitted,
+`null`, empty, prose-only, stale, or candidate-unbound architecture profiles
+fail closed. Architecture proof cannot be accepted from a generic result or
+from a profile supplied only by a worker-controlled extension.
+
+`exit` is required in every capture, comparator, and observer record and MUST
+be a JSON integer, not a Boolean or string, equal to the actual process exit
+value. `exit == 0` is the only successful execution; every nonzero exit MUST
+remain nonzero through the native launcher, taskfmt driver, receipt, and
+review evidence. A textual status, a reviewer verdict, or a successful parent
+process cannot turn a failed child exit into a pass.
+
 ## Evidence ownership
 
 The implementer subagent produces a scoped commit and advisory test output.
