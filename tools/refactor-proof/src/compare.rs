@@ -5,7 +5,7 @@
     reason = "comparator reports malformed proof input on stderr"
 )]
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fs::{self, OpenOptions};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
@@ -18,7 +18,7 @@ use serde_json::Value;
 use tuisnap::Frame;
 
 use crate::json_util::{
-    as_object_map, duplicate_values, get_str, is_safe_relative_path, parse_json_bytes_strict,
+    as_object_map, canonical_json, duplicate_values, get_str, is_safe_relative_path,
     parse_json_strict, require_str, require_str_array, require_u64, sha256_bytes, sha256_canonical,
     values_equal,
 };
@@ -30,6 +30,98 @@ const ARTIFACTS_SCHEMA: &str = "tc-proof-artifacts/v1";
 const REQUIRED_SCHEMA: &str = "tc-proof-required/v1";
 const PROVENANCE_SCHEMA: &str = "tc-proof-provenance/v1";
 const STATE_SCHEMA: &str = "tc-proof-state/v1";
+
+const COMPARE_CONTEXT_KEYS: &[&str] = &[
+    "schema",
+    "run_id",
+    "task_id",
+    "check_id",
+    "oracle_commit",
+    "candidate_source_tree",
+    "oracle_root",
+    "candidate_root",
+    "oracle_manifest_sha256",
+    "candidate_manifest_sha256",
+    "required_sha256",
+    "actions_sha256",
+    "required_ids",
+    "required_count",
+    "tool_sha256",
+    "oracle_adapter_sha256",
+    "candidate_adapter_sha256",
+    "report_path",
+];
+const RUNNER_COMPARATOR_KEYS: &[&str] = &["schema", "context", "report_path"];
+const MANIFEST_KEYS: &[&str] = &["schema", "scenario_ids", "files"];
+const MANIFEST_ENTRY_KEYS: &[&str] = &["path", "size", "sha256"];
+const REQUIRED_KEYS: &[&str] = &["schema", "scenarios"];
+const REQUIRED_SCENARIO_KEYS: &[&str] = &[
+    "id",
+    "frame",
+    "state",
+    "provenance",
+    "state_keys",
+    "lane",
+    "checkpoint",
+];
+const ORACLE_PROVENANCE_KEYS: &[&str] = &[
+    "schema",
+    "source_tree",
+    "scenario_id",
+    "binary_path",
+    "actions_sha256",
+    "tool_sha256",
+    "adapter_sha256",
+    "binary_sha256",
+    "lane",
+    "checkpoint",
+];
+const CANDIDATE_PROVENANCE_KEYS: &[&str] = &[
+    "schema",
+    "source_tree",
+    "scenario_id",
+    "binary_path",
+    "actions_sha256",
+    "tool_sha256",
+    "adapter_sha256",
+    "binary_sha256",
+    "lane",
+    "checkpoint",
+    "run_id",
+    "task_id",
+];
+const FRAME_KEYS: &[&str] = &["version", "cols", "rows", "cells", "cursor", "provenance"];
+const CELL_KEYS: &[&str] = &[
+    "x",
+    "y",
+    "symbol",
+    "width",
+    "continuation",
+    "fg",
+    "bg",
+    "mods",
+];
+const CURSOR_KEYS: &[&str] = &["x", "y", "visible", "style", "blinking"];
+const FRAME_PROVENANCE_KEYS: &[&str] = &[
+    "tool",
+    "tool_version",
+    "profile",
+    "source",
+    "argv",
+    "created_unix",
+];
+const MOD_KEYS: &[&str] = &[
+    "hidden",
+    "blink",
+    "bold",
+    "dim",
+    "italic",
+    "underline",
+    "strikethrough",
+    "reverse",
+];
+const STAGED_ACTIONS_SCHEMA: &str = "tc-proof-staged-actions/v1";
+const STAGED_PROFILE_SCHEMA: &str = "tc-proof-staged-profile/v1";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum FailureCode {
@@ -65,6 +157,7 @@ struct CompareContext {
     raw_bytes: Vec<u8>,
     run_id: String,
     task_id: String,
+    check_id: Option<String>,
     oracle_commit: String,
     candidate_source_tree: String,
     oracle_root: PathBuf,
@@ -128,6 +221,91 @@ enum CompareOutcome {
     Scenario(Vec<(String, FailureCode)>),
 }
 
+fn exact_keys(value: &Value, expected: &[&str], label: &str) -> Result<(), String> {
+    let object = value
+        .as_object()
+        .ok_or_else(|| format!("{label} is not an object"))?;
+    let expected = expected.iter().copied().collect::<BTreeSet<_>>();
+    let actual = object.keys().map(String::as_str).collect::<BTreeSet<_>>();
+    if actual != expected {
+        return Err(format!("{label} has unexpected or missing fields"));
+    }
+    Ok(())
+}
+
+fn exact_keys_with_optional(
+    value: &Value,
+    required: &[&str],
+    optional: &[&str],
+    label: &str,
+) -> Result<(), String> {
+    let object = value
+        .as_object()
+        .ok_or_else(|| format!("{label} is not an object"))?;
+    let allowed = required
+        .iter()
+        .chain(optional.iter())
+        .copied()
+        .collect::<BTreeSet<_>>();
+    let actual = object.keys().map(String::as_str).collect::<BTreeSet<_>>();
+    if required.iter().any(|key| !object.contains_key(*key)) || !actual.is_subset(&allowed) {
+        return Err(format!("{label} has unexpected or missing fields"));
+    }
+    Ok(())
+}
+
+fn canonical_value(raw: &[u8], label: &str) -> Result<Value, String> {
+    let text =
+        std::str::from_utf8(raw).map_err(|error| format!("{label} is not UTF-8: {error}"))?;
+    let value =
+        parse_json_strict(text).map_err(|error| format!("{label} is invalid JSON: {error}"))?;
+    if canonical_json(&value).as_bytes() != raw {
+        return Err(format!("{label} is not canonical JSON"));
+    }
+    Ok(value)
+}
+
+fn require_lower_hex(value: &str, length: usize, label: &str) -> Result<(), String> {
+    if value.len() != length
+        || value
+            .bytes()
+            .any(|byte| !matches!(byte, b'0'..=b'9' | b'a'..=b'f'))
+    {
+        return Err(format!("{label} is not lowercase hexadecimal"));
+    }
+    Ok(())
+}
+
+fn require_digest(value: &Value, key: &str) -> Result<String, String> {
+    let digest = value
+        .get(key)
+        .and_then(Value::as_str)
+        .ok_or_else(|| format!("{key} is missing or not a string"))?;
+    require_lower_hex(digest, 64, key)?;
+    Ok(digest.to_owned())
+}
+
+fn require_identity(value: &Value, key: &str) -> Result<String, String> {
+    let identity = value
+        .get(key)
+        .and_then(Value::as_str)
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| format!("{key} is missing or empty"))?;
+    require_lower_hex(identity, 40, key)?;
+    Ok(identity.to_owned())
+}
+
+fn require_nonempty_strings(value: &Value, key: &str) -> Result<Vec<String>, String> {
+    let values = require_str_array(value, key)?;
+    if values.is_empty() || values.iter().any(String::is_empty) {
+        return Err(format!("{key} must be non-empty strings"));
+    }
+    if !duplicate_values(&values).is_empty() {
+        return Err(format!("{key} contains duplicate identities"));
+    }
+    Ok(values)
+}
+
 /// Execute `tc-proof compare` for the context file at `context_path`.
 ///
 /// # Errors
@@ -151,8 +329,7 @@ pub fn run_compare(context_path: &Path) -> io::Result<i32> {
 }
 
 fn parse_context(raw_bytes: &[u8]) -> Result<CompareContext, String> {
-    let text = std::str::from_utf8(raw_bytes).map_err(|error| error.to_string())?;
-    let value = parse_json_strict(text)?;
+    let value = canonical_value(raw_bytes, "comparison context")?;
     match get_str(&value, "schema") {
         Some(CONTEXT_SCHEMA) => parse_compare_value(&value, raw_bytes, None),
         Some(RUNNER_CONTEXT_SCHEMA) => parse_runner_value(&value, raw_bytes),
@@ -167,8 +344,48 @@ fn parse_compare_value(
     raw_bytes: &[u8],
     host_report_path: Option<PathBuf>,
 ) -> Result<CompareContext, String> {
+    exact_keys_with_optional(
+        value,
+        &COMPARE_CONTEXT_KEYS
+            .iter()
+            .copied()
+            .filter(|key| *key != "check_id")
+            .collect::<Vec<_>>(),
+        &["check_id"],
+        "comparison context",
+    )?;
+    let run_id = require_str(value, "run_id")?;
+    let task_id = require_str(value, "task_id")?;
+    let check_id = value
+        .get("check_id")
+        .map(|_| require_str(value, "check_id"))
+        .transpose()?;
+    let oracle_commit = require_identity(value, "oracle_commit")?;
+    let candidate_source_tree = require_identity(value, "candidate_source_tree")?;
+    let required_ids = require_nonempty_strings(value, "required_ids")?;
+    let required_count = require_u64(value, "required_count")?;
+    if required_count as usize != required_ids.len() {
+        return Err("required_count does not match required_ids".to_string());
+    }
+    for key in [
+        "oracle_manifest_sha256",
+        "candidate_manifest_sha256",
+        "required_sha256",
+        "actions_sha256",
+        "tool_sha256",
+        "oracle_adapter_sha256",
+        "candidate_adapter_sha256",
+    ] {
+        require_digest(value, key)?;
+    }
     let oracle_root = qualify_input_root(&PathBuf::from(require_str(value, "oracle_root")?))?;
     let candidate_root = qualify_input_root(&PathBuf::from(require_str(value, "candidate_root")?))?;
+    if oracle_root == candidate_root
+        || oracle_root.starts_with(&candidate_root)
+        || candidate_root.starts_with(&oracle_root)
+    {
+        return Err("comparison input roots overlap".to_string());
+    }
     let report_path = match host_report_path {
         Some(path) => qualify_report_path(&path)?,
         None => qualify_report_path(&PathBuf::from(require_str(value, "report_path")?))?,
@@ -176,18 +393,19 @@ fn parse_compare_value(
     validate_report_path(&report_path, &oracle_root, &candidate_root, None)?;
     Ok(CompareContext {
         raw_bytes: raw_bytes.to_vec(),
-        run_id: require_str(value, "run_id")?,
-        task_id: require_str(value, "task_id")?,
-        oracle_commit: require_str(value, "oracle_commit")?,
-        candidate_source_tree: require_str(value, "candidate_source_tree")?,
+        run_id,
+        task_id,
+        check_id,
+        oracle_commit,
+        candidate_source_tree,
         oracle_root,
         candidate_root,
         oracle_manifest_sha256: require_str(value, "oracle_manifest_sha256")?,
         candidate_manifest_sha256: require_str(value, "candidate_manifest_sha256")?,
         required_sha256: require_str(value, "required_sha256")?,
         actions_sha256: require_str(value, "actions_sha256")?,
-        required_ids: require_str_array(value, "required_ids")?,
-        required_count: require_u64(value, "required_count")?,
+        required_ids,
+        required_count,
         tool_sha256: require_str(value, "tool_sha256")?,
         oracle_adapter_sha256: require_str(value, "oracle_adapter_sha256")?,
         candidate_adapter_sha256: require_str(value, "candidate_adapter_sha256")?,
@@ -209,7 +427,13 @@ fn parse_runner_value(value: &Value, raw_bytes: &[u8]) -> Result<CompareContext,
         .get("comparator")
         .and_then(Value::as_object)
         .ok_or_else(|| "runner context comparator binding is missing".to_string())?;
-    if get_str(&Value::Object(comparator.clone()), "schema") != Some(CONTEXT_SCHEMA) {
+    let comparator_value = Value::Object(comparator.clone());
+    exact_keys(
+        &comparator_value,
+        RUNNER_COMPARATOR_KEYS,
+        "runner comparator binding",
+    )?;
+    if get_str(&comparator_value, "schema") != Some(CONTEXT_SCHEMA) {
         return Err("runner comparator schema mismatch".to_string());
     }
     let nested = comparator
@@ -374,7 +598,6 @@ fn compare_roots(context: &CompareContext) -> CompareOutcome {
         &context.oracle_root,
         &context.oracle_manifest_sha256,
         &context.required_ids,
-        false,
     ) {
         Ok(manifest) => manifest,
         Err(code) => return CompareOutcome::Global(code),
@@ -384,7 +607,6 @@ fn compare_roots(context: &CompareContext) -> CompareOutcome {
         &context.candidate_root,
         &context.candidate_manifest_sha256,
         &context.required_ids,
-        true,
     ) {
         Ok(manifest) => manifest,
         Err(code) => return CompareOutcome::Global(code),
@@ -399,9 +621,14 @@ fn compare_roots(context: &CompareContext) -> CompareOutcome {
         Err(code) => return CompareOutcome::Global(code),
     };
 
+    let profile_id = match verify_oracle_documents(context, &scenarios) {
+        Ok(profile_id) => profile_id,
+        Err(code) => return CompareOutcome::Global(code),
+    };
+
     let mut scenario_failures = Vec::new();
     for scenario in &scenarios {
-        if let Some(code) = compare_scenario(context, scenario) {
+        if let Some(code) = compare_scenario(context, scenario, profile_id.as_deref()) {
             scenario_failures.push((scenario.id.clone(), code));
         }
     }
@@ -481,7 +708,6 @@ fn verify_manifest(
     root: &Path,
     expected_hash: &str,
     required_ids: &[String],
-    allow_extra_files: bool,
 ) -> Result<ArtifactsManifest, FailureCode> {
     let manifest_path = root.join("manifest.json");
     validate_regular_single_link_file(&manifest_path)?;
@@ -490,8 +716,8 @@ fn verify_manifest(
         return Err(FailureCode::Integrity);
     }
 
-    let text = std::str::from_utf8(&bytes).map_err(|_| FailureCode::Integrity)?;
-    let value = parse_json_strict(text).map_err(|_| FailureCode::Integrity)?;
+    let value = canonical_value(&bytes, "artifact manifest").map_err(|_| FailureCode::Integrity)?;
+    exact_keys(&value, MANIFEST_KEYS, "artifact manifest").map_err(|_| FailureCode::Integrity)?;
     if get_str(&value, "schema") != Some(ARTIFACTS_SCHEMA) {
         return Err(FailureCode::Integrity);
     }
@@ -526,6 +752,8 @@ fn verify_manifest(
             .get("path")
             .and_then(Value::as_str)
             .ok_or(FailureCode::Integrity)?;
+        exact_keys(entry, MANIFEST_ENTRY_KEYS, "artifact manifest entry")
+            .map_err(|_| FailureCode::Integrity)?;
         if !is_safe_relative_path(path) {
             return Err(FailureCode::UnsafePath);
         }
@@ -537,11 +765,21 @@ fn verify_manifest(
             .get("sha256")
             .and_then(Value::as_str)
             .ok_or(FailureCode::Integrity)?;
+        if hash.len() != 64
+            || hash
+                .bytes()
+                .any(|byte| !matches!(byte, b'0'..=b'9' | b'a'..=b'f'))
+        {
+            return Err(FailureCode::Integrity);
+        }
         paths.push(path.to_owned());
         files.push((path.to_owned(), size, hash.to_owned()));
     }
 
     if !duplicate_values(&paths).is_empty() {
+        return Err(FailureCode::RequiredSet);
+    }
+    if paths.windows(2).any(|pair| pair[0] >= pair[1]) {
         return Err(FailureCode::RequiredSet);
     }
 
@@ -554,20 +792,18 @@ fn verify_manifest(
         }
     }
 
-    if allow_extra_files {
-        let manifest_paths: HashSet<_> = paths.iter().collect();
-        for file in walk_files(root)? {
-            let rel = file
-                .strip_prefix(root)
-                .map_err(|_| FailureCode::Integrity)?
-                .to_string_lossy()
-                .replace('\\', "/");
-            if rel == "manifest.json" {
-                continue;
-            }
-            if !manifest_paths.contains(&rel) {
-                return Err(FailureCode::Integrity);
-            }
+    let manifest_paths: HashSet<_> = paths.iter().collect();
+    for file in walk_files(root)? {
+        let rel = file
+            .strip_prefix(root)
+            .map_err(|_| FailureCode::Integrity)?
+            .to_string_lossy()
+            .replace('\\', "/");
+        if rel == "manifest.json" {
+            continue;
+        }
+        if !manifest_paths.contains(&rel) {
+            return Err(FailureCode::Integrity);
         }
     }
 
@@ -581,14 +817,14 @@ fn check_required_set(
 ) -> Result<(), FailureCode> {
     let required_path = context.oracle_root.join("required.json");
     let required_bytes = fs::read(&required_path).map_err(|_| FailureCode::Integrity)?;
-    if sha256_canonical(
-        &parse_json_bytes_strict(&required_bytes).map_err(|_| FailureCode::Integrity)?,
-    ) != context.required_sha256
-    {
+    let required = canonical_value(&required_bytes, "required artifact")
+        .map_err(|_| FailureCode::Integrity)?;
+    if sha256_canonical(&required) != context.required_sha256 {
         return Err(FailureCode::Integrity);
     }
 
-    let required = parse_json_bytes_strict(&required_bytes).map_err(|_| FailureCode::Integrity)?;
+    exact_keys(&required, REQUIRED_KEYS, "required artifact")
+        .map_err(|_| FailureCode::Integrity)?;
     if get_str(&required, "schema") != Some(REQUIRED_SCHEMA) {
         return Err(FailureCode::Integrity);
     }
@@ -599,15 +835,75 @@ fn check_required_set(
         .ok_or(FailureCode::Integrity)?;
 
     if scenarios.len() != context.required_ids.len() {
-        return Err(FailureCode::Integrity);
+        return Err(FailureCode::RequiredSet);
     }
 
     let mut ids = Vec::new();
+    let mut scenario_paths = HashSet::new();
     for scenario in scenarios {
-        ids.push(require_str(scenario, "id").map_err(|_| FailureCode::Integrity)?);
+        exact_keys(scenario, REQUIRED_SCENARIO_KEYS, "required scenario")
+            .map_err(|_| FailureCode::Integrity)?;
+        let id = require_str(scenario, "id").map_err(|_| FailureCode::Integrity)?;
+        if id.is_empty() {
+            return Err(FailureCode::Integrity);
+        }
+        ids.push(id);
+        for key in ["frame", "state", "provenance"] {
+            let path = require_str(scenario, key).map_err(|_| FailureCode::Integrity)?;
+            if !is_safe_relative_path(&path) {
+                return Err(FailureCode::UnsafePath);
+            }
+            if [
+                "manifest.json",
+                "required.json",
+                "actions.json",
+                "font.bin",
+                "profile.json",
+            ]
+            .contains(&path.as_str())
+            {
+                return Err(FailureCode::RequiredSet);
+            }
+            if !scenario_paths.insert(path) {
+                return Err(FailureCode::RequiredSet);
+            }
+        }
+        if require_str(scenario, "lane")
+            .map_err(|_| FailureCode::Integrity)?
+            .is_empty()
+            || require_str(scenario, "checkpoint")
+                .map_err(|_| FailureCode::Integrity)?
+                .is_empty()
+        {
+            return Err(FailureCode::Integrity);
+        }
+        let state_keys = scenario
+            .get("state_keys")
+            .and_then(Value::as_array)
+            .ok_or(FailureCode::Integrity)?;
+        if state_keys.is_empty()
+            || state_keys.iter().any(|key| {
+                key.as_str()
+                    .is_none_or(|key| key.is_empty() || key == "schema")
+            })
+            || duplicate_values(
+                &state_keys
+                    .iter()
+                    .filter_map(Value::as_str)
+                    .map(str::to_owned)
+                    .collect::<Vec<_>>(),
+            )
+            .len()
+                > 0
+        {
+            return Err(FailureCode::Integrity);
+        }
+    }
+    if !duplicate_values(&ids).is_empty() {
+        return Err(FailureCode::RequiredSet);
     }
     if ids != context.required_ids {
-        return Err(FailureCode::Integrity);
+        return Err(FailureCode::RequiredSet);
     }
 
     let expected_candidate_paths = expected_artifact_paths(&required);
@@ -630,6 +926,130 @@ fn check_required_set(
         return Err(FailureCode::Integrity);
     }
 
+    Ok(())
+}
+
+fn verify_oracle_documents(
+    context: &CompareContext,
+    scenarios: &[ScenarioSpec],
+) -> Result<Option<String>, FailureCode> {
+    let actions_path = context.oracle_root.join("actions.json");
+    validate_regular_single_link_file(&actions_path)?;
+    let actions_bytes = fs::read(&actions_path).map_err(|_| FailureCode::Integrity)?;
+    let actions =
+        canonical_value(&actions_bytes, "oracle actions").map_err(|_| FailureCode::Integrity)?;
+    if sha256_bytes(&actions_bytes) != context.actions_sha256 {
+        return Err(FailureCode::Provenance);
+    }
+    validate_action_document(context, scenarios, &actions)?;
+
+    let profile_path = context.oracle_root.join("profile.json");
+    validate_regular_single_link_file(&profile_path)?;
+    let profile_bytes = fs::read(&profile_path).map_err(|_| FailureCode::Integrity)?;
+    let profile =
+        canonical_value(&profile_bytes, "oracle profile").map_err(|_| FailureCode::Integrity)?;
+    let profile_id = if exact_keys(&profile, &["id", "pixel_threshold"], "oracle profile").is_ok() {
+        let id = profile
+            .get("id")
+            .and_then(Value::as_str)
+            .filter(|value| !value.is_empty())
+            .ok_or(FailureCode::Integrity)?;
+        let threshold = profile
+            .get("pixel_threshold")
+            .and_then(Value::as_f64)
+            .ok_or(FailureCode::Integrity)?;
+        if !threshold.is_finite() || threshold < 0.0 {
+            return Err(FailureCode::Integrity);
+        }
+        Some(id.to_owned())
+    } else {
+        exact_keys(&profile, &["schema", "check_id", "lane"], "oracle profile")
+            .map_err(|_| FailureCode::Integrity)?;
+        if get_str(&profile, "schema") != Some(STAGED_PROFILE_SCHEMA) {
+            return Err(FailureCode::Integrity);
+        }
+        let check_id = require_str(&profile, "check_id").map_err(|_| FailureCode::Integrity)?;
+        let lane = require_str(&profile, "lane").map_err(|_| FailureCode::Integrity)?;
+        if check_id.is_empty()
+            || lane.is_empty()
+            || context
+                .check_id
+                .as_deref()
+                .is_some_and(|expected| expected != check_id)
+            || scenarios.iter().any(|scenario| scenario.lane != lane)
+        {
+            return Err(FailureCode::Provenance);
+        }
+        None
+    };
+
+    let font_path = context.oracle_root.join("font.bin");
+    validate_regular_single_link_file(&font_path)?;
+    if fs::read(&font_path)
+        .map_err(|_| FailureCode::Integrity)?
+        .is_empty()
+    {
+        return Err(FailureCode::Integrity);
+    }
+
+    Ok(profile_id)
+}
+
+fn validate_action_document(
+    context: &CompareContext,
+    scenarios: &[ScenarioSpec],
+    actions: &Value,
+) -> Result<(), FailureCode> {
+    if let Some(entries) = actions.as_array() {
+        let mut ids = HashSet::new();
+        let mut previous_time = None;
+        for entry in entries {
+            exact_keys(entry, &["id", "time_ms", "bytes"], "oracle action")
+                .map_err(|_| FailureCode::Integrity)?;
+            let id = require_str(entry, "id").map_err(|_| FailureCode::Integrity)?;
+            if id.is_empty() || !ids.insert(id) {
+                return Err(FailureCode::RequiredSet);
+            }
+            let time = require_u64(entry, "time_ms").map_err(|_| FailureCode::Integrity)?;
+            if previous_time.is_some_and(|previous| time < previous) {
+                return Err(FailureCode::Integrity);
+            }
+            previous_time = Some(time);
+            if entry.get("bytes").and_then(Value::as_str).is_none() {
+                return Err(FailureCode::Integrity);
+            }
+        }
+        return Ok(());
+    }
+
+    exact_keys(
+        actions,
+        &["schema", "check_id", "scenarios"],
+        "oracle actions",
+    )
+    .map_err(|_| FailureCode::Integrity)?;
+    if get_str(actions, "schema") != Some(STAGED_ACTIONS_SCHEMA) {
+        return Err(FailureCode::Integrity);
+    }
+    let check_id = require_str(actions, "check_id").map_err(|_| FailureCode::Integrity)?;
+    if check_id.is_empty()
+        || context
+            .check_id
+            .as_deref()
+            .is_some_and(|expected| expected != check_id)
+    {
+        return Err(FailureCode::Provenance);
+    }
+    let action_scenarios =
+        require_str_array(actions, "scenarios").map_err(|_| FailureCode::Integrity)?;
+    if action_scenarios
+        != scenarios
+            .iter()
+            .map(|scenario| scenario.id.clone())
+            .collect::<Vec<_>>()
+    {
+        return Err(FailureCode::RequiredSet);
+    }
     Ok(())
 }
 
@@ -662,7 +1082,10 @@ fn load_required_scenarios(
 ) -> Result<Vec<ScenarioSpec>, FailureCode> {
     let required_bytes =
         fs::read(oracle_root.join("required.json")).map_err(|_| FailureCode::Integrity)?;
-    let required = parse_json_bytes_strict(&required_bytes).map_err(|_| FailureCode::Integrity)?;
+    let required = canonical_value(&required_bytes, "required artifact")
+        .map_err(|_| FailureCode::Integrity)?;
+    exact_keys(&required, REQUIRED_KEYS, "required artifact")
+        .map_err(|_| FailureCode::Integrity)?;
     let scenarios = required
         .get("scenarios")
         .and_then(Value::as_array)
@@ -672,6 +1095,8 @@ fn load_required_scenarios(
     let by_id = scenarios
         .iter()
         .map(|scenario| {
+            exact_keys(scenario, REQUIRED_SCENARIO_KEYS, "required scenario")
+                .map_err(|_| FailureCode::Integrity)?;
             let id = require_str(scenario, "id").map_err(|_| FailureCode::Integrity)?;
             Ok((id, scenario))
         })
@@ -702,7 +1127,11 @@ fn load_required_scenarios(
     Ok(ordered)
 }
 
-fn compare_scenario(context: &CompareContext, scenario: &ScenarioSpec) -> Option<FailureCode> {
+fn compare_scenario(
+    context: &CompareContext,
+    scenario: &ScenarioSpec,
+    profile_id: Option<&str>,
+) -> Option<FailureCode> {
     let oracle_frame_path = context.oracle_root.join(&scenario.frame);
     let candidate_frame_path = context.candidate_root.join(&scenario.frame);
     let oracle_state_path = context.oracle_root.join(&scenario.state);
@@ -730,7 +1159,13 @@ fn compare_scenario(context: &CompareContext, scenario: &ScenarioSpec) -> Option
         return Some(code);
     }
 
-    match compare_frames(&oracle_frame_path, &candidate_frame_path) {
+    match compare_frames(
+        &oracle_frame_path,
+        &candidate_frame_path,
+        &context.oracle_commit,
+        &context.candidate_source_tree,
+        profile_id,
+    ) {
         Ok(true) => {}
         Ok(false) => return Some(FailureCode::FrameMismatch),
         Err(FailureCode::FrameInvalid) => return Some(FailureCode::FrameInvalid),
@@ -756,7 +1191,17 @@ fn check_provenance(
     is_oracle: bool,
 ) -> Result<(), FailureCode> {
     let bytes = fs::read(path).map_err(|_| FailureCode::Integrity)?;
-    let value = parse_json_bytes_strict(&bytes).map_err(|_| FailureCode::Integrity)?;
+    let value = canonical_value(&bytes, "provenance").map_err(|_| FailureCode::Integrity)?;
+    exact_keys(
+        &value,
+        if is_oracle {
+            ORACLE_PROVENANCE_KEYS
+        } else {
+            CANDIDATE_PROVENANCE_KEYS
+        },
+        "provenance",
+    )
+    .map_err(|_| FailureCode::Provenance)?;
     if get_str(&value, "schema") != Some(PROVENANCE_SCHEMA) {
         return Err(FailureCode::Provenance);
     }
@@ -783,12 +1228,12 @@ fn check_provenance(
     if require_str(&value, "binary_path").map_err(|_| FailureCode::Provenance)? != "binary.bin" {
         return Err(FailureCode::Provenance);
     }
-    if require_str(&value, "actions_sha256").map_err(|_| FailureCode::Provenance)?
+    if require_digest(&value, "actions_sha256").map_err(|_| FailureCode::Provenance)?
         != context.actions_sha256
     {
         return Err(FailureCode::Provenance);
     }
-    if require_str(&value, "tool_sha256").map_err(|_| FailureCode::Provenance)?
+    if require_digest(&value, "tool_sha256").map_err(|_| FailureCode::Provenance)?
         != context.tool_sha256
     {
         return Err(FailureCode::Provenance);
@@ -799,7 +1244,7 @@ fn check_provenance(
     } else {
         &context.candidate_adapter_sha256
     };
-    if require_str(&value, "adapter_sha256").map_err(|_| FailureCode::Provenance)? != *adapter {
+    if require_digest(&value, "adapter_sha256").map_err(|_| FailureCode::Provenance)? != *adapter {
         return Err(FailureCode::Provenance);
     }
 
@@ -819,7 +1264,7 @@ fn check_provenance(
     };
     let binary = root.join("binary.bin");
     let binary_bytes = fs::read(&binary).map_err(|_| FailureCode::Provenance)?;
-    if require_str(&value, "binary_sha256").map_err(|_| FailureCode::Provenance)?
+    if require_digest(&value, "binary_sha256").map_err(|_| FailureCode::Provenance)?
         != sha256_bytes(&binary_bytes)
     {
         return Err(FailureCode::Provenance);
@@ -828,19 +1273,114 @@ fn check_provenance(
     Ok(())
 }
 
-fn compare_frames(oracle_path: &Path, candidate_path: &Path) -> Result<bool, FailureCode> {
-    let oracle_text = fs::read_to_string(oracle_path).map_err(|_| FailureCode::Integrity)?;
-    let candidate_text = fs::read_to_string(candidate_path).map_err(|_| FailureCode::Integrity)?;
-
-    if parse_json_strict(&candidate_text).is_err() {
-        return Err(FailureCode::FrameInvalid);
+fn validate_frame_color(value: &Value) -> Result<(), FailureCode> {
+    if value == &Value::String("Default".to_owned()) {
+        return Ok(());
     }
-    if parse_json_strict(&oracle_text).is_err() {
+    let Some(object) = value.as_object() else {
+        return Err(FailureCode::FrameInvalid);
+    };
+    match object.keys().next().map(String::as_str) {
+        Some("Indexed") if object.len() == 1 => Ok(()),
+        Some("Rgb") if object.len() == 1 => {
+            let rgb = object.get("Rgb").ok_or(FailureCode::FrameInvalid)?;
+            exact_keys(rgb, &["r", "g", "b"], "frame RGB color")
+                .map_err(|_| FailureCode::FrameInvalid)
+        }
+        _ => Err(FailureCode::FrameInvalid),
+    }
+}
+
+fn validate_frame_document(value: &Value) -> Result<(), FailureCode> {
+    exact_keys(value, FRAME_KEYS, "frame").map_err(|_| FailureCode::FrameInvalid)?;
+    let cells = value
+        .get("cells")
+        .and_then(Value::as_array)
+        .ok_or(FailureCode::FrameInvalid)?;
+    for cell in cells {
+        exact_keys(cell, CELL_KEYS, "frame cell").map_err(|_| FailureCode::FrameInvalid)?;
+        validate_frame_color(cell.get("fg").ok_or(FailureCode::FrameInvalid)?)?;
+        validate_frame_color(cell.get("bg").ok_or(FailureCode::FrameInvalid)?)?;
+        exact_keys(
+            cell.get("mods").ok_or(FailureCode::FrameInvalid)?,
+            MOD_KEYS,
+            "frame modifiers",
+        )
+        .map_err(|_| FailureCode::FrameInvalid)?;
+    }
+    exact_keys(
+        value.get("cursor").ok_or(FailureCode::FrameInvalid)?,
+        CURSOR_KEYS,
+        "frame cursor",
+    )
+    .map_err(|_| FailureCode::FrameInvalid)?;
+    exact_keys(
+        value.get("provenance").ok_or(FailureCode::FrameInvalid)?,
+        FRAME_PROVENANCE_KEYS,
+        "frame provenance",
+    )
+    .map_err(|_| FailureCode::FrameInvalid)?;
+    Ok(())
+}
+
+fn frame_comparison_payload(value: &Value) -> Result<Value, FailureCode> {
+    let mut payload = value.clone();
+    let provenance = payload
+        .get_mut("provenance")
+        .and_then(Value::as_object_mut)
+        .ok_or(FailureCode::FrameInvalid)?;
+    provenance.remove("source");
+    provenance.remove("created_unix");
+    Ok(payload)
+}
+
+fn compare_frames(
+    oracle_path: &Path,
+    candidate_path: &Path,
+    oracle_source: &str,
+    candidate_source: &str,
+    profile_id: Option<&str>,
+) -> Result<bool, FailureCode> {
+    let oracle_bytes = fs::read(oracle_path).map_err(|_| FailureCode::Integrity)?;
+    let candidate_bytes = fs::read(candidate_path).map_err(|_| FailureCode::Integrity)?;
+    let oracle_text = std::str::from_utf8(&oracle_bytes).map_err(|_| FailureCode::Integrity)?;
+    let candidate_text =
+        std::str::from_utf8(&candidate_bytes).map_err(|_| FailureCode::FrameInvalid)?;
+    let oracle_value = parse_json_strict(oracle_text).map_err(|_| FailureCode::Integrity)?;
+    let candidate_value =
+        parse_json_strict(candidate_text).map_err(|_| FailureCode::FrameInvalid)?;
+    validate_frame_document(&oracle_value).map_err(|_| FailureCode::Integrity)?;
+    validate_frame_document(&candidate_value)?;
+
+    let oracle_provenance = oracle_value
+        .get("provenance")
+        .and_then(Value::as_object)
+        .ok_or(FailureCode::Integrity)?;
+    let candidate_provenance = candidate_value
+        .get("provenance")
+        .and_then(Value::as_object)
+        .ok_or(FailureCode::FrameInvalid)?;
+    if oracle_provenance.get("source").and_then(Value::as_str) != Some(oracle_source) {
         return Err(FailureCode::Integrity);
     }
+    if candidate_provenance.get("source").and_then(Value::as_str) != Some(candidate_source) {
+        return Err(FailureCode::Provenance);
+    }
+    if let Some(profile_id) = profile_id
+        && (oracle_provenance.get("profile").and_then(Value::as_str) != Some(profile_id)
+            || candidate_provenance.get("profile").and_then(Value::as_str) != Some(profile_id))
+    {
+        return Err(FailureCode::Provenance);
+    }
 
-    let oracle = Frame::from_json(&oracle_text).map_err(|_| FailureCode::FrameInvalid)?;
-    let candidate = Frame::from_json(&candidate_text).map_err(|_| FailureCode::FrameInvalid)?;
+    let oracle = Frame::from_json(oracle_text).map_err(|_| FailureCode::FrameInvalid)?;
+    let candidate = Frame::from_json(candidate_text).map_err(|_| FailureCode::FrameInvalid)?;
+    if !values_equal(
+        &frame_comparison_payload(&oracle_value)?,
+        &frame_comparison_payload(&candidate_value)?,
+    ) {
+        return Ok(false);
+    }
 
     let diffs = oracle
         .diff_cells(&candidate)
@@ -855,9 +1395,10 @@ fn compare_states(
 ) -> Result<bool, FailureCode> {
     let oracle_bytes = fs::read(oracle_path).map_err(|_| FailureCode::Integrity)?;
     let candidate_bytes = fs::read(candidate_path).map_err(|_| FailureCode::Integrity)?;
-    let oracle = parse_json_bytes_strict(&oracle_bytes).map_err(|_| FailureCode::Integrity)?;
-    let candidate =
-        parse_json_bytes_strict(&candidate_bytes).map_err(|_| FailureCode::Integrity)?;
+    let oracle =
+        canonical_value(&oracle_bytes, "oracle state").map_err(|_| FailureCode::Integrity)?;
+    let candidate = canonical_value(&candidate_bytes, "candidate state")
+        .map_err(|_| FailureCode::StateInvalid)?;
 
     if get_str(&oracle, "schema") != Some(STATE_SCHEMA)
         || get_str(&candidate, "schema") != Some(STATE_SCHEMA)
@@ -866,6 +1407,9 @@ fn compare_states(
     }
 
     let allowed: HashSet<_> = state_keys.iter().cloned().collect();
+    if allowed.len() != state_keys.len() || state_keys.iter().any(|key| key.is_empty()) {
+        return Err(FailureCode::StateInvalid);
+    }
     for value in [&oracle, &candidate] {
         let map = as_object_map(value).map_err(|_| FailureCode::StateInvalid)?;
         for key in map.keys() {
@@ -881,6 +1425,10 @@ fn compare_states(
                 return Err(FailureCode::StateInvalid);
             }
         }
+    }
+
+    if oracle_bytes != candidate_bytes {
+        return Ok(false);
     }
 
     let mut oracle_payload = oracle.clone();
@@ -984,12 +1532,130 @@ fn build_report(context: &CompareContext, outcome: CompareOutcome) -> (i32, Comp
     }
 }
 
+/// Validate a comparator report before the host accepts it as runtime output.
+///
+/// This checks the report ABI and canonical byte representation. Complete
+/// required-set accounting remains the comparator's responsibility because
+/// this boundary does not hold the protected required identity list.
+pub fn validate_report(
+    raw: &[u8],
+    run_id: &str,
+    task_id: &str,
+    context_sha256: &str,
+) -> Result<(), String> {
+    let value = canonical_value(raw, "comparison report")?;
+    exact_keys(
+        &value,
+        &[
+            "schema",
+            "run_id",
+            "task_id",
+            "context_sha256",
+            "required_count",
+            "checked_count",
+            "passed_count",
+            "results",
+            "failures",
+        ],
+        "comparison report",
+    )?;
+    if get_str(&value, "schema") != Some(COMPARISON_SCHEMA)
+        || get_str(&value, "run_id") != Some(run_id)
+        || get_str(&value, "task_id") != Some(task_id)
+        || get_str(&value, "context_sha256") != Some(context_sha256)
+    {
+        return Err("comparison report identity mismatch".to_string());
+    }
+    require_lower_hex(
+        require_str(&value, "context_sha256")?.as_str(),
+        64,
+        "comparison report context_sha256",
+    )?;
+    let required_count = value
+        .get("required_count")
+        .and_then(Value::as_u64)
+        .ok_or_else(|| "comparison report required_count is invalid".to_string())?;
+    let checked_count = value
+        .get("checked_count")
+        .and_then(Value::as_u64)
+        .ok_or_else(|| "comparison report checked_count is invalid".to_string())?;
+    let passed_count = value
+        .get("passed_count")
+        .and_then(Value::as_u64)
+        .ok_or_else(|| "comparison report passed_count is invalid".to_string())?;
+    if checked_count > required_count || passed_count > checked_count {
+        return Err("comparison report counts are invalid".to_string());
+    }
+    let results = value
+        .get("results")
+        .and_then(Value::as_array)
+        .ok_or_else(|| "comparison report results are not an array".to_string())?;
+    if results.len() as u64 != checked_count {
+        return Err("comparison report checked_count does not match results".to_string());
+    }
+    let mut result_ids = HashSet::new();
+    let mut passed_results = 0_u64;
+    for result in results {
+        exact_keys(result, &["id", "status"], "comparison result")?;
+        let id = result
+            .get("id")
+            .and_then(Value::as_str)
+            .filter(|id| !id.is_empty())
+            .ok_or_else(|| "comparison result id is invalid".to_string())?;
+        if !result_ids.insert(id.to_owned()) {
+            return Err("comparison report has duplicate result ids".to_string());
+        }
+        if result
+            .get("status")
+            .and_then(Value::as_str)
+            .is_none_or(|status| !matches!(status, "passed" | "failed"))
+        {
+            return Err("comparison result status is invalid".to_string());
+        }
+        if result.get("status").and_then(Value::as_str) == Some("passed") {
+            passed_results = passed_results.saturating_add(1);
+        }
+    }
+    if passed_results != passed_count {
+        return Err("comparison report passed_count does not match results".to_string());
+    }
+    let failures = value
+        .get("failures")
+        .and_then(Value::as_array)
+        .ok_or_else(|| "comparison report failures are not an array".to_string())?;
+    for failure in failures {
+        exact_keys(failure, &["id", "code", "detail"], "comparison failure")
+            .or_else(|_| exact_keys(failure, &["id", "code"], "comparison failure"))?;
+        if failure
+            .get("id")
+            .is_some_and(|id| !id.is_null() && id.as_str().is_none_or(str::is_empty))
+        {
+            return Err("comparison failure id is invalid".to_string());
+        }
+        if failure
+            .get("code")
+            .and_then(Value::as_str)
+            .is_none_or(str::is_empty)
+        {
+            return Err("comparison failure code is invalid".to_string());
+        }
+        if failure
+            .get("detail")
+            .is_some_and(|detail| !detail.is_string())
+        {
+            return Err("comparison failure detail is invalid".to_string());
+        }
+    }
+    Ok(())
+}
+
 fn write_report(path: &Path, report: &ComparisonReport) -> io::Result<()> {
     let parent = path
         .parent()
         .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "report has no parent"))?;
     ensure_real_directory(parent)?;
-    let json = serde_json::to_string(report).map_err(io::Error::other)?;
+    let value = serde_json::to_value(report).map_err(io::Error::other)?;
+    let json = canonical_json(&value);
     let mut options = OpenOptions::new();
     options.write(true).create_new(true);
     #[cfg(unix)]
@@ -998,7 +1664,7 @@ fn write_report(path: &Path, report: &ComparisonReport) -> io::Result<()> {
         options.custom_flags(libc::O_NOFOLLOW);
     }
     let mut file = options.open(path)?;
-    file.write_all(format!("{json}\n").as_bytes())?;
+    file.write_all(json.as_bytes())?;
     file.sync_all()
 }
 
@@ -1084,6 +1750,7 @@ mod tests {
                 raw_bytes: Vec::new(),
                 run_id: "run".to_owned(),
                 task_id: "task".to_owned(),
+                check_id: None,
                 oracle_commit: "a".repeat(40),
                 candidate_source_tree: "b".repeat(40),
                 oracle_root,
@@ -1101,7 +1768,7 @@ mod tests {
             };
 
             assert_eq!(
-                compare_scenario(&context, &scenario),
+                compare_scenario(&context, &scenario, Some("profile"),),
                 Some(FailureCode::Integrity),
                 "hardlinked {hardlinked_name} must be rejected"
             );
@@ -1173,7 +1840,7 @@ mod tests {
                 },
             },
         });
-        let raw = serde_json::to_vec(&runner)?;
+        let raw = canonical_json(&runner).into_bytes();
         let parsed = parse_context(&raw).map_err(io::Error::other)?;
         assert_eq!(
             parsed.report_path,
@@ -1211,7 +1878,7 @@ mod tests {
                 },
             },
         });
-        let raw = serde_json::to_vec(&runner)?;
+        let raw = canonical_json(&runner).into_bytes();
         assert!(parse_context(&raw).is_err());
         Ok(())
     }
