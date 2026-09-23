@@ -582,16 +582,36 @@ def _effective_guard(fact: dict[str, Any], source: str) -> bool:
     return _has_effective_guard(source)
 
 
-def _initializer_is_once_lock_new(value: Any) -> bool:
+def _initializer_is_once_lock_new(
+    value: Any,
+    scope: Scope = (),
+    imports: dict[tuple[Scope, str], tuple[str, ...]] | None = None,
+) -> bool:
     if value is None:
-        return True
+        return False
     if not isinstance(value, str):
         return False
     normalized = re.sub(r"\s+", "", value)
-    return normalized in {
+    if normalized in {
         "Expr::Call(ExprCall{attrs:[],func:Expr::Path(ExprPath{attrs:[],qself:None,path:Path{leading_colon:None,segments:[PathSegment{ident:Ident(std),arguments:PathArguments::None},PathSegment{ident:Ident(sync),arguments:PathArguments::None},PathSegment{ident:Ident(OnceLock),arguments:PathArguments::None}]}}),args:[]})",
+        "Expr::Call(ExprCall{attrs:[],func:Expr::Path(ExprPath{attrs:[],qself:None,path:Path{leading_colon:None,segments:[PathSegment{ident:Ident(OnceLock),arguments:PathArguments::None}]}}),args:[]})",
         "std::sync::OnceLock::new()",
-    } or "OnceLock" in normalized and "new" in normalized and "static" not in normalized
+        "::std::sync::OnceLock::new()",
+        "OnceLock::new()",
+    }:
+        return True
+
+    if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*::new\(\)", normalized):
+        name = normalized.split("::", 1)[0]
+        return imports is not None and _binding(imports, name, scope) == ("std", "sync", "OnceLock")
+    if imports is not None:
+        return any(
+            path == ("std", "sync", "OnceLock")
+            and binding_scope in _scope_candidates(scope)
+            and re.search(rf"\bIdent\({re.escape(name)}\)", normalized) is not None
+            for (binding_scope, name), path in imports.items()
+        )
+    return False
 
 
 def _has_effective_guard(text: str) -> bool:
@@ -820,6 +840,8 @@ def validate_broker_observation(body: dict[str, Any], profile: dict[str, Any]) -
                         _reject()
                     if not _storage_type_ok(fact["type"], scope, aliases, imports):
                         _reject()
+                    if "initializer" in fact and not _initializer_is_once_lock_new(fact["initializer"], scope, imports):
+                        _reject()
                     broker_statics.append((path, fact))
                 else:
                     if _contains_mutable_type(resolved):
@@ -914,6 +936,10 @@ def validate_broker_event(event: dict[str, Any], profile: dict[str, Any]) -> Non
     """Architecture-event arm for the ADJ-13 broker profile."""
     if not _is_dict(event) or not _is_dict(profile):
         _reject()
+    if profile.get("policy") != ADJ13_POLICY:
+        _reject()
+    if type(event.get("exit")) is not int or event["exit"] != 0:
+        _reject()
     payload = event.get("payload")
     if not _is_dict(payload):
         _reject()
@@ -923,6 +949,7 @@ def validate_broker_event(event: dict[str, Any], profile: dict[str, Any]) -> Non
     record = records[0]
     if type(record.get("exit")) is not int or record["exit"] != 0:
         _reject()
+    _decode_record_stream(record, "stderr")
     try:
         def unique_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
             result: dict[str, Any] = {}

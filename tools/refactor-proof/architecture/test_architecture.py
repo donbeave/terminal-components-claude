@@ -39,6 +39,7 @@ from refactor_proof.architecture.broker import (  # noqa: E402
     validate_broker_observation,
 )
 from refactor_proof.architecture.dispatch import (  # noqa: E402
+    _profile_group,
     _validate_architecture_context,
     _validate_event,
 )
@@ -572,6 +573,11 @@ class BrokerSchemaAdversarialTests(unittest.TestCase):
         self._fact(body, "static", "SIGNAL_BROKER")["type"] = "NotOnceLock<Mutex<SignalBroker>>"
         self._rejects(body)
 
+    def test_non_once_lock_initializer_is_rejected(self) -> None:
+        body = _valid_broker_observation()
+        self._fact(body, "static", "SIGNAL_BROKER")["initializer"] = "std::sync::OnceLock::from(7)"
+        self._rejects(body)
+
     def test_missing_broker_field_is_rejected(self) -> None:
         body = _valid_broker_observation()
         self._fact(body, "struct", "SignalBroker")["fields"].pop()
@@ -618,6 +624,26 @@ class BrokerSchemaAdversarialTests(unittest.TestCase):
         self._rejects(body)
 
 class DispatchTests(unittest.TestCase):
+    def test_architecture_without_profile_is_rejected(self) -> None:
+        event = {
+            "exit": 0,
+            "payload": {
+                "calls": ["App.update", "Widget.draw", "Widget.draw", "Props.enabled"],
+                "value": 0,
+                "pty": False,
+            },
+        }
+        with self.assertRaises(Reject) as raised:
+            _validate_event(event, {"configuration": {"seed": 0}}, None)
+        self.assertEqual(raised.exception.category, "ARCHITECTURE")
+
+    def test_profile_group_must_match_real_checker(self) -> None:
+        profile = _adj13_profile([SESSION])
+        profile["group"] = "standalone"
+        with self.assertRaises(Reject) as raised:
+            _profile_group(profile)
+        self.assertEqual(raised.exception.category, "ARCHITECTURE")
+
     def test_qualification_schema_allows_architecture_profile(self) -> None:
         context = {
             "schema": "tc-proof-runner-context/v1",
@@ -729,6 +755,21 @@ class DispatchTests(unittest.TestCase):
         )
         with self.assertRaises(Reject) as raised:
             _validate_event(event, {}, _adj13_profile([SESSION]))
+        self.assertEqual(raised.exception.category, "ARCHITECTURE")
+
+    def test_adj13_policy_rejects_boolean_event_exit(self) -> None:
+        event = _syntax_event([])
+        event["exit"] = False
+        with self.assertRaises(Reject) as raised:
+            _validate_event(event, {}, _adj13_profile([SESSION]))
+        self.assertEqual(raised.exception.category, "ARCHITECTURE")
+
+    def test_broker_event_requires_adj13_policy(self) -> None:
+        event = _syntax_event([])
+        profile = _adj13_profile([SESSION])
+        del profile["policy"]
+        with self.assertRaises(Reject) as raised:
+            validate_broker_event(event, profile)
         self.assertEqual(raised.exception.category, "ARCHITECTURE")
 
 
