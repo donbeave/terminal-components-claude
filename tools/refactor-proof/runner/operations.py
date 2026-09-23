@@ -187,7 +187,7 @@ def run_oracle(context_path: Path, namespace: str | None) -> int:
         _guard_context(context, context_hash)
         qualification = context.get("qualification")
         family = qualification.get("family") if isinstance(qualification, dict) else None
-        validate_oracle_namespace(namespace, family)
+        validate_oracle_namespace(context, namespace)
         validate_source_authority(context, operation)
         validate_schema(context)
         expected_members = validate_required_members(context)
@@ -210,7 +210,12 @@ def run_oracle(context_path: Path, namespace: str | None) -> int:
             tree=os.environ["TC_PROOF_SOURCE_TREE"],
         )
         digests = [client.digest(event) for event in events]
-        validate_oracle_repeat(events)
+        validate_oracle_repeat(
+            events,
+            context=context,
+            source_commit=os.environ["TC_PROOF_ORACLE_COMMIT"],
+            source_tree=os.environ["TC_PROOF_SOURCE_TREE"],
+        )
         _validate_execution_events(events, context, expected_members, operation)
         return finish("passed", None, {"observations": events}, digests, operation, reported)
     except Reject as error:

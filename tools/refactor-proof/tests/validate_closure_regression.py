@@ -24,6 +24,8 @@ from runner.context import ALLOWED_V1_KEYS, Reject
 from runner.validate import validate_index_close_outputs
 
 NONCE = "closure-observer-nonce"
+OBSERVER_PROVIDER = Path("/usr/bin/true")
+OBSERVER_PROVIDER_SHA256 = hashlib.sha256(OBSERVER_PROVIDER.read_bytes()).hexdigest()
 
 
 def _write_json(path: Path, value: dict[str, object]) -> str:
@@ -101,7 +103,10 @@ def _fixture(base_dir: Path | None = None) -> tuple[Path, dict[str, object], dic
             "CHK-001": ["close"],
             "CHK-002": ["external"],
         },
-        "provider": {"path": "/usr/bin/true", "sha256": "e" * 64},
+        "provider": {
+            "path": str(OBSERVER_PROVIDER),
+            "sha256": OBSERVER_PROVIDER_SHA256,
+        },
     }
     observer_path = root / "observer.json"
     observer_hash = _write_json(observer_path, observer)

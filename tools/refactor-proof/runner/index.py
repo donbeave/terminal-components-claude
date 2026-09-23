@@ -27,7 +27,12 @@ def load_index() -> tuple[dict[str, Any], str]:
         raise Reject("CONTEXT_INDEX") from None
     if sha256_bytes(raw) != index_hash:
         raise Reject("CONTEXT_INDEX")
-    index = load_path(path)
+    try:
+        index = load_path(path)
+    except (UnicodeDecodeError, ValueError):
+        raise Reject("CONTEXT_INDEX") from None
+    if not isinstance(index, dict):
+        raise Reject("CONTEXT_INDEX")
     return index, index_hash
 
 
@@ -119,7 +124,7 @@ def validate_index(context: dict[str, Any], context_hash: str) -> None:
             raise Reject("CONTEXT_INDEX")
         try:
             preparation = load_path(result_path)
-        except (OSError, ValueError):
+        except (OSError, UnicodeDecodeError, ValueError):
             raise Reject("CONTEXT_INDEX") from None
         if (
             not isinstance(preparation, dict)
@@ -153,7 +158,7 @@ def validate_index(context: dict[str, Any], context_hash: str) -> None:
             raise Reject("CONTEXT_INDEX")
         try:
             child = load_path(child_path)
-        except ValueError:
+        except (UnicodeDecodeError, ValueError):
             raise Reject("CONTEXT_INDEX") from None
         if not isinstance(child, dict):
             raise Reject("CONTEXT_INDEX")
@@ -191,7 +196,7 @@ def validate_index(context: dict[str, Any], context_hash: str) -> None:
         raise Reject("CONTEXT_INDEX")
     try:
         capability = load_path(observer_path)
-    except (OSError, ValueError):
+    except (OSError, UnicodeDecodeError, ValueError):
         raise Reject("CONTEXT_INDEX") from None
     if (
         not isinstance(capability, dict)

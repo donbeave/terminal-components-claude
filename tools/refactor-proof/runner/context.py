@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import itertools
-import json
 import os
+import re
+import stat
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -40,6 +42,12 @@ ARCHITECTURE_EXTENSION_KEYS = frozenset(
     {"architecture_profile", "branch_host_projection"}
 )
 NATIVE_ORACLE_NAMESPACES = frozenset({"showcase", "holla", "jackin", "tablepro", "components"})
+_ALLOWED_SYSTEM_SYMLINKS = {
+    Path("/etc"): Path("/private/etc"),
+    Path("/home"): Path("/System/Volumes/Data/home"),
+    Path("/tmp"): Path("/private/tmp"),
+    Path("/var"): Path("/private/var"),
+}
 OBSERVER_OPERATIONS = {
     "account-tests",
     "architecture",
@@ -77,7 +85,7 @@ def load_context(path: Path) -> tuple[dict[str, Any], bytes, str]:
     raw = path.read_bytes()
     try:
         context = load_path(path)
-    except (ValueError, json.JSONDecodeError):
+    except (UnicodeDecodeError, ValueError):
         raise Reject("INTEGRITY") from None
     if not isinstance(context, dict):
         raise Reject("INTEGRITY")
@@ -157,8 +165,8 @@ def validate_oracle_sequence(context: dict[str, Any], operation: Any) -> list[st
     return sequence
 
 
-def validate_oracle_namespace(namespace: str | None, family: object) -> None:
-    """Accept synthetic or native app namespaces; reject unknown names."""
+def _validate_oracle_namespace_values(namespace: object, family: object) -> None:
+    """Validate the allowed namespace set without binding a context."""
     if family == "native":
         if namespace not in NATIVE_ORACLE_NAMESPACES:
             raise Reject("PROTOCOL")
@@ -167,19 +175,136 @@ def validate_oracle_namespace(namespace: str | None, family: object) -> None:
         raise Reject("PROTOCOL")
 
 
+def validate_oracle_namespace(
+    namespace_or_context: str | dict[str, Any] | None,
+    family_or_namespace: object,
+) -> None:
+    """Validate an oracle namespace and, when available, bind its identity.
+
+    The two-argument legacy form remains available to the accounting runner.
+    The current v1 runner passes the complete context as the first argument so
+    the command-line namespace must equal the hashed check declaration.
+    """
+    if isinstance(namespace_or_context, dict):
+        context = namespace_or_context
+        namespace = family_or_namespace
+        qualification = context.get("qualification")
+        family = qualification.get("family") if isinstance(qualification, dict) else None
+        check = qualification.get("check") if isinstance(qualification, dict) else None
+        declared = check.get("namespace") if isinstance(check, dict) else None
+        if not isinstance(declared, str) or namespace != declared:
+            raise Reject("PROTOCOL")
+        _validate_oracle_namespace_values(namespace, family)
+        return
+    _validate_oracle_namespace_values(namespace_or_context, family_or_namespace)
+
+
+def _trusted_regular_file(path: Path, category: str) -> None:
+    if not path.is_absolute():
+        raise Reject(category)
+    current = Path(path.anchor)
+    for component in path.parts[1:]:
+        current /= component
+        try:
+            metadata = current.lstat()
+        except OSError:
+            raise Reject(category) from None
+        if stat.S_ISLNK(metadata.st_mode):
+            allowed_target = _ALLOWED_SYSTEM_SYMLINKS.get(current)
+            if allowed_target is None or current.resolve() != allowed_target:
+                raise Reject(category)
+    try:
+        metadata = path.lstat()
+    except OSError:
+        raise Reject(category) from None
+    if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1:
+        raise Reject(category)
+
+
+def _git_ancestor(worktree: Path, commit: str) -> bool:
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(worktree), "merge-base", "--is-ancestor", commit, "HEAD"],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except OSError:
+        return False
+    return result.returncode == 0
+
+
 def validate_tool(context: dict[str, Any]) -> None:
     tool = context["tool"]
+    if not isinstance(tool, dict) or set(tool) != {"path", "sha256"}:
+        raise Reject("PREFLIGHT")
+    if (
+        not isinstance(tool.get("path"), str)
+        or not re.fullmatch(r"[0-9a-f]{64}", str(tool.get("sha256")))
+    ):
+        raise Reject("PREFLIGHT")
     path = Path(tool["path"])
-    actual = sha256_bytes(path.read_bytes())
+    _trusted_regular_file(path, "PREFLIGHT")
+    try:
+        actual = sha256_bytes(path.read_bytes())
+    except OSError:
+        raise Reject("PREFLIGHT") from None
     if actual != tool["sha256"]:
         raise Reject("PREFLIGHT")
 
 
 def validate_dependencies(context: dict[str, Any]) -> None:
-    for dependency in context["dependencies"]:
-        if not dependency.get("accepted"):
+    dependencies = context.get("dependencies")
+    if not isinstance(dependencies, list):
+        raise Reject("PREFLIGHT")
+    seen: set[str] = set()
+    for dependency in dependencies:
+        if not isinstance(dependency, dict) or set(dependency) != {
+            "task_id",
+            "path",
+            "sha256",
+            "accepted",
+            "integrated",
+            "integration_commit",
+        }:
             raise Reject("PREFLIGHT")
-        if not dependency.get("integrated"):
+        task_id = dependency.get("task_id")
+        path_value = dependency.get("path")
+        sha256 = dependency.get("sha256")
+        integration_commit = dependency.get("integration_commit")
+        if (
+            not isinstance(task_id, str)
+            or not re.fullmatch(r"TASK-[0-9]{3}", task_id)
+            or task_id in seen
+            or not isinstance(path_value, str)
+            or not re.fullmatch(r"[0-9a-f]{64}", str(sha256))
+            or dependency.get("accepted") is not True
+            or dependency.get("integrated") is not True
+            or not re.fullmatch(r"[0-9a-f]{40}", str(integration_commit))
+        ):
+            raise Reject("PREFLIGHT")
+        seen.add(task_id)
+        path = Path(path_value)
+        _trusted_regular_file(path, "PREFLIGHT")
+        try:
+            actual = sha256_bytes(path.read_bytes())
+        except OSError:
+            raise Reject("PREFLIGHT") from None
+        if actual != sha256:
+            raise Reject("PREFLIGHT")
+
+        qualification = context.get("qualification")
+        common = qualification.get("common") if isinstance(qualification, dict) else None
+        worktree_value = common.get("worktree") if isinstance(common, dict) else None
+        candidate_commit = context.get("worktree_commit")
+        if (
+            not isinstance(worktree_value, str)
+            or not isinstance(candidate_commit, str)
+            or not re.fullmatch(r"[0-9a-f]{40}", candidate_commit)
+        ):
+            raise Reject("PREFLIGHT")
+        worktree = Path(worktree_value)
+        if not worktree.is_absolute() or not worktree.is_dir() or not _git_ancestor(worktree, integration_commit):
             raise Reject("PREFLIGHT")
 
 

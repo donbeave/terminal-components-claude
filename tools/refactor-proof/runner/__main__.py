@@ -17,12 +17,22 @@ from .index import load_index
 from .json_util import load_bytes, sha256_bytes
 from .operations import run_capture, run_close, run_oracle, run_preflight, run_required
 from .result import finish
+from .validate import validate_comparison_report
 
 RUNNER_OPS = {"preflight", "required", "oracle", "capture", "account-tests", "architecture", "close"}
 RUNNER_CONTEXT_SCHEMA = "tc-proof-context/v1"
 COMPARE_CONTEXT_SCHEMA = "tc-proof-compare-context/v1"
 NATIVE_BINARY_ENV = "TC_PROOF_NATIVE_BINARY"
 NATIVE_LAUNCHER_ENV = "TC_PROOF_NATIVE_LAUNCHER"
+ARCHITECTURE_PROFILE_SCHEMAS = frozenset(
+    {
+        "tc-proof-architecture-profile/v1",
+        "tc-architecture-rust-profile/v1",
+        "tc-architecture-actual-rust-profile/v1",
+        "tc-style-timing-actual-profile/v1",
+        "tc-architecture-source-profile/v1",
+    }
+)
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
@@ -33,6 +43,30 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--lane")
     parser.add_argument("--approve", action="store_true")
     return parser.parse_args(argv)
+
+
+def _run_architecture_with_profile(context_path: Path) -> int:
+    """Require a real profile before entering the architecture dispatcher."""
+    try:
+        context, _, _ = load_context(context_path)
+        profile = context.get("architecture_profile")
+        if (
+            context.get("operation") != "architecture"
+            or not isinstance(profile, dict)
+            or not profile
+            or profile.get("schema") not in ARCHITECTURE_PROFILE_SCHEMAS
+        ):
+            raise Reject("ARCHITECTURE")
+    except Reject as error:
+        return finish(
+            "rejected",
+            error.category,
+            {},
+            [],
+            "architecture",
+            os.environ.get("TC_PROOF_CONTEXT_SHA256", "0" * 64),
+        )
+    return run_architecture(context_path)
 
 
 def _bind_environment(name: str, value: str) -> None:
@@ -240,9 +274,8 @@ def _native_comparator_path(context_path: Path) -> Path:
         context, _, _ = load_context(context_path)
     except (OSError, Reject, ValueError) as error:
         raise RuntimeError("compare context cannot be loaded") from error
-    schema = context.get("schema")
-    if not isinstance(schema, str) or schema not in {RUNNER_CONTEXT_SCHEMA, COMPARE_CONTEXT_SCHEMA}:
-        raise RuntimeError("compare context schema is not supported")
+    if context.get("schema") != RUNNER_CONTEXT_SCHEMA:
+        raise RuntimeError("compare context must be a bound runner context")
     trusted = _trusted_comparator(context)
 
     override = os.environ.get(NATIVE_BINARY_ENV)
@@ -252,16 +285,9 @@ def _native_comparator_path(context_path: Path) -> Path:
     if override is not None and launcher is not None and override != launcher:
         raise RuntimeError("native comparator paths are ambiguous")
 
-    selected_value = override or launcher
-    if selected_value is None and trusted is not None:
-        selected_value = str(trusted[0])
-    if selected_value is None:
-        root = Path(__file__).resolve().parent.parent
-        workspace = root.parent.parent
-        target = workspace / "target"
-        if target.is_symlink():
-            raise RuntimeError("default native comparator target is a symlink")
-        selected_value = str(target / "debug" / "tc-proof")
+    if trusted is None:
+        raise RuntimeError("native comparator is not verifier-bound")
+    selected_value = override or launcher or str(trusted[0])
 
     selected = _validated_executable(selected_value, "native comparator")
     candidate_root = Path(__file__).resolve().parent.parent.parent.parent
@@ -332,21 +358,37 @@ def _derive_compare_index(context_path: Path) -> None:
     os.environ["TC_PROOF_CONTEXT_INDEX_SHA256"] = sha256_bytes(raw)
 
 
-def _load_comparison_report(report_path: object) -> tuple[dict[str, object] | None, str | None]:
-    """Read the comparator report plus its digest, or (None, None)."""
+def _load_comparison_report(
+    report_path: object,
+) -> tuple[dict[str, object] | None, bytes | None, str | None]:
+    """Read a strict comparator report plus its raw bytes and digest."""
     if not isinstance(report_path, str) or not report_path:
-        return None, None
+        return None, None, None
+    path = Path(report_path)
+    if not path.is_absolute():
+        return None, None, None
+    current = Path(path.anchor)
     try:
-        raw = Path(report_path).read_bytes()
+        for component in path.parts[1:]:
+            current /= component
+            if current.lstat().st_mode & stat.S_IFMT(stat.S_IFLNK):
+                return None, None, None
+        metadata = path.lstat()
     except OSError:
-        return None, None
+        return None, None, None
+    if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1:
+        return None, None, None
+    try:
+        raw = path.read_bytes()
+    except OSError:
+        return None, None, None
     try:
         report = load_bytes(raw)
     except (UnicodeDecodeError, ValueError):
-        return None, None
+        return None, None, None
     if not isinstance(report, dict):
-        return None, None
-    return report, sha256_bytes(raw)
+        return None, None, None
+    return report, raw, sha256_bytes(raw)
 
 
 def run_compare(context_path: Path) -> int:
@@ -370,17 +412,32 @@ def run_compare(context_path: Path) -> int:
     comparator = qualification.get("comparator") if isinstance(qualification, dict) else None
     nested = comparator.get("context") if isinstance(comparator, dict) else None
     nested_path = nested.get("report_path") if isinstance(nested, dict) else None
-    report, report_hash = _load_comparison_report(nested_path)
-    status = "passed" if completed.returncode == 0 else "rejected"
+    report, report_raw, report_hash = _load_comparison_report(nested_path)
     category: str | None = None
-    if status == "rejected":
-        category = "COMPARISON"
-        failures = report.get("failures") if isinstance(report, dict) else None
-        if isinstance(failures, list) and failures:
-            first = failures[0]
-            code = first.get("code") if isinstance(first, dict) else None
-            if isinstance(code, str) and code:
-                category = code
+    try:
+        if report is None or report_raw is None:
+            raise Reject("COMPARISON")
+        report_hash = validate_comparison_report(
+            report,
+            report_raw,
+            context,
+            context_hash,
+            Path(str(nested_path)),
+            require_success=completed.returncode == 0,
+            category="COMPARISON",
+        )
+        status = "passed" if completed.returncode == 0 else "rejected"
+        if status == "rejected":
+            failures = report.get("failures")
+            if isinstance(failures, list) and failures:
+                first = failures[0]
+                code = first.get("code") if isinstance(first, dict) else None
+                if isinstance(code, str) and code:
+                    category = code
+    except Reject as error:
+        status = "rejected"
+        category = error.category
+        report_hash = None
     digests = [report_hash] if report_hash is not None else [context_hash]
     outputs: dict[str, object] = {"exit_code": completed.returncode}
     if isinstance(nested_path, str) and nested_path:
@@ -426,7 +483,7 @@ def main(argv: list[str] | None = None) -> int:
         "oracle": lambda: run_oracle(args.context, args.namespace),
         "capture": lambda: run_capture(args.context, args.lane),
         "account-tests": lambda: run_account_tests(args.context),
-        "architecture": lambda: run_architecture(args.context),
+        "architecture": lambda: _run_architecture_with_profile(args.context),
         "close": lambda: run_close(args.context),
     }
     return dispatch[args.operation]()

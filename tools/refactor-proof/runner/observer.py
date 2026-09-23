@@ -53,6 +53,7 @@ class ObserverClient:
         self.request_id = 0
         self._request = os.fdopen(request_fd, "wb")
         self._response = os.fdopen(response_fd, "rb")
+        self._closed = False
 
     @classmethod
     def from_env(cls, observer_sequence: list[str]) -> ObserverClient:
@@ -77,6 +78,8 @@ class ObserverClient:
             raise ObserverError(str(error)) from error
 
     def request(self, operation: str, source_commit: str, tree: str) -> dict[str, Any]:
+        if self._closed:
+            raise ObserverError("observer transport is closed")
         if self.request_id >= len(self.observer_sequence):
             raise ObserverError("observer request sequence exhausted")
         expected_operation = self.observer_sequence[self.request_id]
@@ -100,13 +103,16 @@ class ObserverClient:
             self._request.write(line)
             self._request.flush()
             raw = self._response.readline(MAX_RESPONSE_BYTES + 1)
-        except OSError as error:
+        except (OSError, ValueError) as error:
             raise ObserverError("observer transport failed") from error
         if not raw or not raw.endswith(b"\n"):
             raise ObserverError("observer response incomplete")
         if len(raw) > MAX_RESPONSE_BYTES:
             raise ObserverError("observer response exceeds maximum bound")
-        event = load_bytes(raw[:-1])
+        try:
+            event = load_bytes(raw[:-1])
+        except (UnicodeDecodeError, ValueError) as error:
+            raise ObserverError("observer response is not strict JSON") from error
         if (
             not isinstance(event, dict)
             or set(event) != OBSERVATION_KEYS
@@ -147,13 +153,26 @@ class ObserverClient:
 
     def require_complete(self) -> None:
         if self.request_id != len(self.observer_sequence):
+            self.close()
             raise ObserverError("observer request sequence incomplete")
+        self.close()
+
+    def __enter__(self) -> ObserverClient:
+        if self._closed:
+            raise ObserverError("observer transport is closed")
+        return self
+
+    def __exit__(self, _type: object, _value: object, _traceback: object) -> None:
+        self.close()
 
     def close(self) -> None:
+        if self._closed:
+            return
+        self._closed = True
         for stream in (self._request, self._response):
             try:
                 stream.close()
-            except OSError:
+            except (OSError, ValueError):
                 pass
 
     def digest(self, event: dict[str, Any]) -> str:

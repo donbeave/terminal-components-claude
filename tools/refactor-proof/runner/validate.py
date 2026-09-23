@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .context import ALLOWED_V1_KEYS, Reject, allowed_context_keys, expanded_members
-from .json_util import load_path, sha256_bytes
+from .json_util import load_path, sha256_bytes, sha256_canonical
 
 
 def seeded_value(config: dict[str, Any]) -> int:
@@ -23,11 +23,17 @@ def validate_capture_payload(
     config: dict[str, Any],
     operation: str,
 ) -> None:
-    if event.get("exit", 0) != 0 or not isinstance(event.get("payload"), dict):
+    if operation not in {"oracle", "capture", "direct", "pty"}:
+        raise Reject("EXECUTION")
+    if "exit" not in event or type(event.get("exit")) is not int or event.get("exit") != 0:
+        raise Reject("EXECUTION")
+    if not isinstance(event.get("payload"), dict):
         raise Reject("EXECUTION")
     body = event["payload"]
-    draw_count = 2 if operation == "architecture" else 10
     calls = body.get("calls", [])
+    if not isinstance(calls, list) or any(not isinstance(call, str) for call in calls):
+        raise Reject("EXECUTION")
+    draw_count = 10
     if "App.update" not in calls:
         raise Reject("EXECUTION")
     if calls.count("Widget.draw") != draw_count:
@@ -65,15 +71,60 @@ def validate_capture_payload(
                     raise Reject("EXECUTION")
 
 
-def validate_oracle_repeat(events: list[dict[str, Any]]) -> None:
+def validate_oracle_repeat(
+    events: list[dict[str, Any]],
+    *,
+    context: dict[str, Any] | None = None,
+    source_commit: str | None = None,
+    source_tree: str | None = None,
+) -> None:
     if len(events) != 2:
         raise Reject("EXECUTION")
     first = events[0].get("payload")
     second = events[1].get("payload")
-    if events[0].get("exit") != 0 or events[1].get("exit") != 0:
+    if (
+        type(events[0].get("exit")) is not int
+        or type(events[1].get("exit")) is not int
+        or events[0].get("exit") != 0
+        or events[1].get("exit") != 0
+    ):
         raise Reject("EXECUTION")
-    if first != second:
+    if not isinstance(first, dict) or not first or not isinstance(second, dict) or not second:
+        raise Reject("EXECUTION")
+    if sha256_canonical(first) != sha256_canonical(second):
         raise Reject("REPEAT")
+    if context is None:
+        return
+    if set(events[0]) != _OBSERVATION_KEYS or set(events[1]) != _OBSERVATION_KEYS:
+        raise Reject("REPEAT")
+    if source_commit is None:
+        source_commit = context.get("oracle_commit")
+    if source_tree is None:
+        source_tree = context.get("tree")
+    expected = {
+        "run_id": context.get("run_id"),
+        "task_id": context.get("task_id"),
+        "check_id": context.get("check_id"),
+        "operation": "oracle",
+        "source_commit": source_commit,
+        "tree": source_tree,
+    }
+    if not isinstance(source_commit, str) or not isinstance(source_tree, str):
+        raise Reject("REPEAT")
+    nonce = events[0].get("nonce")
+    if not isinstance(nonce, str) or not nonce:
+        raise Reject("REPEAT")
+    for request_id, event in enumerate(events):
+        if any(event.get(key) != value for key, value in expected.items()):
+            raise Reject("REPEAT")
+        if (
+            event.get("nonce") != nonce
+            or type(event.get("request_id")) is not int
+            or event.get("request_id") != request_id
+        ):
+            raise Reject("REPEAT")
+        if not isinstance(event.get("records"), list) or not event["records"]:
+            raise Reject("REPEAT")
 
 
 def validate_native_extension(payload: dict[str, Any], contract: dict[str, Any], source_commit: str) -> None:
@@ -138,6 +189,28 @@ _RUNTIME_RESULT_KEYS = {
     "observation_digests",
     "outputs",
 }
+_COMPARISON_KEYS = {
+    "schema",
+    "run_id",
+    "task_id",
+    "context_sha256",
+    "required_count",
+    "checked_count",
+    "passed_count",
+    "results",
+    "failures",
+}
+_COMPARISON_FAILURE_CODES = {
+    "UNSAFE_PATH",
+    "UNEXPECTED_APPROVAL",
+    "INTEGRITY",
+    "REQUIRED_SET",
+    "PROVENANCE",
+    "FRAME_INVALID",
+    "FRAME_MISMATCH",
+    "STATE_INVALID",
+    "STATE_MISMATCH",
+}
 
 _OBSERVATION_KEYS = {
     "schema",
@@ -163,6 +236,133 @@ _ALLOWED_SYSTEM_SYMLINKS = {
     Path("/tmp"): Path("/private/tmp"),
     Path("/var"): Path("/private/var"),
 }
+
+
+def validate_comparison_report(
+    report: Any,
+    report_raw: bytes,
+    context: dict[str, Any],
+    context_hash: str,
+    report_path: Path,
+    *,
+    require_success: bool,
+    category: str,
+) -> str:
+    """Validate a native comparator report against its bound runner context."""
+
+    def reject() -> None:
+        raise Reject(category)
+
+    if not isinstance(report, dict) or set(report) != _COMPARISON_KEYS:
+        reject()
+    if not isinstance(report_raw, bytes):
+        reject()
+    qualification = context.get("qualification")
+    comparator = qualification.get("comparator") if isinstance(qualification, dict) else None
+    nested = comparator.get("context") if isinstance(comparator, dict) else None
+    if (
+        context.get("operation") != "compare"
+        or not isinstance(comparator, dict)
+        or not isinstance(nested, dict)
+        or nested.get("schema") != "tc-proof-compare-context/v1"
+        or nested.get("run_id") != context.get("run_id")
+        or nested.get("task_id") != context.get("task_id")
+        or nested.get("check_id") != context.get("check_id")
+        or not isinstance(context.get("run_id"), str)
+        or not Path(context["run_id"]).is_absolute()
+        or not isinstance(context.get("check_id"), str)
+        or not _check_id(context["check_id"])
+    ):
+        reject()
+    expected_report = Path(context["run_id"]) / "outputs" / f"{context['check_id']}.compare.json"
+    if report_path != expected_report or comparator.get("report_path") != str(expected_report):
+        reject()
+    if nested.get("report_path") != str(expected_report):
+        reject()
+
+    required_ids = nested.get("required_ids")
+    required_count = nested.get("required_count")
+    if (
+        not isinstance(required_ids, list)
+        or not required_ids
+        or any(not isinstance(value, str) or not value for value in required_ids)
+        or len(set(required_ids)) != len(required_ids)
+        or type(required_count) is not int
+        or required_count != len(required_ids)
+    ):
+        reject()
+    if (
+        report.get("schema") != "tc-proof-comparison/v1"
+        or report.get("run_id") != context.get("run_id")
+        or report.get("task_id") != context.get("task_id")
+        or report.get("context_sha256") != context_hash
+        or type(report.get("required_count")) is not int
+        or report.get("required_count") != required_count
+    ):
+        reject()
+    counts = [report.get(name) for name in ("checked_count", "passed_count")]
+    if any(type(value) is not int or value < 0 or value > required_count for value in counts):
+        reject()
+    checked_count, passed_count = counts
+    if passed_count > checked_count:
+        reject()
+
+    results = report.get("results")
+    failures = report.get("failures")
+    if not isinstance(results, list) or not isinstance(failures, list):
+        reject()
+    failed_ids: set[str] = set()
+    if results:
+        if checked_count != required_count or [row.get("id") if isinstance(row, dict) else None for row in results] != required_ids:
+            reject()
+        for result in results:
+            if (
+                not isinstance(result, dict)
+                or set(result) != {"id", "status"}
+                or not isinstance(result.get("id"), str)
+                or result.get("status") not in {"passed", "failed"}
+            ):
+                reject()
+            if result["status"] == "failed":
+                failed_ids.add(result["id"])
+        if passed_count != required_count - len(failed_ids):
+            reject()
+    elif checked_count != 0 or passed_count != 0:
+        reject()
+
+    failure_ids: set[str] = set()
+    for failure in failures:
+        if not isinstance(failure, dict) or set(failure) not in ({"id", "code"}, {"id", "code", "detail"}):
+            reject()
+        failure_id = failure.get("id")
+        if failure_id is not None and (
+            not isinstance(failure_id, str) or failure_id not in required_ids or failure_id in failure_ids
+        ):
+            reject()
+        if failure.get("code") not in _COMPARISON_FAILURE_CODES:
+            reject()
+        if "detail" in failure and not isinstance(failure["detail"], str):
+            reject()
+        if failure_id is not None:
+            failure_ids.add(failure_id)
+    if results:
+        if failure_ids != failed_ids:
+            reject()
+    elif len(failures) != 1 or failures[0].get("id") is not None:
+        reject()
+
+    if require_success:
+        if (
+            not results
+            or checked_count != required_count
+            or passed_count != required_count
+            or failures
+            or any(result.get("status") != "passed" for result in results)
+        ):
+            reject()
+    elif results and not failed_ids:
+        reject()
+    return sha256_bytes(report_raw)
 
 
 def _hex(value: Any, length: int) -> bool:
@@ -214,7 +414,7 @@ def _real_directory(path: Path) -> None:
 def _object(path: Path) -> dict[str, Any]:
     try:
         value = load_path(path)
-    except (OSError, TypeError, ValueError):
+    except (OSError, TypeError, UnicodeDecodeError, ValueError):
         raise Reject("CLOSURE") from None
     if not isinstance(value, dict):
         raise Reject("CLOSURE")
@@ -240,6 +440,23 @@ def _bound_member(member: Any, expected_id: str, directory: Path) -> tuple[Path,
     if sha256_bytes(raw) != member["sha256"]:
         raise Reject("CLOSURE")
     return path, member["sha256"]
+
+
+def _bound_path_reference(value: Any) -> tuple[Path, str]:
+    if not isinstance(value, dict) or set(value) != {"path", "sha256"}:
+        raise Reject("CLOSURE")
+    raw_path = value.get("path")
+    if not isinstance(raw_path, str) or not _hex(value.get("sha256"), 64):
+        raise Reject("CLOSURE")
+    path = Path(raw_path)
+    _regular_file(path)
+    try:
+        raw = path.read_bytes()
+    except OSError:
+        raise Reject("CLOSURE") from None
+    if sha256_bytes(raw) != value["sha256"]:
+        raise Reject("CLOSURE")
+    return path, value["sha256"]
 
 
 def validate_close_records(event: dict[str, Any], expected_check_ids: list[str]) -> None:
@@ -300,6 +517,8 @@ def _validate_current_observation(
         "tree": source_tree,
     }
     if any(event.get(key) != value for key, value in expected.items()):
+        raise Reject("CLOSURE")
+    if type(event.get("request_id")) is not int or type(event.get("exit")) is not int:
         raise Reject("CLOSURE")
     if (
         context.get("run_id") != index.get("run_id")
@@ -463,6 +682,7 @@ def validate_index_close_outputs(
         or capability.get("sequences") != observer_sequences
     ):
         raise Reject("CLOSURE")
+    _bound_path_reference(capability.get("provider"))
 
     current_context = context_entries[current_check_id][2]
     current_sequence = current_context.get("observer_sequence")
@@ -480,32 +700,58 @@ def validate_index_close_outputs(
         )
 
     expected_names = {f"{check_id}.result.json" for check_id in expected_ids}
-    report_names: set[str] = set()
-    for _, _, context in context_entries.values():
+    report_bindings: dict[str, tuple[Path, str, dict[str, Any]]] = {}
+    for check_id, (_, context_hash, context) in context_entries.items():
         qualification = context.get("qualification")
         if not isinstance(qualification, dict):
             raise Reject("CLOSURE")
         comparator = qualification.get("comparator")
         if comparator is None:
+            if context["operation"] == "compare":
+                raise Reject("CLOSURE")
             continue
         if not isinstance(comparator, dict):
             raise Reject("CLOSURE")
         report_path = comparator.get("report_path")
         if report_path is None:
+            if context["operation"] == "compare":
+                raise Reject("CLOSURE")
             continue
-        if not isinstance(report_path, str) or Path(report_path).parent != output_dir:
+        if context["operation"] != "compare" or not isinstance(report_path, str):
             raise Reject("CLOSURE")
-        report_name = Path(report_path).name
-        if not report_name or report_name.endswith(".result.json"):
+        report = Path(report_path)
+        expected_report = run_dir / "outputs" / f"{check_id}.compare.json"
+        if report != expected_report or report.parent != output_dir:
             raise Reject("CLOSURE")
-        report_names.add(report_name)
-    expected_names |= report_names
+        report_name = report.name
+        if report_name in report_bindings:
+            raise Reject("CLOSURE")
+        report_bindings[report_name] = (report, context_hash, context)
+    expected_names |= set(report_bindings)
     try:
         actual_names = {path.name for path in output_dir.iterdir()}
     except OSError:
         raise Reject("CLOSURE") from None
     if actual_names != expected_names:
         raise Reject("CLOSURE")
+
+    report_hashes: dict[str, str] = {}
+    for report_name, (report_path, context_hash, context) in report_bindings.items():
+        _regular_file(report_path)
+        try:
+            report_raw = report_path.read_bytes()
+        except OSError:
+            raise Reject("CLOSURE") from None
+        report = _object(report_path)
+        report_hashes[context["check_id"]] = validate_comparison_report(
+            report,
+            report_raw,
+            context,
+            context_hash,
+            report_path,
+            require_success=True,
+            category="CLOSURE",
+        )
 
     context_by_id = {check_id: values for check_id, values in context_entries.items()}
     for row in event["records"]:
@@ -535,11 +781,24 @@ def validate_index_close_outputs(
         ):
             raise Reject("CLOSURE")
 
-        observations = report["outputs"].get("observations")
-        if observations is None:
-            if context["operation"] not in {"external", "compare"}:
+        outputs = report["outputs"]
+        if "observations" not in outputs:
+            if context["operation"] == "compare":
+                report_hash = report_hashes.get(check_id)
+                expected_report = run_dir / "outputs" / f"{check_id}.compare.json"
+                if (
+                    report_hash is None
+                    or set(outputs) != {"exit_code", "report"}
+                    or type(outputs.get("exit_code")) is not int
+                    or outputs.get("exit_code") != 0
+                    or outputs.get("report") != str(expected_report)
+                    or report["observation_digests"] != [report_hash]
+                ):
+                    raise Reject("CLOSURE")
+            elif context["operation"] != "external":
                 raise Reject("CLOSURE")
         else:
+            observations = outputs["observations"]
             sequence = context.get("observer_sequence")
             if (
                 not isinstance(sequence, list)
@@ -558,8 +817,7 @@ def validate_index_close_outputs(
                     request_id=request_id,
                     operation=observed_operation,
                 )
-
-    for report_name in report_names:
-        _regular_file(output_dir / report_name)
-        if not isinstance(_object(output_dir / report_name), dict):
-            raise Reject("CLOSURE")
+            if report["observation_digests"] != [
+                sha256_canonical(observation) for observation in observations
+            ]:
+                raise Reject("CLOSURE")
