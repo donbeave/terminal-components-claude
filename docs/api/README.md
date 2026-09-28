@@ -27,7 +27,7 @@ The pinned visual source is commit `4a79c0a2d40fca46fc406b77157ce3b3f12ec16b`. I
 | How does an event become a typed action? | [Responses and event flow](public-api.md#responses-and-event-flow) |
 | How are collections and controlled values kept stable? | [Controlled values and reconciliation](public-api.md#controlled-values-and-reconciliation) |
 | How is visual customization constrained? | [Parts, patches, and slots](public-api.md#parts-patches-and-slots) and [authoring](authoring.md) |
-| What can a component author access? | [Author boundary](authoring.md#author-boundary) |
+| What can a component author access? | [Author boundary](authoring.md#purpose-and-boundary) |
 | How do secrets differ from ordinary text? | [Secret state](public-api.md#secret-state) and [secret types](types.md#secret-and-validation-types) |
 | Is there a universal `Widget` or `show` API? | [Deliberate exclusions](public-api.md#deliberate-exclusions) |
 | How does `Grid` support read-only and editing? | [Grid capability boundary](public-api.md#grid-capability-boundary) |

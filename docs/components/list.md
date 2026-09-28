@@ -37,7 +37,7 @@ List::draw(&self, ui: &mut Ui<'_>, area: Rect, state: &ListState) -> Rect;
 List::measure(&self, cx: &MeasureCx<'_>, constraints: Constraints) -> Size;
 ```
 
-`ListState` owns only durable view state: cursor `ItemKey`, range-selection anchor and [`ScrollState`](../foundations/runtime.md#scroll-region). Selected keys remain caller-controlled borrowed props. `ListAction` is typed: `Activate { key, origin }` and `SelectionRequested(SelectionRequest)`. Expose read-only cursor, selected-key and scroll observations; keep rows, geometry and runtime handles private.
+`ListState` owns only durable view state: cursor `ItemKey`, range-selection anchor and [`ScrollState`](./scroll-region.md#scroll-and-capture-behavior). Selected keys remain caller-controlled borrowed props. `ListAction` is typed: `Activate { key, origin }` and `SelectionRequested(SelectionRequest)`. Expose read-only cursor, selected-key and scroll observations; keep rows, geometry and runtime handles private.
 
 ## Ownership and update/draw rules
 
@@ -61,7 +61,7 @@ The baseline uses a focus gutter, selected markers (`›` for single selection a
 - Up/Down and `j`/`k` move the cursor; PageUp/PageDown, Home/`g` and End/`G` use the shared scroll/navigation rules. The exact baseline key map is an oracle input, not permission to expose legacy event types.
 - Enter and Space request activation or selection for the current enabled key. Disabled rows consume the gesture without an action. In multi mode, range extension and select-all preserve disabled rows and key identity.
 - Pointer press/release is a completed gesture. A down event alone never activates. Release outside cancels the pending row activation; source removal or disabling during a held press cancels it rather than retargeting another row.
-- Wheel scrolls the list under the pointer and does not transfer focus. Boundary wheels are consumed with no state change. Scrollbar thumb press, track press and captured drag use the shared [`ScrollRegion`](../foundations/runtime.md#scroll-region) mechanism.
+- Wheel scrolls the list under the pointer and does not transfer focus. Boundary wheels are consumed with no state change. Scrollbar thumb press, track press and captured drag use the shared [`ScrollRegion`](./scroll-region.md#scroll-and-capture-behavior) mechanism.
 - Hover may lift a row only while pointer hover is current. Keyboard navigation suppresses stale hover until pointer motion restores it. Disabled rows do not hover or activate.
 - Where the baseline supplies press/activation feedback, sample the 140 ms feedback window and its expiry explicitly; redraw frequency never advances it.
 
@@ -94,6 +94,6 @@ Each trace records dimensions, symbols, wide-cell continuation, foreground/backg
 
 ## Dependencies and negative tests
 
-Dependencies: [`scroll-region`](../foundations/runtime.md#scroll-region), [`identity`](../foundations/identity.md), [`input-actions`](../foundations/input-actions.md), [`layout`](../foundations/layout.md), [`theme`](../foundations/theme.md), [`collections`](../foundations/collections.md), [`authoring`](../foundations/author.md), and [`conformance`](../foundations/conformance.md).
+Dependencies: [`scroll-region`](./scroll-region.md#scroll-and-capture-behavior), [`identity`](../foundations/identity.md), [`input-actions`](../foundations/input-actions.md), [`layout`](../foundations/layout.md), [`theme`](../foundations/theme.md), [`collections`](../foundations/collections.md), [`authoring`](../foundations/author.md), and [`conformance`](../foundations/conformance.md).
 
 Required negative tests include: draw must not mutate semantic state; duplicate keys are rejected; disabled or stale keys produce no activation; release-outside and removed-target gestures produce no action; selection cannot silently follow an index; wheel cannot move focus; hidden rows cannot register hit regions; Unicode matching and width cannot split a grapheme or continuation cell; and a part override must affect the cells it claims. The component uses the shared engine rather than inventing a second list or scroll implementation.

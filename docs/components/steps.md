@@ -90,6 +90,6 @@ Expected output is bound before candidate testing through [`../verification/orac
 
 ## Dependencies and negative tests
 
-Dependencies: [`scroll-region`](../foundations/runtime.md#scroll-region), [`identity`](../foundations/identity.md), [`input-actions`](../foundations/input-actions.md), [`layout`](../foundations/layout.md), [`theme`](../foundations/theme.md), [`author`](../foundations/author.md), and [`conformance`](../foundations/conformance.md).
+Dependencies: [`scroll-region`](./scroll-region.md#scroll-and-capture-behavior), [`identity`](../foundations/identity.md), [`input-actions`](../foundations/input-actions.md), [`layout`](../foundations/layout.md), [`theme`](../foundations/theme.md), [`author`](../foundations/author.md), and [`conformance`](../foundations/conformance.md).
 
 Negative tests must prove: display mode never registers a focus stop; lifecycle status cannot change during update/draw; spinner phase cannot advance from repaint count; removed/disabled keys cannot activate; duplicate keys are rejected; draw is semantically pure; wheel/scrollbar cannot change status; long Unicode text cannot corrupt cells; and part patches cannot overwrite required status/gutter cells. Steps does not embed a scheduler or retry operation.

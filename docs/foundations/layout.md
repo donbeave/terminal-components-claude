@@ -115,7 +115,7 @@ capability and the immutable caller model needed to measure dynamic content.
 It does not expose mutable state, event queues, a global buffer, a runtime
 registry, or an executor. Components use `update` for semantic state changes,
 `measure` for size, and `draw` for immutable paint plus geometry publication;
-see the [API lifecycle](../api/public-api.md#update-draw-and-measure).
+see the [API lifecycle](../api/public-api.md#ownership-and-phases).
 
 ### Allocation invariants
 
