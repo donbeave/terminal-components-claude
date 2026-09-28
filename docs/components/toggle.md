@@ -1,8 +1,8 @@
 # Toggle
 
-**Component ID:** W04  
-**Group:** Controls  
-**Phase:** P3  
+**Component ID:** W04\
+**Group:** Controls\
+**Phase:** P3\
 **Contract status:** canonical Termrock target; implementation is future work on `termrock-refactor`.
 
 ## Purpose and scope

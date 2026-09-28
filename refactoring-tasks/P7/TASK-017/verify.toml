@@ -34,4 +34,3 @@ argv = ["rtk", "cargo", "nextest", "run", "--workspace"]
 expected = { exit = 0 }
 requirements = ["R-005"]
 acceptance = ["AC-004"]
-

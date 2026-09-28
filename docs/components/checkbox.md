@@ -1,8 +1,8 @@
 # Checkbox
 
-**Component ID:** W03  
-**Group:** Controls  
-**Phase:** P3  
+**Component ID:** W03\
+**Group:** Controls\
+**Phase:** P3\
 **Contract status:** canonical Termrock target; implementation is future work on `termrock-refactor`.
 
 ## Purpose and scope

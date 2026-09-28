@@ -1,6 +1,6 @@
 # TerminalView
 
-**Inventory:** W44 · adapter boundary · P6 · extension component  
+**Inventory:** W44 · adapter boundary · P6 · extension component\
 **Baseline:** 4a79c0a2d40fca46fc406b77157ce3b3f12ec16b
 
 ## Purpose and boundary
@@ -163,4 +163,3 @@ Required negative tests:
 - selection/caret state cannot escape stable source coordinates;
 - a candidate cannot generate or bless its own expected snapshot;
 - source replacement cannot silently retarget a selection or cursor.
-

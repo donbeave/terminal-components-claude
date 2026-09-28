@@ -1,6 +1,6 @@
 # PropsList
 
-**Inventory:** W35 · data and text · P3 · baseline composition  
+**Inventory:** W35 · data and text · P3 · baseline composition\
 **Baseline:** 4a79c0a2d40fca46fc406b77157ce3b3f12ec16b
 
 ## Purpose and scope
@@ -143,4 +143,3 @@ Required negative tests:
 - draw cannot mutate cursor, scroll or source rows;
 - duplicate or missing stable keys fail reconciliation;
 - pointer capture ends on release outside the list.
-

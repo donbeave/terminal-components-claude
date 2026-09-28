@@ -82,4 +82,3 @@ backends, or visual redesign.
 | [TablePro](tablepro.md) | Grid, editor, overlay, selection, form, and workbench composition | `src/bin/tablepro/`, `tablepro` |
 | [Jackin Preview](jackin-preview.md) | Host-management, accounts, usage, launch, overlay, and terminal-pane composition | `src/bin/jackin_preview/`, `jackin-preview` |
 | [Holla](holla.md) | Finder, preview, action, plan, output, and context-adaptive composition | `src/bin/holla/`, `holla` |
-

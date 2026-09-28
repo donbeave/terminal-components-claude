@@ -1,6 +1,6 @@
 # Empty
 
-**Inventory:** W36 · feedback · P2 · baseline composition  
+**Inventory:** W36 · feedback · P2 · baseline composition\
 **Baseline:** 4a79c0a2d40fca46fc406b77157ce3b3f12ec16b
 
 ## Purpose and scope
@@ -125,4 +125,3 @@ Required negative tests:
 - retry action cannot run during draw;
 - zero/tiny rectangles cannot panic or write outside area;
 - theme/part patches cannot silently be ignored or recolor unrelated cells.
-

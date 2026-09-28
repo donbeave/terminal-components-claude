@@ -1,8 +1,8 @@
 # RadioGroup
 
-**Component ID:** W05  
-**Group:** Controls  
-**Phase:** P3  
+**Component ID:** W05\
+**Group:** Controls\
+**Phase:** P3\
 **Contract status:** canonical Termrock target; implementation is future work on `termrock-refactor`.
 
 ## Purpose and scope

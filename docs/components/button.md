@@ -1,8 +1,8 @@
 # Button
 
-**Component ID:** W02  
-**Group:** Controls  
-**Phase:** P2  
+**Component ID:** W02\
+**Group:** Controls\
+**Phase:** P2\
 **Contract status:** canonical Termrock target; implementation is future work on `termrock-refactor`.
 
 ## Purpose and scope

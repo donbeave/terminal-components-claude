@@ -255,4 +255,3 @@ Required negative tests include:
   controls; dead-call/custom-paint mutation fails;
 - one cell, cursor, step key, focus/capture owner or action trace difference
   fails exact comparison.
-

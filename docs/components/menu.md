@@ -267,4 +267,3 @@ Required negative tests include:
   a dead menu call followed by custom paint fails the ownership mutation gate;
 - one cell, cursor, focus owner, capture owner, layer path or action-target
   difference fails exact comparison.
-

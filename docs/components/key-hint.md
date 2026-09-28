@@ -1,6 +1,6 @@
 # KeyHint
 
-**Inventory:** W42 · chrome · P2 · baseline component  
+**Inventory:** W42 · chrome · P2 · baseline component\
 **Baseline:** 4a79c0a2d40fca46fc406b77157ce3b3f12ec16b
 
 ## Purpose and scope
@@ -90,4 +90,3 @@ Required negative tests:
 - width returned by measure cannot differ from draw width;
 - KeyHint cannot register focus, hit or pointer capture;
 - a Chord cannot render differently solely because its parent is Menu or Help.
-

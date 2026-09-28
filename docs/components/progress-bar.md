@@ -1,6 +1,6 @@
 # ProgressBar
 
-**Inventory:** W37 · feedback · P5 · baseline component  
+**Inventory:** W37 · feedback · P5 · baseline component\
 **Baseline:** 4a79c0a2d40fca46fc406b77157ce3b3f12ec16b
 
 ## Purpose and scope
@@ -114,4 +114,3 @@ Required negative tests:
 - narrow areas cannot underflow or write outside area;
 - status tones cannot recolor unrelated surfaces;
 - a progress bar cannot emit operation controls or domain actions.
-

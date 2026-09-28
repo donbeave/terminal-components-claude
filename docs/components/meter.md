@@ -1,6 +1,6 @@
 # Meter
 
-**Inventory:** W39 · feedback · P5 · baseline component  
+**Inventory:** W39 · feedback · P5 · baseline component\
 **Baseline:** 4a79c0a2d40fca46fc406b77157ce3b3f12ec16b
 
 ## Purpose and scope

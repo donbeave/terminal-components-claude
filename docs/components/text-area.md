@@ -1,8 +1,8 @@
 # TextArea
 
-**Component ID:** W09  
-**Group:** Forms  
-**Phase:** P3  
+**Component ID:** W09\
+**Group:** Forms\
+**Phase:** P3\
 **Contract status:** canonical Termrock target; implementation is future work on `termrock-refactor`.
 
 ## Purpose and scope

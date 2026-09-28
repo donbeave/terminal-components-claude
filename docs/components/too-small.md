@@ -1,6 +1,6 @@
 # TooSmall
 
-**Inventory:** W43 · chrome · P2 · baseline composition  
+**Inventory:** W43 · chrome · P2 · baseline composition\
 **Baseline:** 4a79c0a2d40fca46fc406b77157ce3b3f12ec16b
 
 ## Purpose and scope
@@ -102,4 +102,3 @@ Required negative tests:
 - TooSmall cannot consume host quit or invent an action;
 - a product-specific threshold cannot become a library default;
 - grow-after-shrink cannot create a fresh state object.
-

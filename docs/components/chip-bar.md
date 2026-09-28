@@ -1,8 +1,8 @@
 # ChipBar
 
-**Component ID:** W06  
-**Group:** Collections  
-**Phase:** P3  
+**Component ID:** W06\
+**Group:** Collections\
+**Phase:** P3\
 **Contract status:** canonical Termrock target; implementation is future work on `termrock-refactor`.
 
 ## Purpose and scope

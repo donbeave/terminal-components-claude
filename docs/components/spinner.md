@@ -1,6 +1,6 @@
 # Spinner
 
-**Inventory:** W38 · feedback · P5 · baseline component  
+**Inventory:** W38 · feedback · P5 · baseline component\
 **Baseline:** 4a79c0a2d40fca46fc406b77157ce3b3f12ec16b
 
 ## Purpose and scope
@@ -106,4 +106,3 @@ Required negative tests:
 - a spinner cannot register focus/hit/capture;
 - a narrow area cannot panic or paint outside bounds;
 - embedding cannot change measured width across phases.
-
