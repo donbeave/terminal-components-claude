@@ -30,6 +30,7 @@ In scope:
 
 - Oracle qualification, exact comparator behavior, trusted reference inputs, and conformance-harness scaffolding.
 - A repository-local `mise.toml` stable-toolchain pin and the nonpublished conformance package/workspace wiring, without moving the four applications or baseline files.
+- A candidate-blind ExistingOracle fixture for TablePro pending-edit preview SQL, derived from the frozen implementation and covering the documented statement and key/default cases.
 
 Out of scope:
 
@@ -43,6 +44,7 @@ Out of scope:
 - **R-004 (MUST NOT):** No product implementation, service integration, separate project/repository migration, or application redesign is added to this library task.
 - **R-005 (MUST):** The completion gate succeeds.
 - **R-006 (MUST):** Pin a verified stable Rust toolchain through Mise for local and CI use; establish one public library package and one nonpublished conformance package in this repository workspace; keep conformance-only dependencies out of the production library graph.
+- **R-007 (MUST):** Before candidate TablePro Grid integration exists, seal the exact ordered SQL preview statement vectors produced by the frozen baseline for update, insert, delete, and documented boundary cases. Record baseline provenance and keep the expected vectors outside candidate-controlled approval paths.
 
 ## Acceptance criteria
 
@@ -83,14 +85,14 @@ Then application source, snapshots, baseline tests, and product integrations are
 
 - **Type:** invariant
 - **Covers:** `R-003, R-004`
-- **Check:** `CHK-003`
+- **Check:** `CHK-004`
 
 ### AC-004 — Completion gate passes
 
 **Verification**
 
 - **Type:** gate
-- **Check:** `CHK-005`
+- **Check:** `CHK-006`
 
 ### AC-005 — The in-place package and toolchain boundaries hold
 ```gherkin
@@ -103,7 +105,20 @@ Then Mise selects the declared stable toolchain and the nonpublished conformance
 
 - **Type:** invariant
 - **Covers:** `R-006`
-- **Check:** `CHK-004`
+- **Check:** `CHK-005`
+
+### AC-006 — TablePro preview SQL vectors are sealed from the frozen implementation
+```gherkin
+Given the TablePro pending-edit fixture states at the frozen baseline
+When the oracle fixture is qualified before candidate Grid integration
+Then the ordered UPDATE, INSERT, and DELETE statements and documented boundary outputs are fixed in the ExistingOracle lane with source provenance
+```
+
+**Verification**
+
+- **Type:** invariant
+- **Covers:** `R-007`
+- **Check:** `CHK-003`
 
 ## Fixed decisions
 
@@ -120,8 +135,9 @@ Then Mise selects the declared stable toolchain and the nonpublished conformance
 - [ ] **2** Implement.
     - [ ] **2.1** Deliver the scoped Termrock mechanism. (`R-001`, `AC-001`, `CHK-001`)
     - [ ] **2.2** Prove shared ownership, identity, and applicable edge behavior. (`R-002`, `AC-002`, `CHK-002`)
-    - [ ] **2.3** Preserve the frozen applications and keep product work out of scope. (`R-003`, `R-004`, `AC-003`, `CHK-003`)
-    - [ ] **2.4** Establish the pinned toolchain and test-only workspace boundary. (`R-006`, `AC-005`, `CHK-004`)
+    - [ ] **2.3** Preserve the frozen applications and keep product work out of scope. (`R-003`, `R-004`, `AC-003`, `CHK-004`)
+    - [ ] **2.4** Establish the pinned toolchain and test-only workspace boundary. (`R-006`, `AC-005`, `CHK-005`)
+    - [ ] **2.5** Seal the baseline TablePro preview SQL vector fixture before candidate integration. (`R-007`, `AC-006`, `CHK-003`)
 - [ ] **3** Verify.
-    - [ ] **3.1** Run the one completion gate. (`R-005`, `AC-004`, `CHK-005`)
+    - [ ] **3.1** Run the one completion gate. (`R-005`, `AC-004`, `CHK-006`)
 <!-- checklist:end -->

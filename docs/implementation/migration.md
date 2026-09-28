@@ -65,6 +65,13 @@ before candidate components. Preserve provenance for every extracted frame and
 interaction trace. A missing oracle state becomes capture work; it is never
 silently accepted from the candidate.
 
+Seal the baseline TablePro pending-edit SQL preview as an `ExistingOracle`
+contract before the consumer migration phase. Record full ordered statement
+vectors for update, insert, and delete cases, including original-key
+predicates, `DEFAULT` handling, no-op reverts, composite keys, and the
+no-primary-key fallback. Candidate code cannot supply or approve those expected
+vectors.
+
 ### 1. Install shared ownership and the target facade
 
 Introduce the Termrock architecture behind the existing repository boundary in
@@ -141,6 +148,20 @@ keyboard and pointer programs, capability/motion modes, and snapshot paths.
 Compare at the same dimensions and checkpoints. A failed parity case blocks
 removal of the old path and is repaired in the reusable library or its contract
 owner, not hidden by an app-local painter.
+
+TablePro has one narrow caller-side adapter exception: its existing
+`preview_sql` function may change how it reads rows and pending edits when the
+consumer moves from `DataGrid` to the caller-owned Termrock `GridModel` and
+`GridEditor` contracts. Preserve the full ordered SQL output byte-for-byte for
+equivalent table, column, original-row, and pending-edit inputs. Keep the
+existing dirty-row/column ordering, original-key predicates, default handling,
+no-op revert behavior, SQL literal formatting, or row targeting when keyed
+rows are reordered, filtered, or removed. Do not change
+`sql_literal`, query execution, Safe Mode, history, completion, switcher, or
+database behavior. The P6 consumer task owns this adapter; because task-format
+scope is file-level, an independent diff review must confirm that only the
+`preview_sql` adapter and its directly related input fixture changed in
+`model.rs`.
 
 The applications remain conformance evidence throughout. No application gets a
 new feature, service, route, backend, product model, or visual refresh as part

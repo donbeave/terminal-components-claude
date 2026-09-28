@@ -21,6 +21,14 @@ acceptance = ["AC-002"]
 
 [[checks]]
 id = "CHK-003"
+phase = "regression"
+argv = ["rtk", "cargo", "nextest", "run", "--workspace", "--test", "termrock_oracle", "--", "--exact", "tablepro_preview_sql_fixture"]
+expected = { exit = 0 }
+requirements = ["R-007"]
+acceptance = ["AC-006"]
+
+[[checks]]
+id = "CHK-004"
 phase = "lint"
 argv = ["rtk", "cargo", "nextest", "run", "--workspace", "--test", "termrock_conformance", "--", "--exact", "protected_paths"]
 expected = { exit = 0 }
@@ -28,7 +36,7 @@ requirements = ["R-003", "R-004"]
 acceptance = ["AC-003"]
 
 [[checks]]
-id = "CHK-004"
+id = "CHK-005"
 phase = "lint"
 argv = ["mise", "exec", "--", "rtk", "cargo", "nextest", "run", "--workspace", "--test", "termrock_toolchain"]
 expected = { exit = 0 }
@@ -36,7 +44,7 @@ requirements = ["R-006"]
 acceptance = ["AC-005"]
 
 [[checks]]
-id = "CHK-005"
+id = "CHK-006"
 phase = "gate"
 argv = ["rtk", "cargo", "nextest", "run", "--workspace"]
 expected = { exit = 0 }

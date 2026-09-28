@@ -7,9 +7,10 @@ creates a clean-room repository or a second project.
 
 The four existing applications remain parity consumers. They are not product work. Every package
 protects `snapshots/**` and `tests/visual_baseline/**`; all packages except the single P6 consumer
-migration package also protect `src/bin/**`. TASK-015 is the only package allowed to edit application
-call sites, and only under the four explicit `src/bin/<app>/` paths declared there. Its acceptance
-contract requires exact frozen output and interaction parity.
+migration package also protect `src/bin/**`. TASK-015 alone may edit its exact application
+presentation paths and the one TablePro `preview_sql` adapter path listed in its verifier. Its
+acceptance contract requires exact frozen output and interaction parity; the SQL adapter must match
+the baseline's sealed statement vectors.
 
 ## Format and execution
 
@@ -27,7 +28,10 @@ The verifier commands are future implementation checks. They use `rtk cargo next
 implementation or test run is part of this documentation-only change. Each package has one final
 gate check. The final gate intentionally runs the workspace suite because shared runtime and
 rendering changes cross component boundaries. Only `TASK-015` may update application call sites to
-consume Termrock components; it cannot change fixtures, scenarios, product behavior, or output.
+consume Termrock components, plus the TablePro `preview_sql` input adapter required to consume
+caller-owned Grid state; it cannot change fixtures, scenarios, product behavior, or output. The
+adapter boundary and parity rule are owned by
+[`migration.md`](../docs/implementation/migration.md).
 
 ## Dependency DAG
 
@@ -72,6 +76,6 @@ the linked canonical contracts before implementation:
 
 Application migration is limited to eventual adoption of these reusable mechanisms while preserving
 the exact frozen Showcase, TablePro, Jackin Preview, and Holla behavior. TASK-015 is the sole
-migration package; its four application paths are call-site scope only. No package authorizes
-services, providers, Docker, account authorization, Git operations, databases, shell/PTY runtime,
-or product redesign.
+migration package; its exact application presentation files and TablePro preview adapter are the
+only application source scope. No package authorizes services, providers, Docker, account
+authorization, Git operations, database backends, shell/PTY runtime, or product redesign.
