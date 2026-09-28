@@ -28,7 +28,6 @@ writable_paths = [
   "src/bin/showcase/pages/trees.rs",
   "src/bin/tablepro/app.rs",
   "src/bin/tablepro/connections.rs",
-  "src/bin/tablepro/model.rs",
   "src/bin/tablepro/tabs.rs",
   "src/bin/tablepro/workbench.rs",
   "src/bin/jackin_preview/app.rs",
@@ -75,6 +74,7 @@ forbidden_paths = [
   "src/bin/tablepro/main.rs",
   "src/bin/tablepro/app_tests.rs",
   "src/bin/tablepro/app_tests_coverage.rs",
+  "src/bin/tablepro/model.rs",
   "src/bin/tablepro/db.rs",
   "src/bin/tablepro/sql.rs",
   "src/bin/jackin_preview/main.rs",
@@ -122,7 +122,7 @@ id = "CHK-003"
 phase = "lint"
 argv = ["rtk", "cargo", "nextest", "run", "--workspace", "--test", "termrock_conformance", "--", "--exact", "protected_paths"]
 expected = { exit = 0 }
-requirements = ["R-003", "R-004"]
+requirements = ["R-003", "R-004", "R-006"]
 acceptance = ["AC-003"]
 
 [[checks]]
