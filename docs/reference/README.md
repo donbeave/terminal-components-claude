@@ -71,6 +71,10 @@ canonical narrative owners remain the documents linked above. `validation.json`
 is retained as a provenance snapshot of source-pack checks, separate from the
 repository's future verification gates.
 
+The F02 record links `Response<A>` to its canonical shape in
+[`docs/api/types.md`](../api/types.md#typed-response) instead of repeating the
+field declaration, keeping the machine inventory and prose on one type owner.
+
 ## Capture-plan rules
 
 Capture plans preserve dimensions, applicable state axes, exact case IDs,

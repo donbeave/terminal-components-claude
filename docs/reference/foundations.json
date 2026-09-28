@@ -40,7 +40,7 @@
         "src/widgets/keyhint.rs",
         "src/widgets/hintbar.rs"
       ],
-      "api": "enum Flow { Bubble, Consumed }\nenum Invalidate { None, Paint, Layout }\nstruct Response<A> { id: Id, flow: Flow, invalidate: Invalidate, state: VisualState, action: Option<A> }\nenum ActivationOrigin { Keyboard, Pointer, Programmatic }\nstruct Activated { origin: ActivationOrigin }\nstruct ValueChanged<T> { value: T, origin: ActivationOrigin }\nstruct Binding<'a> { action: ActionKey, chord: Option<Chord>, label: &'a str, enabled: bool, visible: bool, priority: u16 }\nBindingView::resolve(scope: ScopeId, bindings: &[Binding<'_>]) -> BindingView\nCx::intents(&mut self, owner: Id) -> IntentIter<'_>",
+      "api": "enum Flow { Bubble, Consumed }\nenum Invalidate { None, Paint, Layout }\nResponse<A>: canonical shape in docs/api/types.md#typed-response\nenum ActivationOrigin { Keyboard, Pointer, Programmatic }\nstruct Activated { origin: ActivationOrigin }\nstruct ValueChanged<T> { value: T, origin: ActivationOrigin }\nstruct Binding<'a> { action: ActionKey, chord: Option<Chord>, label: &'a str, enabled: bool, visible: bool, priority: u16 }\nBindingView::resolve(scope: ScopeId, bindings: &[Binding<'_>]) -> BindingView\nCx::intents(&mut self, owner: Id) -> IntentIter<'_>",
       "contract": [
         "Normalize terminal input once. Preserve modifiers, repeat/release information, paste boundaries and pointer coordinates. InputToken can preserve an opaque link to original bytes when the host needs lossless forwarding.",
         "Consumption, visual invalidation, state change and domain intent are independent. A boundary wheel event can be consumed without paint; a display tick can repaint without an action.",
