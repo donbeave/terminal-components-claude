@@ -33,6 +33,11 @@ provenance. They do not introduce a competing prose authority. Tasks must link
 to the canonical documents above instead of copying these records into new
 contracts.
 
+The component manifest records frozen source paths and proposed module names,
+not a second workspace layout. Future implementation paths are owned by the
+in-place architecture and task scopes; no `crates/termrock` destination is
+imported from the superseded source-pack plan.
+
 ## Frozen provenance
 
 Every visual or capture reference is anchored to the immutable baseline commit

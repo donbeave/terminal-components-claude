@@ -1,33 +1,35 @@
 ---
 schema: task/v5
 id: TASK-001
-title: "Qualify the frozen oracle and independent comparator"
+title: "Qualify the oracle, conformance package, and toolchain"
 kind: refactor
 ---
 
-# TASK-001 — Qualify the frozen oracle and independent comparator
+# TASK-001 — Qualify the oracle, conformance package, and toolchain
 
 ## Goal
 
-The frozen visual-baseline output and observable interaction can be compared by an independent, candidate-blind conformance harness.
+The in-place workspace has a pinned stable toolchain, a nonpublished conformance package, and an independent candidate-blind comparator for frozen output and observable interaction.
 
 ## Context
 
 The annotated `visual-baseline` tag resolves to `4a79c0a2d40fca46fc406b77157ce3b3f12ec16b`. Qualify its dimensions, cells, styles, cursor, focus, capture, actions, and interaction traces against an oracle that candidate code cannot rewrite.
 
-Dependencies: none. Canonical contracts: [verification/oracle-and-provenance.md](../../../docs/verification/oracle-and-provenance.md), [verification/visual-parity.md](../../../docs/verification/visual-parity.md), [verification/interaction-parity.md](../../../docs/verification/interaction-parity.md).
+Dependencies: none. Canonical contracts: [architecture/overview.md](../../../docs/architecture/overview.md), [implementation/quality-gates.md](../../../docs/implementation/quality-gates.md), [foundations/conformance.md](../../../docs/foundations/conformance.md), [verification/oracle-and-provenance.md](../../../docs/verification/oracle-and-provenance.md), [verification/visual-parity.md](../../../docs/verification/visual-parity.md), [verification/interaction-parity.md](../../../docs/verification/interaction-parity.md).
 
 ## Preconditions
 
 - **P-001:** The caller has supplied a committed descendant of annotated `visual-baseline` (`4a79c0a2d40fca46fc406b77157ce3b3f12ec16b`) on `termrock-refactor`.
 - **P-002:** The linked canonical architecture, API, component, design, and verification documents are present.
-- **P-003:** The future implementation environment provides `rtk` and `cargo nextest`.
+- **P-003:** The future implementation environment provides `rtk`, Mise, and `cargo nextest`.
+- **P-004:** Implementation starts from this repository's current root Cargo package; P0 establishes the in-repository workspace boundary without moving the applications or changing current package identity.
 
 ## Scope
 
 In scope:
 
 - Oracle qualification, exact comparator behavior, trusted reference inputs, and conformance-harness scaffolding.
+- A repository-local `mise.toml` stable-toolchain pin and the nonpublished conformance package/workspace wiring, without moving the four applications or baseline files.
 
 Out of scope:
 
@@ -38,8 +40,9 @@ Out of scope:
 - **R-001 (MUST):** Deliver the scoped mechanism according to the linked canonical contracts.
 - **R-002 (MUST):** Preserve caller-owned state, borrowed props, typed actions, stable identities, and shared foundation ownership required by the API.
 - **R-003 (MUST):** The frozen applications, snapshots, and visual-baseline tests remain untouched; their exact output is the oracle.
-- **R-004 (MUST NOT):** No product implementation, service integration, repository migration, or application redesign is added to this library task.
+- **R-004 (MUST NOT):** No product implementation, service integration, separate project/repository migration, or application redesign is added to this library task.
 - **R-005 (MUST):** The completion gate succeeds.
+- **R-006 (MUST):** Pin a verified stable Rust toolchain through Mise for local and CI use; establish one public library package and one nonpublished conformance package in this repository workspace; keep conformance-only dependencies out of the production library graph.
 
 ## Acceptance criteria
 
@@ -87,6 +90,19 @@ Then application source, snapshots, baseline tests, and product integrations are
 **Verification**
 
 - **Type:** gate
+- **Check:** `CHK-005`
+
+### AC-005 — The in-place package and toolchain boundaries hold
+```gherkin
+Given the existing repository and pinned toolchain contract
+When the conformance workspace is inspected and exercised
+Then Mise selects the declared stable toolchain and the nonpublished conformance package uses public library exports without adding conformance tools to production dependencies
+```
+
+**Verification**
+
+- **Type:** invariant
+- **Covers:** `R-006`
 - **Check:** `CHK-004`
 
 ## Fixed decisions
@@ -94,6 +110,7 @@ Then application source, snapshots, baseline tests, and product integrations are
 - **D-001:** Existing baseline outputs remain immutable `ExistingOracle` inputs; extracted evidence and future extensions stay separately labelled.
 - **D-002:** The work stays in this repository on `termrock-refactor`; it never creates a separate implementation repository.
 - **D-003:** The package's verifier scope is enforced by narrow writable library/conformance paths and forbidden application/oracle paths.
+- **D-004:** The conformance package and toolchain pin live in this repository; the discarded separate-repository source layout is not a destination.
 
 ## Checklist
 
@@ -104,6 +121,7 @@ Then application source, snapshots, baseline tests, and product integrations are
     - [ ] **2.1** Deliver the scoped Termrock mechanism. (`R-001`, `AC-001`, `CHK-001`)
     - [ ] **2.2** Prove shared ownership, identity, and applicable edge behavior. (`R-002`, `AC-002`, `CHK-002`)
     - [ ] **2.3** Preserve the frozen applications and keep product work out of scope. (`R-003`, `R-004`, `AC-003`, `CHK-003`)
+    - [ ] **2.4** Establish the pinned toolchain and test-only workspace boundary. (`R-006`, `AC-005`, `CHK-004`)
 - [ ] **3** Verify.
-    - [ ] **3.1** Run the one completion gate. (`R-005`, `AC-004`, `CHK-004`)
+    - [ ] **3.1** Run the one completion gate. (`R-005`, `AC-004`, `CHK-005`)
 <!-- checklist:end -->

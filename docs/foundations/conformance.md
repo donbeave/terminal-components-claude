@@ -66,9 +66,12 @@ does not redefine those rules.
 
 The production Termrock library must not depend on the registry, `tui-snap`,
 PTY tooling, fonts, PNG/HTML libraries, source discovery, or filesystem
-manifests. Those tools may be dependencies of the test-only conformance
-package. Tests exercise public exports; they do not introduce a production
-`Widget` trait, plugin system, route registry, or dynamic component installer.
+manifests. The in-place package shape is one public library crate plus one
+nonpublished conformance crate in the same repository workspace; the
+conformance package owns those tools. The frozen baseline harness may retain
+its existing test-only dependency while it remains the oracle. Tests exercise
+public exports; they do not introduce a production `Widget` trait, plugin
+system, route registry, or dynamic component installer.
 
 ## Registry lifecycle
 

@@ -10,14 +10,16 @@ or product roadmaps for the four reference applications.
    packet rules.
 2. [`migration.md`](migration.md) — how the current `junie-tui` implementation
    becomes the Termrock library while preserving the frozen applications.
-3. [`../architecture/overview.md`](../architecture/overview.md) — the target
+3. [`quality-gates.md`](quality-gates.md) — toolchain, package, implementation
+   quality, performance, and independent-review gates.
+4. [`../architecture/overview.md`](../architecture/overview.md) — the target
    architecture and ownership boundaries.
-4. [`../api/public-api.md`](../api/public-api.md) — the target caller-facing
+5. [`../api/public-api.md`](../api/public-api.md) — the target caller-facing
    API.
-5. [`../foundations/README.md`](../foundations/README.md) and
+6. [`../foundations/README.md`](../foundations/README.md) and
    [`../components/README.md`](../components/README.md) — the shared contracts
    and complete component inventory.
-6. [`../verification/README.md`](../verification/README.md) — oracle,
+7. [`../verification/README.md`](../verification/README.md) — oracle,
    conformance, and parity gates.
 
 The task catalog under `refactoring-tasks/` turns this plan into executable
@@ -77,6 +79,7 @@ redesign belongs in this plan.
 | Component behavior and state matrices | [`../components/`](../components/) |
 | Visual and interaction contracts | [`../design/`](../design/) |
 | Oracle provenance and exact parity gates | [`../verification/`](../verification/) |
+| Implementation quality and independent review | [`quality-gates.md`](quality-gates.md) |
 | Preserved application roles and scenarios | [`../applications/`](../applications/) |
 | Executable dependency graph and task metadata | [`../../refactoring-tasks/`](../../refactoring-tasks/) |
 

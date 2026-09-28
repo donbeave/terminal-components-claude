@@ -1,7 +1,7 @@
 schema = "verify/v2"
 task_id = "TASK-014"
-writable_paths = ["src/widgets", "src/core", "src/runtime.rs", "src/ui", "tests/termrock", "tests/conformance"]
-forbidden_paths = ["src/bin", "snapshots", "tests/visual_baseline", "Cargo.toml", "Cargo.lock", ".config", ".github", "scripts", "tools", "xtask"]
+writable_paths = ["Cargo.toml", "Cargo.lock", "src/widgets", "src/core", "src/runtime.rs", "src/ui", "tests/termrock", "tests/conformance"]
+forbidden_paths = ["src/bin", "snapshots", "tests/visual_baseline", ".config", ".github", "scripts", "tools", "xtask"]
 
 [[checks]]
 id = "CHK-001"
@@ -34,4 +34,3 @@ argv = ["rtk", "cargo", "nextest", "run", "--workspace"]
 expected = { exit = 0 }
 requirements = ["R-005"]
 acceptance = ["AC-004"]
-

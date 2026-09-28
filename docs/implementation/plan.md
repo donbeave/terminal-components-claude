@@ -25,6 +25,9 @@ on `termrock-refactor`.
   `ExtractedOracle` path. Candidate code cannot bless its own snapshot.
 - Every applicable behavior case needs exact visual and interaction evidence;
   non-applicable states need a recorded reason.
+- Implementation quality, toolchain, dependency isolation, performance
+  evidence, and independent-review requirements follow
+  [`quality-gates.md`](quality-gates.md).
 
 The source pack's inventory is the coverage floor: 45 component/API surfaces,
 12 shared foundations, all 54 legacy-family dispositions, and 45 capture plans.
@@ -35,7 +38,7 @@ component, foundation, and verification sections.
 
 | Phase | Scope | Required outputs | Gate |
 |---|---|---|---|
-| **P0 — reference qualification** | Pin the source commit, tool/profile inputs, and approved snapshot corpus. Inventory public exports, parts, source behavior, application compositions, capture plans, missing states, and legacy-family dispositions. Build the comparator and oracle adapters before candidate implementation. | Immutable source/provenance manifest; sealed dimensions and event programs; component/foundation coverage matrix; comparator fixtures; baseline mutation probes. | Deliberate one-cell, style, cursor, action-target, duplicate-action, missing-case, and wrong-oracle-input mutations fail. Candidate code cannot create expected output. |
+| **P0 — reference qualification** | Pin the source commit, tool/profile inputs, and approved snapshot corpus. Inventory public exports, parts, source behavior, application compositions, capture plans, missing states, and legacy-family dispositions. Establish the repository-local Mise toolchain pin and nonpublished conformance package; build the comparator and oracle adapters before candidate implementation. | Immutable source/provenance manifest; one public library plus test-only conformance package in this workspace; pinned stable toolchain; sealed dimensions and event programs; component/foundation coverage matrix; comparator fixtures; baseline mutation probes. | Deliberate one-cell, style, cursor, action-target, duplicate-action, missing-case, and wrong-oracle-input mutations fail. The production dependency graph excludes conformance tools. Candidate code cannot create expected output. |
 | **P1 — foundations and public API** | Establish the Termrock facade and external-consumer harness. Implement identity/revisions, normalized input and typed responses, runtime focus/hover/capture/press/time, layers, measurement/layout, semantic theme, and shared text/model contracts. | Public signature probes; generic scene driver; ownership and purity tests; stale-geometry, duplicate-key, overlay, color-capability, and draw-repeatability fixtures. | External examples use only public exports; update/draw/measure boundaries hold; geometry invalidation, identity, layer ownership, and capability cases pass. |
 | **P2 — basic components and collections** | Implement Button, Brand, Panel, SplitPane, ScrollRegion, List, NavList, Tree, Tabs, Empty, KeyHint, HintBar, and TooSmall on the shared mechanisms. | Generic list/detail and nested/resize/pointer compositions; collection reconciliation cases; per-component oracle captures and negative mutations. | Baseline recipes and applicable focus/hover/press/scroll/resize behavior match without domain modules or duplicate runtime mechanisms. |
 | **P3 — editing, choices, forms, and secrets** | Implement Field, TextInput, TextArea, Checkbox, Toggle, RadioGroup, Select, ChipBar, Form, Props, PropsList, and secret validation on the shared text, identity, and response contracts. | Controlled-value and revision fixtures; draft/commit/cancel/conflict cases; Unicode and selection tests; secret leak/clone/debug negatives; form composition consumer. | TextInput and TextArea retain their distinct baseline Escape/paste policies. Choices remain caller-controlled. Secret values never enter output, traces, or debug artifacts. |
@@ -47,8 +50,10 @@ component, foundation, and verification sections.
 ## Dependency order inside phases
 
 P0 is a prerequisite for all implementation. Build and negatively qualify the
-comparator before accepting any candidate frame. Source and capture inventory
-are independent from candidate code.
+comparator before accepting any candidate frame. Establish the one public
+library and nonpublished conformance package inside the existing workspace,
+and pin the stable toolchain through Mise. Source and capture inventory are
+independent from candidate code.
 
 Within P1, settle identity, revision, response, clock, model, theme, geometry,
 and text signatures before downstream component work. Runtime/layers and

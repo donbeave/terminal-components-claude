@@ -97,7 +97,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/brand.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -217,7 +216,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/button.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -328,7 +326,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/choice.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -438,7 +435,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/choice.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -582,7 +578,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/choice.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -729,7 +724,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/chip.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -829,7 +823,6 @@
           "not_applicable_reason": "No generic whole-surface activation. Text/scroll/selection gestures and child actions are covered by their own cases."
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/field.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -986,7 +979,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/input.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -1144,7 +1136,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/textarea.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -1317,7 +1308,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/select.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -1427,7 +1417,6 @@
           "not_applicable_reason": "No generic whole-surface activation. Text/scroll/selection gestures and child actions are covered by their own cases."
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/form.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -1597,7 +1586,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/list.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -1747,7 +1735,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/filter_list.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -1899,7 +1886,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/nav_list.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -2069,7 +2055,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/tree.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -2242,7 +2227,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/steps.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -2396,7 +2380,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/tabs.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -2584,7 +2567,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/picker.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -2758,7 +2740,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/picker.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -2926,7 +2907,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/picker_chain.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -3079,7 +3059,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/completion.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -3230,7 +3209,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/dialog.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -3367,7 +3345,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/menu.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -3497,7 +3474,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/menu.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -3628,7 +3604,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/menu.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -3766,7 +3741,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/help.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -3872,7 +3846,6 @@
           "not_applicable_reason": "No generic whole-surface activation. Text/scroll/selection gestures and child actions are covered by their own cases."
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/wizard.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -4060,7 +4033,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/grid.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -4230,7 +4202,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/code.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -4377,7 +4348,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/diff.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -4535,7 +4505,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/viewport.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -4641,7 +4610,6 @@
           "not_applicable_reason": "No generic whole-surface activation. Text/scroll/selection gestures and child actions are covered by their own cases."
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/panel.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -4747,7 +4715,6 @@
           "not_applicable_reason": "No generic whole-surface activation. Text/scroll/selection gestures and child actions are covered by their own cases."
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/split.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -4849,7 +4816,6 @@
           "not_applicable_reason": "No generic whole-surface activation. Text/scroll/selection gestures and child actions are covered by their own cases."
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/props.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -4998,7 +4964,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/props.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -5113,7 +5078,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/empty.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -5226,7 +5190,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/progress.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -5332,7 +5295,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/progress.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -5447,7 +5409,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/meter.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -5583,7 +5544,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/status.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -5686,7 +5646,6 @@
           "not_applicable_reason": "No generic whole-surface activation. Text/scroll/selection gestures and child actions are covered by their own cases."
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/hintbar.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -5778,7 +5737,6 @@
           "not_applicable_reason": "No generic whole-surface activation. Text/scroll/selection gestures and child actions are covered by their own cases."
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/keyhint.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -5869,7 +5827,6 @@
           "not_applicable_reason": "No generic whole-surface activation. Text/scroll/selection gestures and child actions are covered by their own cases."
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/too_small.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -6012,7 +5969,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/terminal_view.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",
@@ -6139,7 +6095,6 @@
           ]
         }
       ],
-      "proposed_implementation": "crates/termrock/src/components/scroll_region.rs",
       "status": {
         "specification": "proposed",
         "implementation": "not_implemented",

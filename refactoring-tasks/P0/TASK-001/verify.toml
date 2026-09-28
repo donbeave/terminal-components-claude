@@ -1,7 +1,7 @@
 schema = "verify/v2"
 task_id = "TASK-001"
-writable_paths = ["tests/termrock", "tests/conformance"]
-forbidden_paths = ["src/bin", "snapshots", "tests/visual_baseline", "Cargo.toml", "Cargo.lock", ".config", ".github", "scripts", "tools", "xtask"]
+writable_paths = ["Cargo.toml", "Cargo.lock", "mise.toml", "tests/termrock", "tests/conformance"]
+forbidden_paths = ["src/bin", "snapshots", "tests/visual_baseline", ".config", ".github", "scripts", "tools", "xtask"]
 
 [[checks]]
 id = "CHK-001"
@@ -29,9 +29,16 @@ acceptance = ["AC-003"]
 
 [[checks]]
 id = "CHK-004"
+phase = "lint"
+argv = ["mise", "exec", "--", "rtk", "cargo", "nextest", "run", "--workspace", "--test", "termrock_toolchain"]
+expected = { exit = 0 }
+requirements = ["R-006"]
+acceptance = ["AC-005"]
+
+[[checks]]
+id = "CHK-005"
 phase = "gate"
 argv = ["rtk", "cargo", "nextest", "run", "--workspace"]
 expected = { exit = 0 }
 requirements = ["R-005"]
 acceptance = ["AC-004"]
-

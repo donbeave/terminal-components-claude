@@ -50,6 +50,26 @@ Stable semantic IDs, item keys, column keys, and source revisions preserve
 meaning when data reorders or changes. Shared ownership details are in the
 [foundation contracts](../foundations/README.md).
 
+## Package and dependency boundary
+
+The in-place target has one public Termrock library crate and one nonpublished
+conformance crate in this repository's Cargo workspace. The existing four
+applications remain consumers in this same project. Keep reusable production
+code in the library; do not create a crate per component. Split production
+crates only when measured compile-time or dependency-isolation evidence shows a
+concrete benefit.
+
+Keep the production dependency graph small: Ratatui core types, Unicode width
+and grapheme handling, a reviewed zeroization primitive for secret buffers,
+and a small flags helper only when a real contract requires it. CLI and other
+application-only dependencies do not enter the public library graph. A
+terminal session/backend adapter is optional. PTY, `tui-snap`, raster, font,
+report, and conformance-manifest tooling stay outside the production library
+dependency graph. The frozen baseline harness may keep its existing test-only
+dependencies while it remains the trusted oracle. Exact package wiring is a
+future implementation decision within this repository; it does not create a
+second repository or project.
+
 The current baseline still contains names such as `junie_tui`, `WidgetId`,
 `Outcome`, and `RenderCtx`. These are current or legacy implementation names,
 not future Termrock API or compatibility requirements.

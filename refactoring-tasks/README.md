@@ -36,7 +36,7 @@ actual committed descendant accepted for its dependencies.
 
 | Phase | Package | Outcome | Depends on |
 | --- | --- | --- | --- |
-| P0 | [TASK-001](P0/TASK-001/README.md) | Qualify the frozen oracle and independent comparator | — |
+| P0 | [TASK-001](P0/TASK-001/README.md) | Qualify the oracle, conformance package, pinned toolchain, and independent comparator | — |
 | P1 | [TASK-002](P1/TASK-002/README.md) | Identity, events, responses, and constrained public API | TASK-001 |
 | P1 | [TASK-003](P1/TASK-003/README.md) | Runtime focus, hit testing, capture, time, and layers | TASK-001, TASK-002 |
 | P1 | [TASK-004](P1/TASK-004/README.md) | Measurement, layout, theme, text, and authoring foundations | TASK-002, TASK-003 |
@@ -68,6 +68,7 @@ the linked canonical contracts before implementation:
 - `docs/design/` owns visual and interaction parity.
 - `docs/verification/` owns oracle provenance, exact comparison, state coverage, and mutation gates.
 - `docs/implementation/plan.md` owns phase sequencing and in-place migration strategy.
+- `docs/implementation/quality-gates.md` owns the pinned toolchain, package/dependency boundaries, implementation-quality blockers, performance evidence, and independent-review protocol.
 
 Application migration is limited to eventual adoption of these reusable mechanisms while preserving
 the exact frozen Showcase, TablePro, Jackin Preview, and Holla behavior. TASK-015 is the sole

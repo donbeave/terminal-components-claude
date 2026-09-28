@@ -15,7 +15,7 @@ Termrock refactoring is ready for independent review with measured performance b
 
 The final closure package combines performance evidence with a fresh review of architecture, API, component coverage, visual parity, task scope, and protected applications. It is a release gate for the future implementation.
 
-Dependencies: TASK-017. Canonical contracts: [implementation/plan.md](../../../docs/implementation/plan.md), [verification/conformance.md](../../../docs/verification/conformance.md), [verification/visual-parity.md](../../../docs/verification/visual-parity.md), [verification/interaction-parity.md](../../../docs/verification/interaction-parity.md), [architecture/overview.md](../../../docs/architecture/overview.md), [api/public-api.md](../../../docs/api/public-api.md).
+Dependencies: TASK-017. Canonical contracts: [implementation/plan.md](../../../docs/implementation/plan.md), [implementation/quality-gates.md](../../../docs/implementation/quality-gates.md), [verification/conformance.md](../../../docs/verification/conformance.md), [verification/visual-parity.md](../../../docs/verification/visual-parity.md), [verification/interaction-parity.md](../../../docs/verification/interaction-parity.md), [architecture/overview.md](../../../docs/architecture/overview.md), [api/public-api.md](../../../docs/api/public-api.md).
 
 ## Preconditions
 
@@ -27,7 +27,7 @@ Dependencies: TASK-017. Canonical contracts: [implementation/plan.md](../../../d
 
 In scope:
 
-- Measured library/conformance performance, full documentation/task traceability review, and final independent gate evidence.
+- Measured library/conformance performance, evidence for the declared two-minute review-lane target, full documentation/task traceability review, and all four independent review packets required by `quality-gates.md`.
 
 Out of scope:
 
@@ -40,6 +40,7 @@ Out of scope:
 - **R-003 (MUST):** The frozen applications, snapshots, and visual-baseline tests remain untouched; their exact output is the oracle.
 - **R-004 (MUST NOT):** No product implementation, service integration, repository migration, or application redesign is added to this library task.
 - **R-005 (MUST):** The completion gate succeeds.
+- **R-006 (MUST):** Record cold/warm compile times, test-shard durations, full gate duration, and frame measurements on a declared runner; compare the review lane with the proposed two-minute target without dropping required cases or relaxing parity gates.
 
 ## Acceptance criteria
 
@@ -80,14 +81,27 @@ Then application source, snapshots, baseline tests, and product integrations are
 
 - **Type:** invariant
 - **Covers:** `R-003, R-004`
-- **Check:** `CHK-003`
+- **Check:** `CHK-004`
 
 ### AC-004 — Completion gate passes
 
 **Verification**
 
 - **Type:** gate
-- **Check:** `CHK-004`
+- **Check:** `CHK-005`
+
+### AC-005 — Performance evidence is complete and coverage stays intact
+```gherkin
+Given the declared runner and complete conformance case set
+When cold and warm builds, test shards, the full gate, and frame workloads are measured
+Then the report compares the lane to the two-minute target without removing cases or weakening exact parity
+```
+
+**Verification**
+
+- **Type:** invariant
+- **Covers:** `R-006`
+- **Check:** `CHK-003`
 
 ## Fixed decisions
 
@@ -103,7 +117,8 @@ Then application source, snapshots, baseline tests, and product integrations are
 - [ ] **2** Implement.
     - [ ] **2.1** Deliver the scoped Termrock mechanism. (`R-001`, `AC-001`, `CHK-001`)
     - [ ] **2.2** Prove shared ownership, identity, and applicable edge behavior. (`R-002`, `AC-002`, `CHK-002`)
-    - [ ] **2.3** Preserve the frozen applications and keep product work out of scope. (`R-003`, `R-004`, `AC-003`, `CHK-003`)
+    - [ ] **2.3** Preserve the frozen applications and keep product work out of scope. (`R-003`, `R-004`, `AC-003`, `CHK-004`)
+    - [ ] **2.4** Record cold/warm, shard, gate, and frame measurements. (`R-006`, `AC-005`, `CHK-003`)
 - [ ] **3** Verify.
-    - [ ] **3.1** Run the one completion gate. (`R-005`, `AC-004`, `CHK-004`)
+    - [ ] **3.1** Run the one completion gate. (`R-005`, `AC-004`, `CHK-005`)
 <!-- checklist:end -->
