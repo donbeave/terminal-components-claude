@@ -5,7 +5,7 @@ This tree is the repository's current specification for its in-place refactor in
 ## Authority
 
 1. [GOAL.md](../GOAL.md) owns the current mission, scope, protected baseline, and success conditions.
-2. Detailed contracts live once under `architecture/`, `api/`, `design/`, `foundations/`, `components/`, and `verification/`.
+2. `architecture/overview.md` owns the high-level map. Detailed contracts live once under `api/`, `design/`, `foundations/`, `components/`, and `verification/`.
 3. [implementation/plan.md](implementation/plan.md) owns future phase ordering; [refactoring-tasks/](../refactoring-tasks/README.md) turns it into task packages that link back to contracts.
 4. Frozen source and approved output at `visual-baseline` commit `4a79c0a2d40fca46fc406b77157ce3b3f12ec16b` own visual and observable interaction evidence.
 5. Git history retains superseded planning decisions. Old working-tree plans are removed after migration.

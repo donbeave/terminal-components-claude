@@ -1,34 +1,42 @@
-# F11 · Conformance registry and public-surface checks
+# F11 · Test-only conformance registry
 
-**Status:** canonical Termrock verification foundation; implementation is future work.
+**Status:** canonical foundation contract; implementation is future work.
 
 **Legacy families:** C53, C54.
 
-**Visual authority:** approved output and observable interaction from `visual-baseline` commit `4a79c0a2d40fca46fc406b77157ce3b3f12ec16b`. The registry never changes that oracle.
+**Scope:** the shape, ownership, and production-dependency boundary of the
+future Termrock conformance registry. It is test infrastructure, not a
+production plugin registry, component framework, or acceptance policy.
 
-**Scope:** test-only manifests, sealed event programs, public-consumer probes, exact frame/interaction comparison, and negative gates. This foundation is not a production plugin registry or an application framework.
+The conformance package will qualify the in-place Termrock refactor on
+`termrock-refactor`. It uses the preserved applications and frozen baseline
+without changing their source or expected output during registry operation.
 
-The conformance package is future implementation work on `termrock-refactor` in this repository. It qualifies the refactored library and its four preserved consumers in place; it does not establish a separate repository or acceptance authority.
+## Contract ownership
 
-See the [verification index](../verification/README.md), [visual parity contract](../verification/visual-parity.md), [interaction parity contract](../verification/interaction-parity.md), [oracle and provenance rules](../verification/oracle-and-provenance.md), and [public API contract](../api/public-api.md).
+The [verification contracts](../verification/README.md) own oracle authority,
+provenance, comparison semantics, case coverage, and acceptance gates. The
+[component documents](../components/README.md) own applicable component cases.
+The [public API contract](../api/public-api.md) owns external-consumer rules.
+This foundation owns how those cases are represented and kept out of the
+production library.
 
-## Source evidence
+## Registry shape
 
-- [`tests/visual_baseline/audit.rs`](../../tests/visual_baseline/audit.rs) records current baseline audit/coverage behavior.
-- [`tests/visual_baseline/main.rs`](../../tests/visual_baseline/main.rs) and the other files in that directory are immutable visual/application evidence.
-- [`src/lib.rs`](../../src/lib.rs) and [`src/widgets/mod.rs`](../../src/widgets/mod.rs) expose the current implementation inventory. Their legacy module names are not the target public surface.
-- `snapshots/**` and `tests/visual_baseline/**` are frozen expected output and test fixtures. They are read-only during this documentation goal and remain read-only oracle inputs during implementation.
-
-## Registry data model
-
-The following is a test-only target shape. It is intentionally not a production dependency and not a universal widget abstraction.
+The registry contains stable case IDs, component/API ownership, fixture and
+source references, sealed input programs, declared applicable axes, and an
+authority-lane label. A not-applicable axis carries its reason. Manifests are
+requirements; their presence or schema validity does not count as execution or
+approval.
 
 ```rust
 pub struct ComponentCase {
-    pub component: &'static str,
-    pub scenario: &'static str,
+    pub id: CaseId,
+    pub component: ComponentKey,
+    pub fixture_revision: Revision,
     pub authority: AuthorityLane,
     pub program: SealedProgram,
+    pub axes: Vec<ApplicableAxis>,
 }
 
 pub enum AuthorityLane {
@@ -37,118 +45,59 @@ pub enum AuthorityLane {
     Extension,
 }
 
-pub struct Harness { /* test-only state, renderer and trace */ }
-
-impl Harness {
-    pub fn dispatch(&mut self, event: Input, at: Moment);
-    pub fn checkpoint(&mut self, name: &str) -> CanonicalObservation;
-}
-
-pub fn compare_exact(
-    expected: &CanonicalObservation,
-    actual: &CanonicalObservation,
-) -> Comparison;
+pub struct ConformanceRegistry { /* test-only validated case index */ }
 ```
 
-`CanonicalObservation` contains frame dimensions and cells, cursor state, semantic trace, focus/capture/layer ownership, stable selection/navigation keys, draft/committed observations, typed action count/target, and provenance. `Comparison` reports every mismatch and fails closed when expected data, provenance, or required observations are absent.
+The type names are target notation, not promised source symbols. Lane meaning,
+provenance, sealing, and approval requirements are defined in
+[oracle and provenance](../verification/oracle-and-provenance.md); this file
+does not redefine those rules.
 
-The exact Rust names may change during P0/P1 implementation, but the authority split, observation fields, and failure behavior are fixed by this contract.
+## Ownership and dependency boundary
 
-## Authority lanes
+- The registry owns case identity, references, applicable-axis declarations,
+  and the sealed test-program index.
+- Component contracts own each case's behavior and non-applicability reason.
+- Verification owns expected observations, comparator rules, evidence lanes,
+  acceptance receipts, and negative mutations.
+- The caller/application owns domain fixtures and controlled values supplied
+  to a case; the registry never performs real product actions.
+- Capture and approval authority remains outside candidate implementation.
 
-Every case declares one lane:
+The production Termrock library must not depend on the registry, `tui-snap`,
+PTY tooling, fonts, PNG/HTML libraries, source discovery, or filesystem
+manifests. Those tools may be dependencies of the test-only conformance
+package. Tests exercise public exports; they do not introduce a production
+`Widget` trait, plugin system, route registry, or dynamic component installer.
 
-| Lane | Meaning | Approval rule |
-| --- | --- | --- |
-| `ExistingOracle` | Approved artifact already produced from the frozen baseline source/output | Candidate is compared against a read-only artifact; candidate cannot rewrite it |
-| `ExtractedOracle` | New isolated state captured by a trusted adapter from unchanged pinned source | Capture program, patch/digest, source pin, and approval receipt are sealed before candidate comparison |
-| `Extension` | New robustness, adapter, theme, or capability behavior with no baseline equivalent | Separate specification/review; never relabel as baseline parity |
+## Registry lifecycle
 
-The four preserved applications (`showcase`, `tablepro`, `jackin-preview`, `holla`) remain baseline consumers and source/output evidence. Their fixture worlds, scenarios, keyboard/mouse behavior, and snapshots are not regenerated by the candidate.
+1. Validate unique case IDs, referenced component/foundation IDs, and the
+   dependency closure before execution.
+2. Load an explicitly selected case through its trusted lane and sealed
+   program.
+3. Pass observations to the verification-owned comparator and reporting
+   policy.
+4. Preserve every declared case and report missing or blocked evidence as a
+   failure; candidate output cannot add expected results.
 
-The registry is a manifest of requirements, not proof by itself. Each component/API surface has a case set, source references, applicable state axes, non-applicability decisions where appropriate, and links to the canonical component/foundation contract. Every legacy family in the imported inventory remains dispositioned; the reference pack reconciles 45 component/API surfaces, 12 foundations, and 54 legacy families. These counts are coverage targets for the implementation plan, not permission to invent widgets or screenshots.
+The exact observation fields and test lanes are owned by the
+[conformance verification contract](../verification/conformance.md). This
+foundation only defines the registry boundary and lifecycle.
 
-## Oracle isolation and provenance
+## Required foundation checks
 
-Trusted capture and approval happen outside candidate authority. The candidate receives read-only expected artifacts and sealed numeric event programs. It may not:
+- The registry is unavailable to production callers and is absent from the
+  Termrock library dependency graph.
+- Duplicate case IDs, unresolved component references, malformed axes, and
+  dependency cycles fail registry validation.
+- A valid manifest with missing evidence remains unexecuted and cannot pass.
+- Case selection cannot remove required rows or relabel an oracle lane.
+- Reports preserve registry IDs and lane labels without copying secret input.
+- The 45 component/API surfaces, 12 foundations, and 54 legacy families stay
+  reconcilable against the machine-readable inventories in
+  [`../reference/`](../reference/).
 
-- run an accept/bless command against the expected tree;
-- choose its own hit coordinates or resolve a semantic target into coordinates for an exact parity gesture;
-- use candidate-produced screenshots as `ExistingOracle` or `ExtractedOracle` evidence;
-- lower the required-case denominator by disabling or deleting a manifest row;
-- replace a missing expected artifact with a passing empty result;
-- copy a baseline painter or use size-specific snapshot replicas in place of the component.
-
-Record repository and commit, source paths/blob IDs, trusted adapter digest, toolchain and lockfile digests, input program, fixture revision, supplied time samples, dimensions, terminal capability/motion policy, renderer/profile/font digests, output hashes, and approval receipt. A missing hash, wrong visual pin, changed renderer qualification, or absent approval is a blocking failure.
-
-## Exact observations
-
-Frame comparison covers, at the declared terminal dimensions:
-
-- every cell symbol and wide-cell continuation marker;
-- foreground/background colors and modifiers supported by the qualified comparison tool;
-- cursor coordinates and visibility, plus any canonical cursor properties the tool preserves;
-- active layer path and written-cell ownership where applicable.
-
-Semantic comparison covers:
-
-- focus owner, capture owner, and keyboard scope;
-- selected/current stable key, navigation key, and source revision;
-- draft versus committed value observations without exposing secrets;
-- typed action count, action type, action target, activation origin, and duplicate/replay behavior;
-- geometry publication and provenance for pointer cases.
-
-Require zero decoded cell differences for an identical qualified renderer/profile. Document tool limits explicitly: if a tool normalizes or drops an attribute, supplement it with direct cell/model/protocol assertions and do not call that attribute screenshot-proven. PNG/HTML output alone is not terminal behavior proof.
-
-## Required test lanes
-
-### Snapshot and frame lane
-
-Use `tui-snap` for the future conformance harness, with the original baseline renderer/profile qualified separately from any candidate toolkit update. Exercise pure production-view paths and the actual executable/PTY path where the adapter changes input or cleanup. Expected output is immutable and comparison is exact at the supported attribute level.
-
-### Interaction lane
-
-Drive normalized key, pointer down/up/drag, wheel, paste, resize, focus, layer, and supplied-time programs. A pointer target is resolved against the trusted oracle before the numeric program is sealed. Compare focus/capture, stable targets, action traces, cursor/draft/commit observations, and presentation timing as well as cells. Semantic-target tests are useful extension evidence but cannot substitute for sealed coordinate parity.
-
-### Public API lane
-
-Compile examples and probes as an external consumer using only public exports. No source-level `include!`, private imports, `pub(crate)` shortcuts, copied baseline painter, or candidate-specific internals are permitted. Probes cover caller-owned state, borrowed props, `update`/`draw`/`measure`, typed actions, stable keys, constrained parts, and secret restrictions.
-
-### Negative lane
-
-The suite must fail for each of these mutations:
-
-- one cell symbol, color, continuation marker, cursor, or supported modifier changes;
-- a focus/capture/layer owner changes;
-- an action target changes or one activation is duplicated/dropped;
-- a source reorder/removal retargets an old display index;
-- a required expected artifact or case is removed;
-- a wrong baseline SHA, renderer digest, or approval receipt is supplied;
-- a standard widget is replaced by a dead call plus hand-painted cells;
-- draw mutates state, leaks a secret, or lets a disabled/covered control receive input;
-- an unavailable or blocked scenario reports pass.
-
-## Applicable state coverage
-
-Component manifests enumerate only applicable axes. When relevant, cover normal, focus, hover, focus+hover, keyboard-suppressed hover, pointer-down, held press, release inside/outside, activation feedback, disabled, read-only, editing, valid/invalid, selected/current, empty/loading/partial/error, top/middle/bottom scroll, nested overlays, resize, source reorder/removal, every unique animation phase, boundary timing, paused, and reduced-motion behavior. Decorative/noninteractive components explicitly mark inapplicable axes instead of fabricating meaningless cases.
-
-The full visual state and interaction contracts live in `docs/verification/`; this foundation owns registry authority, exact observation shape, and negative acceptance. Component pages own their applicable case descriptions. Foundation pages own shared mechanism checks. No second checklist may redefine those authorities.
-
-## Runtime and dependency boundary
-
-The production Termrock library does not depend on this registry, `tui-snap`, PTYs, fonts, PNG/HTML libraries, discovery tools, or filesystem manifests. The conformance package is test-only and may depend on those tools. It is not a plugin system, component installer, visual CMS, or application router.
-
-The registry also cannot prove a missing implementation. P0/P1 implementation work must build the concrete Rust drivers, sealed capture programs, external consumer probes, and artifact verifier. The document pack's manifests and capture plans are requirements, not captured frames or acceptance receipts.
-
-## Required verification of this foundation
-
-- Reconcile all 45 component/API records, 12 foundation records, 54 legacy families, and each required capture plan against canonical docs before implementation acceptance.
-- Validate unique IDs, resolved dependencies, applicable-case declarations, provenance fields, and no cycles or orphaned references.
-- Run exact frame, semantic trace, public API, compile-fail, mutation, and blocked-scenario tests as separate lanes.
-- Verify missing expected artifacts fail closed and cannot be accepted from candidate output.
-- Verify reports redact secret input and preserve lane labels (`ExistingOracle`, `ExtractedOracle`, `Extension`).
-- Verify unchanged baseline applications and snapshots remain byte-for-byte untouched during the documentation goal and are never mutated by candidate acceptance tooling.
-
-## Migration note
-
-The current `tests/visual_baseline` audit and legacy `src/lib.rs`/widget modules are evidence only. They do not become an authority over this contract and are not implemented by this documentation change. This document is the canonical owner for conformance registry semantics and public-surface checks; the verification pages own comparison procedures and the task catalog points here instead of copying the rules.
+The current `tests/visual_baseline` files and `src/lib.rs` are migration
+evidence. They are not modified by this documentation goal and do not define
+the target registry API.

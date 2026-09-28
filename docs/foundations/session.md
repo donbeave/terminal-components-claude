@@ -10,7 +10,7 @@
 
 This adapter is future in-place implementation work on `termrock-refactor` in this repository. It is an optional library edge, not a separate terminal product or repository destination.
 
-See the [runtime architecture](../architecture/runtime.md), [public API contract](../api/public-api.md), [interaction contract](../design/interaction-contract.md), [conformance contract](conformance.md), and [TerminalView boundary](../components/README.md).
+See the [runtime architecture](../foundations/runtime.md), [public API contract](../api/public-api.md), [interaction contract](../design/interaction-contract.md), [conformance contract](conformance.md), and [TerminalView boundary](../components/README.md).
 
 ## Source evidence
 

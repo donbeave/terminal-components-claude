@@ -10,7 +10,7 @@
 
 This surface belongs to the future in-place Termrock library on `termrock-refactor` in this repository. It does not define a separate repository or a second application framework.
 
-See the [public API contract](../api/public-api.md), [architecture overview](../architecture/overview.md), [runtime contract](../architecture/runtime.md), [component index](../components/README.md), and [conformance contract](../verification/conformance.md).
+See the [public API contract](../api/public-api.md), [API authoring contract](../api/authoring.md), [architecture overview](../architecture/overview.md), [runtime contract](../foundations/runtime.md), [component index](../components/README.md), and [conformance contract](../verification/conformance.md).
 
 ## Source evidence
 
@@ -18,39 +18,13 @@ See the [public API contract](../api/public-api.md), [architecture overview](../
 - [`src/bin/jackin_preview/rain.rs`](../../src/bin/jackin_preview/rain.rs) is application artwork evidence. Rain, warp phrases, logos, and instance-entry/exit rules remain application-owned; they are not Termrock standard components.
 - The baseline applications and snapshots are read-only conformance consumers. A custom author surface must preserve their observable output when used by a future migration.
 
-## Proposed public surface
+## Surface implementation boundary
 
-These signatures are Rustdoc-style target declarations. They describe capability boundaries, not an implementation already present in this repository.
-
-```rust
-pub mod author {
-    pub fn register(ui: &mut Ui<'_>, region: RegionSpec);
-    pub fn paint(
-        ui: &mut Ui<'_>,
-        area: Rect,
-        text: StyledText<'_>,
-        part: Part,
-    );
-    pub fn request_cursor(ui: &mut Ui<'_>, owner: Id, cursor: CursorSpec);
-    pub fn blit_terminal(
-        ui: &mut Ui<'_>,
-        area: Rect,
-        source: &dyn TerminalSource,
-    );
-}
-
-impl Ui<'_> {
-    pub fn part<R>(
-        &mut self,
-        owner: Id,
-        part: Part,
-        area: Rect,
-        painter: impl FnOnce(&mut PartUi<'_>) -> R,
-    ) -> R;
-}
-```
-
-The exact type spelling may change during the public API freeze. The following properties are fixed: borrowed props and styles, immediate callbacks, reserved rectangles, clipping, normalized intents, and no access to mutable runtime registries.
+The public names and signatures are owned by the
+[API authoring contract](../api/authoring.md). This foundation owns their
+implementation constraints: borrowed inputs, immediate callbacks, reserved
+rectangles, clipping, normalized intents, and no access to mutable runtime
+registries. Type spelling may change during the P1 public API freeze.
 
 ## Responsibilities and ownership
 
@@ -58,7 +32,7 @@ The exact type spelling may change during the public API freeze. The following p
 2. A custom component author owns the component's caller-provided model, durable state, stable `Id`/`ItemKey` values, update policy, and typed actions. The author surface never owns a domain service, process, terminal session, or persistence operation.
 3. `draw` callbacks receive read-only state and borrowed props. They may paint cells inside the reserved rectangle, request a cursor, publish layout/hit facts through the constrained `Ui`, and invoke immediate row/part callbacks. They must not mutate semantic state, read a clock or environment variable, perform IO, or execute a returned action.
 4. Runtime owns focus, hover, press/capture, layers, hit dispatch, cursor arbitration, and normalized input. A custom author cannot write directly to those registries or add a second hit-testing engine.
-5. Theme owns semantic roles, metrics, glyphs, and capability conversion. Author callbacks receive resolved/borrowed style vocabulary or an explicit `StylePatch`; they do not invent a parallel global palette or bypass disabled/read-only recipes.
+5. Theme resolves semantic roles and capability conversion; exact visual values belong to the visual contract. Author callbacks receive resolved/borrowed style vocabulary or an explicit `StylePatch`; they do not invent a parallel global palette or bypass disabled/read-only recipes.
 6. Callback lifetimes are immediate. `Fn`/`FnOnce` bounds do not make a callback pure by themselves; state-before/after checks and API review must catch hidden interior mutability, IO, or retained data.
 
 ## Parts, slots, and clipping
