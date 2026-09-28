@@ -21,7 +21,7 @@ Identity types are owned by the [identity foundation](../foundations/identity.md
 | Ui | Draw context for clipped paint, geometry publication, cursor intent, layers, and constrained part/row/cell painting. It does not expose semantic mutation. |
 | MeasureCx | Immutable measurement environment containing constraints, theme metrics, capability, and relevant time-independent policy. |
 | Theme / ColorLevel / ColorTokens | Semantic recipes and capability selection for TrueColor, Ansi256, Ansi16, and Mono. Theme::termrock is the baseline-preserving default; Paper is an extension sentinel. |
-| Response<A> | Owner identity, at most one typed action, Flow, Invalidate, and derived VisualState. Metadata is registered once by shared runtime code. |
+| Response<A> | See the canonical target shape below: `id` is the semantic owner identity and `state` is derived `VisualState`. |
 | Flow / Invalidate | Independent axes: Bubble/Consumed; None/Paint/Layout. |
 | VisualState | Derived flags such as focused, focus-visible, hovered, pressed, activation-feedback, selected, checked, disabled, editing, invalid, busy, and loading. Inapplicable combinations are not fabricated. |
 | ActivationOrigin / Activated / ValueChanged<T> | Keyboard, pointer, or programmatic origin; activation marker; controlled next-value request. |
@@ -31,6 +31,22 @@ Identity types are owned by the [identity foundation](../foundations/identity.md
 | Moment / AnimationSample / MotionPolicy | Monotonic elapsed time, explicit animation epoch/phase, and Full, Reduced, or Paused motion. Draw never advances time. |
 | FrameToken / PaintedFrame / UpdateReport | Presented-frame receipt, canonical paint plus published geometry/cursor facts, and dispatch invalidation/diagnostics. |
 | RuntimeError / LayerError / ClockError / SessionError | Typed safe failures. Descriptions never contain secret values. Duplicate identity, stale geometry, and nonmonotonic time fail closed. |
+
+### Typed response
+
+This is the one canonical target shape for a semantic update result. The field names are part of the target contract; concrete fields may remain private and be exposed through narrow typed observations.
+
+```rust
+struct Response<A> {
+    id: Id,
+    flow: Flow,
+    invalidate: Invalidate,
+    state: VisualState,
+    action: Option<A>,
+}
+```
+
+`id` identifies the semantic owner of this response; it is not a second owner field. `state` is a derived visual-state observation, not durable component state. `action` carries at most one caller-facing typed action. The shared runtime response helper records metadata once.
 
 ## Display and value policies
 

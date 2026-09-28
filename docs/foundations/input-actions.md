@@ -23,14 +23,6 @@ Termrock is the in-place future of this repository's `termrock-refactor` branch.
 enum Flow { Bubble, Consumed }
 enum Invalidate { None, Paint, Layout }
 
-struct Response<A> {
-    id: Id,
-    flow: Flow,
-    invalidate: Invalidate,
-    state: VisualState,
-    action: Option<A>,
-}
-
 enum ActivationOrigin { Keyboard, Pointer, Programmatic }
 struct Activated { origin: ActivationOrigin }
 struct ValueChanged<T> { value: T, origin: ActivationOrigin }
@@ -48,9 +40,9 @@ BindingView::resolve(scope: ScopeId, bindings: &[Binding<'_>]) -> BindingView
 Cx::intents(&mut self, owner: Id) -> IntentIter<'_>
 ```
 
-`Response<A>` has at most one caller-facing typed action for one dispatched input or update cause. `Flow` answers whether routing continues. `Invalidate` answers whether a repaint or layout publication is needed. Visual state and action metadata are observations, not alternate side effects. These axes are independent: a boundary wheel event may be consumed without painting, while a tick may request paint without a business action.
+The canonical [`Response<A>` shape and field names](../api/types.md#typed-response) live in the public type dictionary: `id` identifies the semantic owner and `state` carries derived `VisualState`. This foundation defines response flow and dispatch behavior, not a second response representation. A response has at most one caller-facing typed action for one dispatched input or update cause. `Flow` answers whether routing continues. `Invalidate` answers whether a repaint or layout publication is needed. Visual state and action metadata are observations, not alternate side effects. These axes are independent: a boundary wheel event may be consumed without painting, while a tick may request paint without a business action.
 
-The shared type dictionary defines `Input`, `Intent`, `InputToken`, `Chord`, `Binding`, `BindingView`, `ScopeId`, `UpdateCause`, and `VisualState` in [`../api/types.md`](../api/types.md). The target API keeps typed actions; it does not erase them to strings or `Any`.
+The shared type dictionary defines `Input`, `Intent`, `InputToken`, `Chord`, `Binding`, `BindingView`, `ScopeId`, `UpdateCause`, `VisualState`, and `Response<A>` in [`../api/types.md`](../api/types.md). The target API keeps typed actions; it does not erase them to strings or `Any`.
 
 ## Normalization boundary
 

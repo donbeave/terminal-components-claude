@@ -76,17 +76,7 @@ Repeated draw with equal inputs is observably idempotent. Immutable references a
 
 ## Responses and event flow
 
-All semantic component output uses one typed response shape. The concrete fields may be private; the public observations are narrow and typed:
-
-```rust
-struct Response<A> {
-    owner: Id,
-    action: Option<A>,
-    flow: Flow,
-    invalidate: Invalidate,
-    visual: VisualState,
-}
-```
+All semantic component output uses the canonical [`Response<A>` shape and field names](types.md#typed-response). That type dictionary owns its representation; the concrete fields may remain private, with public observations exposed narrowly and through typed accessors.
 
 `Response<A>` carries at most one typed action for an update call. `Flow` (`Bubble` or `Consumed`) and `Invalidate` (`None`, `Paint`, or `Layout`) are independent. Response metadata is registered once by the shared runtime response helper; callers do not maintain a second focus/hover engine.
 
