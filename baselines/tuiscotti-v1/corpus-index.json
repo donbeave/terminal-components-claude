@@ -1,0 +1,29 @@
+{
+  "applications": {
+    "holla": [
+      125,
+      3125
+    ],
+    "jackin": [
+      49,
+      1225
+    ],
+    "showcase": [
+      84,
+      2100
+    ],
+    "tablepro": [
+      44,
+      1100
+    ]
+  },
+  "generated_at": "2026-10-03T22:09:44Z",
+  "historical_oracle_commit": "4a79c0a2d40fca46fc406b77157ce3b3f12ec16b",
+  "historical_oracle_tag": "visual-baseline",
+  "reference_app_sha": "7bd6a331721737514a2477c894d922cb262ef07b",
+  "schema": "termrock-spec/tuiscotti-corpus-index-v1",
+  "total_artifacts": 75500,
+  "total_captures": 7550,
+  "total_screens": 302,
+  "tuiscotti_source_sha": "a47c9aaefb34e4c00026f99d8a8dd7ee5916b274"
+}
