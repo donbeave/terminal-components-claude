@@ -34,12 +34,14 @@ review evidence, not an approval source.
 
 ## Renderer and capability pins
 
-The baseline toolkit revision is `tui-snap` commit
-`2d43458ad2bc37d76653c22d56e61ee74512d893`, the current dependency recorded by
-the frozen repository. `9dc86daff1dcbf20805b145916e8f04e9515f929` is a separate
-qualification candidate. Qualify old-tool/new-tool output on an unchanged
-frame set and classify renderer/parser-only changes separately. Do not combine
+The baseline toolkit revision is `tuiscotti` commit
+`a47c9aaefb34e4c00026f99d8a8dd7ee5916b274` (`TUISCOTTI_SHA`), replacing legacy `tui-snap`
+`2d43458ad2bc37d76653c22d56e61ee74512d893`. All approved visual checkpoints export
+six native formats (`.ansi`, `.html`, `.png`, `.ascii`, `.txt`, `.frame.json`) plus
+companion fidelity and loss sidecars from a single observation. Qualify old-tool/new-tool output
+on an unchanged frame set and classify renderer/parser-only changes separately. Do not combine
 a toolkit upgrade with a product approval.
+
 
 Each applicable component and composed fixture exercises:
 

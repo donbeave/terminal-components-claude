@@ -15,3 +15,8 @@ docs/refactoring-plan/evidence/*.tar.gz
 # (see docs/baseline/snapshots-v2.md).
 /snapshots.actual
 /snapshots.diff
+
+# Investigation files
+/termrock-library-spec/
+/termrock-tuiscotti-baseline-goal.md
+

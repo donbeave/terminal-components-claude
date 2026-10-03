@@ -35,7 +35,10 @@ unicode-width = "0.2"
 unicode-segmentation = "1"
 
 [dev-dependencies]
-tuisnap = { git = "https://github.com/donbeave/tui-snap", rev = "2d43458ad2bc37d76653c22d56e61ee74512d893" }
+tuiscotti = { git = "https://github.com/tailrocks/tuiscotti", rev = "a47c9aaefb34e4c00026f99d8a8dd7ee5916b274", features = ["pty"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tempfile = "3"
 
 [profile.release]
 lto = "thin"

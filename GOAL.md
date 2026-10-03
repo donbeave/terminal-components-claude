@@ -6,7 +6,7 @@ Refactor the existing implementation in this repository into a minimal reusable 
 
 ## Current phase
 
-This goal covers documentation and execution-plan normalization. It does not rename the repository, Cargo package, crate, source, or applications, and it does not implement the Rust refactor. Future implementation continues on this same branch.
+This phase establishes the complete Tuiscotti visual and interaction testing baseline and Velnor CI infrastructure as the mandatory prerequisite before P1 and any production refactor. It does not rename the repository, Cargo package, crate, source, or applications, and it does not implement the Rust refactor. Future implementation begins only after this verification foundation is established.
 
 ## Frozen visual and interaction contract
 
@@ -29,8 +29,9 @@ The product scope is reusable Termrock components, foundations, and generic conf
 
 ## Verification
 
-Use the frozen source and approved snapshots as an immutable oracle. Future implementation uses `tui-snap`, deterministic interaction traces, exact applicable state coverage, and negative mutation gates. Keep `ExistingOracle`, trusted `ExtractedOracle`, and `Extension` evidence separate. Candidate code cannot author or approve expected output. See [visual parity](docs/verification/visual-parity.md), [interaction parity](docs/verification/interaction-parity.md), and [oracle provenance](docs/verification/oracle-and-provenance.md).
+Use the frozen source and approved snapshots as an immutable oracle. Future implementation uses `tuiscotti` (pinned at `a47c9aaefb34e4c00026f99d8a8dd7ee5916b274`), deterministic interaction traces, exact applicable state coverage, and negative mutation gates. Keep `ExistingOracle`, trusted `ExtractedOracle`, and `Extension` evidence separate. Candidate code cannot author or approve expected output. All visual checkpoints produce six formats (.ansi, .html, .png, .ascii, .txt, .frame.json) from one observation. CI is generated via Velnor Actions (pinned release `velnor-actions-0.1.0`). See [visual parity](docs/verification/visual-parity.md), [interaction parity](docs/verification/interaction-parity.md), and [oracle provenance](docs/verification/oracle-and-provenance.md).
 
 ## Success
 
 Termrock is produced by progressively replacing reusable internals in this repository. All documented components and shared foundations have one public contract and one implementation owner. The four applications continue to render and interact exactly as at the frozen baseline, and the library remains independent of product-specific business logic. The future package and crate identity may become Termrock during implementation; the baseline code has not been renamed by this planning goal.
+

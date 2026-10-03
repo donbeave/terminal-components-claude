@@ -11,9 +11,11 @@
     "implementation_in_scope": false
   },
   "toolchain": {
-    "original_tuisnap_revision": "2d43458ad2bc37d76653c22d56e61ee74512d893",
-    "candidate_tuisnap_revision": "9dc86daff1dcbf20805b145916e8f04e9515f929",
-    "qualification_status": "not_executed"
+    "tuiscotti_sha": "a47c9aaefb34e4c00026f99d8a8dd7ee5916b274",
+    "legacy_tuisnap_revision": "2d43458ad2bc37d76653c22d56e61ee74512d893",
+    "velnor_generator_id": "velnor-actions-0.1.0",
+    "reference_app_sha": "7bd6a331721737514a2477c894d922cb262ef07b",
+    "qualification_status": "qualified"
   },
   "architecture_sources": [
     "https://github.com/donbeave/terminal-components-claude/blob/4a79c0a2d40fca46fc406b77157ce3b3f12ec16b/docs/architecture/component-architecture.md",

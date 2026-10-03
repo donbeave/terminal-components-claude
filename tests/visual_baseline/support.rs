@@ -6,10 +6,10 @@
 //! the pointer group, which needs the live session afterwards. A leading
 //! `wait:` needle is readiness — live clocks skip the 200 ms quiet window.
 //!
-//! Store: the grouped multi-artifact store (`tuisnap::grouped`). Approved
+//! Store: the grouped multi-artifact store (`tuiscotti::grouped`). Approved
 //! frames live at `snapshots/<group>/<sub_group>/<name>.{ansi,txt,png,html}`
 //! (committed, exactly four artifacts per scenario); actuals, diffs and the
-//! HTML report are scratch under `target/tuisnap/` (gitignored). The capture
+//! HTML report are scratch under `target/tuiscotti/` (gitignored). The capture
 //! name is the grouped path, e.g. `holla/parity/discovery/120x40/truecolor`.
 //!
 //! Colour hygiene per capture: ambient `NO_COLOR` is stripped (crossterm
@@ -27,10 +27,17 @@ use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use tuisnap::grouped::{GroupedOutcome, GroupedStore};
-use tuisnap::pty::{PtyOptions, Session, run_once};
-use tuisnap::snapshot::Status;
-use tuisnap::{Frame, Profile, Renderer, VENDORED_FACES};
+use tuiscotti::formats::{
+    assert_no_escapes, assert_normalized_sgr, assert_opaque_rgb, assert_seven_bit,
+    assert_static_offline, capture_all, parse_canonical,
+};
+use tuiscotti::grouped::{GroupedOutcome, GroupedStore};
+use tuiscotti::render::frame_from_screen;
+use tuiscotti::snapshot::Status;
+use tuiscotti::tui::{CancelToken, MouseMods, Wheel};
+pub use tuiscotti::tui::MouseButton;
+use tuiscotti::tui::Tui;
+pub use tuiscotti::{Frame, Profile, Renderer, VENDORED_FACES};
 
 pub const SHOWCASE: &str = env!("CARGO_BIN_EXE_showcase");
 pub const TABLEPRO: &str = env!("CARGO_BIN_EXE_tablepro");
@@ -53,8 +60,8 @@ pub const CANONICAL_COLORS: [Color; 5] = [
     Color::None,
     Color::NoColorEnv,
 ];
+
 /// Prefixes for the 9 `audit_matrix` fixtures (`{prefix}/{cols}x{rows}/{color}`).
-/// Accounts is a custom loop with the same name shape ([`AUDIT_PREFIX_JACKIN_ACCOUNTS`]).
 pub const AUDIT_PREFIX_HOLLA_RUST: &str = "holla/audit/rust";
 pub const AUDIT_PREFIX_HOLLA_UPGRADE: &str = "holla/audit/upgrade";
 pub const AUDIT_PREFIX_JACKIN_CAPSULE: &str = "jackin/audit/capsule";
@@ -83,8 +90,7 @@ pub fn audit_default_name(prefix: &str, cols: u16, rows: u16, color: Color) -> S
 }
 
 /// Every capture name the suite produces: the canonical 5×5 expansion of each
-/// Case::new root and the data-driven audit matrices. `Case::dynamic` loops are
-/// not parsed; their names come from the audit constants below.
+/// Case::new root and the data-driven audit matrices.
 pub fn suite_capture_names() -> BTreeSet<String> {
     let mut names = parse_case_new_names();
     names.extend(generated_matrix_names());
@@ -153,9 +159,6 @@ fn parse_case_new_names() -> BTreeSet<String> {
     names
 }
 
-/// Parse only the representative in each `baseline_case*!` invocation. Variant
-/// arrays can contain additional exact per-combo declarations; they select at
-/// runtime and must not create duplicate canonical roots in the inventory.
 fn extract_case_new_roots(
     src: &str,
     names: &mut BTreeSet<String>,
@@ -165,8 +168,6 @@ fn extract_case_new_roots(
     const MARK: &str = "Case::new(";
     let mut rest = src;
     while let Some(macro_i) = rest.find(MACRO_MARK) {
-        // Flow tests declare representatives outside macros. Parse those raw
-        // declarations before skipping the entire macro invocation.
         extract_raw_case_new_roots(&rest[..macro_i], names, declared_roots);
         let invocation_end = baseline_invocation_end(&rest[macro_i..]);
         let invocation = &rest[macro_i..macro_i + invocation_end];
@@ -200,8 +201,6 @@ fn extract_case_new_roots(
     extract_raw_case_new_roots(rest, names, declared_roots);
 }
 
-/// Return the offset just past a balanced `baseline_case*!(...)` invocation.
-/// Sends can contain arbitrary text, so `;` is not a safe invocation boundary.
 fn baseline_invocation_end(src: &str) -> usize {
     let open = src.find('(').expect("baseline_case invocation missing `(`");
     let mut depth = 1;
@@ -266,13 +265,10 @@ fn extract_raw_case_new_roots(
     }
 }
 
-/// Exact-name filter for macOS Finder metadata. Not snapshot content; every
-/// other unknown file remains a store-integrity failure.
 pub fn is_macos_platform_metadata(path: &Path) -> bool {
     path.file_name() == Some(std::ffi::OsStr::new(".DS_Store"))
 }
 
-/// `--color` palette, or real `NO_COLOR=1` (the baseline's `nocolor`).
 #[derive(Clone, Copy)]
 pub enum Color {
     Truecolor,
@@ -283,7 +279,6 @@ pub enum Color {
 }
 
 impl Color {
-    /// Leaf suffix in capture names (`no_color` is spelled `nocolor`).
     pub fn suffix(self) -> &'static str {
         match self {
             Color::Truecolor => "truecolor",
@@ -295,23 +290,20 @@ impl Color {
     }
 }
 
-/// One capture definition — the typed form of one bash `cap` call.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Scroll {
+    Up,
+    Down,
+}
+
 pub struct Case {
-    /// Grouped store name (`<app>/<sub_group>/<surface>_<state>_<cols>x<rows>_<color>`);
-    /// owned when built by the data-driven matrices.
     pub name: Cow<'static, str>,
     pub bin: &'static str,
-    /// argv after the binary, before `--color` (e.g. `&["--page", "diff"]`).
     pub args: &'static [&'static str],
     pub cols: u16,
     pub rows: u16,
     pub color: Color,
-    /// Boot needle on the fully-rendered first screen (`""` skips the wait);
-    /// sent as the first step, before the sends, exactly as the bash runner
-    /// did (the CLI's `--wait-for` would have run after them).
     pub needle: &'static str,
-    /// DSL steps after the boot wait: key names, `type:<text>`,
-    /// `sleep:<ms>`, `wait:<needle>`.
     pub sends: &'static [&'static str],
     pub timeout_ms: u64,
 }
@@ -339,7 +331,6 @@ impl Case {
         }
     }
 
-    /// Owned-name form for the data-driven matrices (audit 5×5, audit-flows).
     pub fn dynamic(
         name: String,
         bin: &'static str,
@@ -366,8 +357,6 @@ impl Case {
         Self { sends, ..self }
     }
 
-    /// CAP_TIMEOUT override for screens whose boot stream outlasts
-    /// TIMEOUT_MS (scrolling, terminal): the boot wait_idle shares it.
     pub fn timeout(self, ms: u64) -> Self {
         Self {
             timeout_ms: ms,
@@ -375,8 +364,6 @@ impl Case {
         }
     }
 
-    /// Re-root a representative declaration at another canonical combo while
-    /// preserving its argv, boot needle, sends, and timeout drift.
     fn variant(&self, cols: u16, rows: u16, color: Color) -> Self {
         let root = canonical_root(&self.name).unwrap_or_else(|| {
             panic!(
@@ -397,8 +384,6 @@ impl Case {
         }
     }
 
-    /// Re-root a resize capture at its target geometry while retaining the
-    /// representative's initial PTY geometry and capture behavior.
     pub fn resize_variant(&self, cols: u16, rows: u16, color: Color) -> Self {
         let root = canonical_root(&self.name).unwrap_or_else(|| {
             panic!(
@@ -438,39 +423,220 @@ pub fn argv_for(case: &Case) -> Vec<String> {
     argv
 }
 
-pub fn opts_for(case: &Case) -> PtyOptions {
-    let opts = PtyOptions {
-        cols: case.cols,
-        rows: case.rows,
-        timeout: Duration::from_millis(case.timeout_ms),
-        ..PtyOptions::default()
+pub trait ScreenExt {
+    fn find(&self, needle: &str) -> Option<(u16, u16)>;
+    fn text(&self) -> String;
+    fn size(&self) -> (u16, u16);
+}
+
+impl ScreenExt for tuiscotti::Screen {
+    fn find(&self, needle: &str) -> Option<(u16, u16)> {
+        for y in 0..self.rows() {
+            let mut row_str = String::with_capacity(self.cols() as usize);
+            let mut col_offsets = Vec::with_capacity(self.cols() as usize);
+            for x in 0..self.cols() {
+                if let Some(cell) = self.get(x, y).filter(|c| !c.continuation) {
+                    col_offsets.push((row_str.len(), x));
+                    row_str.push_str(&cell.symbol);
+                }
+
+            }
+            if let Some(byte_idx) = row_str.find(needle) {
+                for &(b_idx, col) in col_offsets.iter().rev() {
+                    if b_idx <= byte_idx {
+                        return Some((y, col));
+                    }
+                }
+                return Some((y, 0));
+            }
+        }
+        None
     }
-    .without_env("NO_COLOR")
-    .without_env("HOLLA_NO_MOTION")
-    .without_env("JACKIN_NO_MOTION")
-    .without_env("CLICOLOR_FORCE")
-    .without_env("FORCE_COLOR")
-    .with_env("HOLLA_NO_HISTORY", "1");
-    match case.color {
-        Color::NoColorEnv => opts.with_env("NO_COLOR", "1"),
-        _ => opts,
+
+    fn text(&self) -> String {
+        frame_from_screen(self, "default").text()
+    }
+
+    fn size(&self) -> (u16, u16) {
+        (self.cols(), self.rows())
     }
 }
 
-/// Boot needle first (a `wait:` step), then the sends — the bash runner's
-/// step order.
-fn steps_for(case: &Case) -> Vec<String> {
-    let mut steps = Vec::with_capacity(case.sends.len() + 1);
-    if !case.needle.is_empty() {
-        steps.push(format!("wait:{}", case.needle));
+pub struct Session {
+    pub inner: tuiscotti::tui::Session,
+    pub cols: u16,
+    pub rows: u16,
+}
+
+#[allow(dead_code)]
+impl Session {
+    pub fn wait_until<F>(&mut self, pred: F) -> Result<(), tuiscotti::tui::WaitError>
+    where
+        F: FnMut(&tuiscotti::Screen) -> bool,
+    {
+        let deadline = std::time::Instant::now() + Duration::from_secs(8);
+        let cancel = CancelToken::new();
+        let pred_cell = std::cell::RefCell::new(pred);
+        self.inner.wait_predicate(
+            |obs| pred_cell.borrow_mut()(&obs.screen),
+            deadline,
+            &cancel,
+        )?;
+        Ok(())
     }
-    steps.extend(case.sends.iter().map(|s| s.to_string()));
-    steps
+
+    pub fn wait_for_text(&mut self, needle: &str) -> Result<(), tuiscotti::tui::WaitError> {
+        self.wait_until(|screen| {
+            frame_from_screen(screen, "default").text().contains(needle)
+        })
+    }
+
+    pub fn wait_idle(&mut self, quiet: Duration) -> Result<(), tuiscotti::tui::WaitError> {
+        let deadline = std::time::Instant::now() + Duration::from_secs(8);
+        let cancel = CancelToken::new();
+        self.inner.wait_stable_quiet(deadline, quiet, &cancel)?;
+        Ok(())
+    }
+
+    pub fn wait_stable(&mut self, quiet: Duration) -> Result<Frame, tuiscotti::tui::WaitError> {
+        let deadline = std::time::Instant::now() + Duration::from_secs(8);
+        let cancel = CancelToken::new();
+        let obs = self.inner.wait_stable_quiet(deadline, quiet, &cancel)?;
+        Ok(frame_from_screen(&obs.screen, "default"))
+    }
+
+    pub fn type_text(&mut self, text: &str) -> Result<(), tuiscotti::tui::TuiError> {
+        self.inner.send_text(text)
+    }
+
+    pub fn send_key(&mut self, key: &str) -> Result<(), tuiscotti::tui::TuiError> {
+        self.inner.press(key)
+    }
+
+    pub fn scroll(&mut self, col: u16, row: u16, scroll: Scroll) -> Result<(), tuiscotti::tui::TuiError> {
+        let wheel = match scroll {
+            Scroll::Up => Wheel::Up,
+            Scroll::Down => Wheel::Down,
+        };
+        self.inner.mouse_wheel(wheel, col, row, MouseMods::default())
+    }
+
+    pub fn click_with(&mut self, button: MouseButton, col: u16, row: u16) -> Result<(), tuiscotti::tui::TuiError> {
+        self.inner.mouse_down(button, col, row, MouseMods::default())?;
+        std::thread::sleep(Duration::from_millis(50));
+        self.inner.mouse_up(button, col, row, MouseMods::default())
+    }
+
+    pub fn click(&mut self, col: u16, row: u16) -> Result<(), tuiscotti::tui::TuiError> {
+        self.click_with(MouseButton::Left, col, row)
+    }
+
+    pub fn drag(&mut self, from_col: u16, from_row: u16, to_col: u16, to_row: u16) -> Result<(), tuiscotti::tui::TuiError> {
+        self.inner.mouse_down(MouseButton::Left, from_col, from_row, MouseMods::default())?;
+        std::thread::sleep(Duration::from_millis(20));
+        self.inner.mouse_drag(MouseButton::Left, to_col, to_row, MouseMods::default())?;
+        std::thread::sleep(Duration::from_millis(20));
+        self.inner.mouse_up(MouseButton::Left, to_col, to_row, MouseMods::default())
+    }
+
+    pub fn resize(&mut self, cols: u16, rows: u16) -> Result<(), tuiscotti::tui::TuiError> {
+        self.cols = cols;
+        self.rows = rows;
+        self.inner.resize(cols, rows)
+    }
+
+    pub fn snapshot(&mut self) -> Result<Frame, tuiscotti::tui::TuiError> {
+        let screen = self.inner.snapshot()?;
+        Ok(frame_from_screen(&screen, "default"))
+    }
+}
+
+pub fn spawn(case: &Case) -> Session {
+    let argv = argv_for(case);
+    let mut builder = Tui::new(&argv).size(case.cols, case.rows);
+    builder = builder.env_remove("NO_COLOR");
+    builder = builder.env_remove("HOLLA_NO_MOTION");
+    builder = builder.env_remove("JACKIN_NO_MOTION");
+    builder = builder.env_remove("CLICOLOR_FORCE");
+    builder = builder.env_remove("FORCE_COLOR");
+    builder = builder.env("HOLLA_NO_HISTORY", "1");
+    if let Color::NoColorEnv = case.color {
+        builder = builder.env("NO_COLOR", "1");
+    }
+
+    let inner = builder.spawn()
+        .unwrap_or_else(|e| panic!("spawn `{}` failed: {e:#}", case.name));
+    Session {
+        inner,
+        cols: case.cols,
+        rows: case.rows,
+    }
+}
+
+pub fn spawn_boot(case: &Case) -> Session {
+    let mut session = spawn(case);
+    boot(&mut session, case.needle);
+    if !case.sends.is_empty() {
+        drive(&mut session, case.sends);
+    }
+    session
+}
+
+pub fn boot(session: &mut Session, needle: &str) {
+    if !needle.is_empty() {
+        let deadline = std::time::Instant::now() + Duration::from_secs(8);
+        let cancel = CancelToken::new();
+        session.inner
+            .wait_predicate(
+                |obs| frame_from_screen(&obs.screen, "default").text().contains(needle),
+                deadline,
+                &cancel,
+            )
+            .unwrap_or_else(|e| panic!("boot needle `{needle}` never appeared: {e:#}"));
+        return;
+    }
+    let deadline = std::time::Instant::now() + Duration::from_secs(8);
+    let cancel = CancelToken::new();
+    session.inner
+        .wait_stable_quiet(deadline, Duration::from_millis(200), &cancel)
+        .unwrap_or_else(|e| panic!("boot idle failed: {e:#}"));
+}
+
+pub fn drive(session: &mut Session, steps: &[&str]) {
+    for step in steps {
+        if let Some(ms) = step.strip_prefix("sleep:") {
+            std::thread::sleep(Duration::from_millis(ms.parse().expect("sleep:<ms>")));
+        } else if let Some(needle) = step.strip_prefix("wait:") {
+            let deadline = std::time::Instant::now() + Duration::from_secs(8);
+            let cancel = CancelToken::new();
+            session.inner
+                .wait_predicate(
+                    |obs| frame_from_screen(&obs.screen, "default").text().contains(needle),
+                    deadline,
+                    &cancel,
+                )
+                .unwrap_or_else(|e| panic!("`wait:{needle}` timed out: {e:#}"));
+        } else if let Some(text) = step.strip_prefix("type:") {
+            session.inner.send_text(text).expect("type_text");
+            std::thread::sleep(Duration::from_millis(120));
+        } else {
+            session.inner.press(step).expect("send_key");
+            std::thread::sleep(Duration::from_millis(120));
+        }
+    }
+}
+
+pub fn settle_and_gate(session: &mut Session, name: &str) {
+    let cancel = CancelToken::new();
+    let deadline = std::time::Instant::now() + Duration::from_secs(8);
+    let obs = session.inner
+        .wait_stable_quiet(deadline, SETTLE, &cancel)
+        .unwrap_or_else(|e| panic!("`{name}` never settled: {e:#}"));
+    let frame = frame_from_screen(&obs.screen, "default");
+    assert_gated(&gate(name, &frame));
 }
 
 thread_local! {
-    /// One renderer per test thread: font faces parsed once, glyph rasters
-    /// cached across every check on the thread (no locks).
     static RENDERER: RefCell<Renderer> = RefCell::new(
         Profile::default_profile()
             .renderer(&VENDORED_FACES)
@@ -478,27 +644,71 @@ thread_local! {
     );
 }
 
-/// The grouped store: approved tree at `snapshots/` (committed), scratch
-/// (actuals, diffs, report) under `target/tuisnap/` (gitignored).
 pub fn store() -> GroupedStore {
-    GroupedStore::new(Path::new("snapshots"))
-        .with_actual_root(Path::new("target/tuisnap/actual"))
-        .with_diff_root(Path::new("target/tuisnap/diff"))
-        .with_report_path(Path::new("target/tuisnap/report.html"))
+    let base = if Path::new("baselines/tuiscotti-v1").exists() {
+        Path::new("baselines/tuiscotti-v1")
+    } else {
+        Path::new("snapshots")
+    };
+    GroupedStore::new(base)
+        .with_actual_root(Path::new("target/tuiscotti/actual"))
+        .with_diff_root(Path::new("target/tuiscotti/diff"))
+        .with_report_path(Path::new("target/tuiscotti/report.html"))
 }
 
-/// Cell-exact (ansi) + content (txt) + render-level (html) byte gates +
-/// pixel-exact gate at threshold 1.0 through the thread's cached renderer.
-/// Writes `target/tuisnap/actual/` artifacts even when unmatched.
 pub fn gate(name: &str, frame: &Frame) -> GroupedOutcome {
-    RENDERER
-        .with(|r| store().check_with(&mut r.borrow_mut(), name, frame, 1.0))
-        .unwrap_or_else(|e| panic!("gate `{name}` failed: {e}"))
+    RENDERER.with(|r| {
+        let mut renderer = r.borrow_mut();
+        let bundle = capture_all(&mut renderer, frame, name)
+            .unwrap_or_else(|e| panic!("capture_all `{name}` failed: {e}"));
+
+        assert_seven_bit(&bundle.ascii.text).expect("ascii 7-bit");
+        assert_no_escapes(&bundle.txt).expect("txt clean");
+        assert_normalized_sgr(&bundle.ansi).expect("ansi normalized");
+        assert_opaque_rgb(&bundle.png).expect("png opaque");
+        assert_static_offline(&bundle.html).expect("html static");
+        let _ = parse_canonical(&bundle.json).expect("valid frame json");
+
+        let actual_root = Path::new("target/tuiscotti/actual");
+        let ascii_path = actual_root.join(format!("{name}.ascii"));
+        let ascii_loss_path = actual_root.join(format!("{name}.ascii.loss.json"));
+        let frame_json_path = actual_root.join(format!("{name}.frame.json"));
+        let manifest_path = actual_root.join(format!("{name}.manifest.json"));
+
+        if let Some(parent) = ascii_path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        let _ = std::fs::write(&ascii_path, bundle.ascii.text.as_bytes());
+        let subs: Vec<serde_json::Value> = bundle.ascii.substitutions.iter().map(|s| {
+            serde_json::json!({
+                "x": s.x,
+                "y": s.y,
+                "original": s.original,
+                "replacement": s.replacement,
+            })
+        }).collect();
+        let loss_json = serde_json::to_string_pretty(&subs).unwrap_or_default();
+        let _ = std::fs::write(&ascii_loss_path, loss_json.as_bytes());
+        let _ = std::fs::write(&frame_json_path, bundle.json.as_bytes());
+
+        let manifest_obj = serde_json::json!({
+            "name": name,
+            "generation": bundle.generation.id,
+            "frame_digest": bundle.generation.frame_digest,
+            "profile": bundle.generation.profile,
+            "ascii_substitutions_count": bundle.ascii.substitutions.len(),
+            "timestamp": "pinned",
+        });
+        let _ = std::fs::write(&manifest_path, manifest_obj.to_string().as_bytes());
+
+        store().check_with(&mut renderer, name, frame, 1.0)
+            .unwrap_or_else(|e| panic!("gate `{name}` failed: {e}"))
+    })
 }
 
 /// Fail-closed assertion: only `matched` passes. Missing approval remains
 /// pending after capture, but the test fails until the full suite is
-/// generated and explicitly blessed (`tuisnap accept --grouped` is the only
+/// generated and explicitly blessed (`tuiscotti accept --grouped` is the only
 /// bless, never the test); drift, dimension mismatch and corrupt approval
 /// also fail.
 pub fn assert_gated(outcome: &GroupedOutcome) {
@@ -512,11 +722,10 @@ pub fn assert_gated(outcome: &GroupedOutcome) {
     }
 }
 
-/// A ported-matrix capture: the same runner the `tuisnap run` CLI used.
+/// A ported-matrix capture running through the PTY session.
 pub fn run_and_assert(case: &Case) {
-    let frame = run_once(&argv_for(case), &opts_for(case), &steps_for(case), SETTLE)
-        .unwrap_or_else(|e| panic!("capture `{}` failed: {e:#}", case.name));
-    assert_gated(&gate(&case.name, &frame));
+    let mut session = spawn_boot(case);
+    settle_and_gate(&mut session, &case.name);
 }
 
 /// Expand one representative static Case::new root through the full canonical
@@ -679,65 +888,6 @@ pub fn finish_matrix(failures: &[String]) {
     );
 }
 
-/// Spawn a case's session for the pointer group (mouse/resize captures need
-/// the live session after boot).
-pub fn spawn(case: &Case) -> Session {
-    Session::spawn(&argv_for(case), &opts_for(case))
-        .unwrap_or_else(|e| panic!("spawn `{}` failed: {e:#}", case.name))
-}
-
-/// Central live-session setup: boot needle first, then all case sends. This
-/// mirrors [`run_once`] while handing the connected session back for pointer
-/// or manual-flow assertions.
-pub fn spawn_boot(case: &Case) -> Session {
-    let mut session = spawn(case);
-    boot(&mut session, case.needle);
-    if !case.sends.is_empty() {
-        drive(&mut session, case.sends);
-    }
-    session
-}
-
-/// Boot: needle first. Live clocks starve a quiet-window wait_idle.
-pub fn boot(session: &mut Session, needle: &str) {
-    if !needle.is_empty() {
-        session
-            .wait_for_text(needle)
-            .unwrap_or_else(|e| panic!("boot needle `{needle}` never appeared: {e:#}"));
-        return;
-    }
-    session
-        .wait_idle(Duration::from_millis(200))
-        .unwrap_or_else(|e| panic!("boot idle failed: {e:#}"));
-}
-
-/// `run_once`'s step loop on a live session, pacing included.
-pub fn drive(session: &mut Session, steps: &[&str]) {
-    for step in steps {
-        if let Some(ms) = step.strip_prefix("sleep:") {
-            std::thread::sleep(Duration::from_millis(ms.parse().expect("sleep:<ms>")));
-        } else if let Some(needle) = step.strip_prefix("wait:") {
-            session
-                .wait_for_text(needle)
-                .unwrap_or_else(|e| panic!("`wait:{needle}` timed out: {e:#}"));
-        } else if let Some(text) = step.strip_prefix("type:") {
-            session.type_text(text).expect("type_text");
-            std::thread::sleep(Duration::from_millis(120));
-        } else {
-            session.send_key(step).expect("send_key");
-            std::thread::sleep(Duration::from_millis(120));
-        }
-    }
-}
-
-/// Settle the screen and gate the capture.
-pub fn settle_and_gate(session: &mut Session, name: &str) {
-    let frame = session
-        .wait_stable(SETTLE)
-        .unwrap_or_else(|e| panic!("`{name}` never settled: {e:#}"));
-    assert_gated(&gate(name, &frame));
-}
-
 /// One `#[test]` per canonical root, generated from the representative static
 /// case tables so cargo name filters work. The test fn name comes from the
 /// representative capture; `run_canonical` expands `Case.name`'s root to all
@@ -765,3 +915,4 @@ macro_rules! baseline_case_with_variants {
         }
     };
 }
+

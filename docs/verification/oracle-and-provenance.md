@@ -30,10 +30,13 @@ develop new product routes or services.
 - Exact visual source commit: `4a79c0a2d40fca46fc406b77157ce3b3f12ec16b`.
 - Annotated tag object observed for `visual-baseline`:
   `1ee5ebdcb91fd87adb9a5b28e43d4c7f421706c5`.
-- Baseline renderer/tool pin: `tui-snap`
+- Baseline renderer/tool pin: `tuiscotti`
+  `a47c9aaefb34e4c00026f99d8a8dd7ee5916b274` (`TUISCOTTI_SHA`).
+- Legacy renderer/tool pin (historical provenance): `tui-snap`
   `2d43458ad2bc37d76653c22d56e61ee74512d893`.
-- Separate toolkit qualification candidate:
-  `9dc86daff1dcbf20805b145916e8f04e9515f929`.
+- Reference application authority: `7bd6a331721737514a2477c894d922cb262ef07b` (`REFERENCE_APP_SHA`).
+- CI generator identity: `velnor-actions-0.1.0` (`VELNOR_GENERATOR_ID`).
+
 
 Always verify the commit independently with:
 

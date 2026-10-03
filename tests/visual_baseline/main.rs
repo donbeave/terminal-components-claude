@@ -44,8 +44,8 @@ mod tablepro;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
-use tuisnap::grouped::{self, GroupedStore};
-use tuisnap::{Profile, VENDORED_FACES};
+use tuiscotti::grouped::{self, GroupedStore};
+use tuiscotti::{Profile, VENDORED_FACES};
 
 const STORE_EXTS: [&str; 4] = ["ansi", "txt", "png", "html"];
 

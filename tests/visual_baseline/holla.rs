@@ -17,7 +17,7 @@
 
 use std::time::Duration;
 
-use tuisnap::pty::{Scroll, Session};
+use crate::support::{ScreenExt, Scroll, Session};
 
 use crate::pointer::wheel_below;
 use crate::support::{self, Case, Color, HOLLA};

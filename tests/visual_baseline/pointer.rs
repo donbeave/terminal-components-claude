@@ -16,7 +16,7 @@
 
 use std::time::Duration;
 
-use tuisnap::pty::{MouseButton, Scroll, Session};
+use crate::support::{MouseButton, Scroll, Session, ScreenExt};
 
 use crate::support::{self, Case, Color, HOLLA, SHOWCASE, TABLEPRO};
 
