@@ -204,12 +204,18 @@ fn qualify_grouped_store_and_negative_detection() {
         .expect("check_with");
     assert_eq!(outcome_mut_text.status(), Status::CellsDiffer);
 
-    // 5. Negative test: mutate color / content -> CellsDiffer
-    let capture_c = render_screen(40, 10, |f| {
-        f.render_widget("Hello Cosmos", f.area());
-    }, EdgePolicy::ClipWithReplacement)
-    .expect("render_screen");
-    let frame_c = frame_from_screen(&capture_c.screen, &profile.name);
+    // 5. Negative test: pure color/style mutation with identical text -> CellsDiffer
+    let mut frame_c = frame_a.clone();
+    for cell in &mut frame_c.cells {
+        if cell.symbol != " " {
+            cell.fg = tuiscotti::Color::Rgb(tuiscotti::Rgb::new(0, 255, 255));
+        }
+    }
+    assert_eq!(
+        frame_a.text(),
+        frame_c.text(),
+        "text must be identical to isolate color mutation"
+    );
 
     let outcome_mut_color = store
         .check_with(&mut renderer, case_name, &frame_c, 1.0)
@@ -227,6 +233,22 @@ fn qualify_grouped_store_and_negative_detection() {
         .check_with(&mut renderer, case_name, &frame_d, 1.0)
         .expect("check_with");
     assert_eq!(outcome_mut_dim.status(), Status::DimensionMismatch);
+
+    // 7. Negative test: mutate a decoded pixel in approved PNG (cells and text match) -> PixelsDiffer
+    let approved_png_path = approved_root.join(format!("{case_name}.png"));
+    let mut img = image::load_from_memory(&std::fs::read(&approved_png_path).unwrap())
+        .expect("decode approved png")
+        .to_rgb8();
+    let pixel = img.get_pixel_mut(0, 0);
+    pixel[0] = 255 - pixel[0];
+    pixel[1] = 255 - pixel[1];
+    pixel[2] = 255 - pixel[2];
+    img.save(&approved_png_path).expect("save mutated png");
+
+    let outcome_mut_pixel = store
+        .check_with(&mut renderer, case_name, &frame_a, 1.0)
+        .expect("check_with should succeed but report pixel difference");
+    assert_eq!(outcome_mut_pixel.status(), Status::PixelsDiffer);
 }
 
 #[test]
@@ -266,20 +288,80 @@ fn qualify_corrupt_and_tampered_artifact_rejection() {
     let matched = store.check_with(&mut renderer, case_name, &frame, 1.0).unwrap();
     assert_eq!(matched.status(), Status::Matched);
 
-    // 3. Corrupt the approved PNG (replace with garbage bytes)
+    // Backup valid approved artifacts
+    let approved_ansi = approved_root.join(format!("{case_name}.ansi"));
+    let approved_txt = approved_root.join(format!("{case_name}.txt"));
+    let approved_html = approved_root.join(format!("{case_name}.html"));
     let approved_png = approved_root.join(format!("{case_name}.png"));
-    std::fs::write(&approved_png, b"NOT_A_VALID_PNG_CORRUPT_BYTES").unwrap();
 
-    let corrupt_outcome = store.check_with(&mut renderer, case_name, &frame, 1.0);
-    // GroupedStore either returns Err on decoding or marks PixelsDiffer
-    if let Ok(res) = corrupt_outcome {
-        assert_ne!(res.status(), Status::Matched);
-    }
+    let orig_ansi = std::fs::read(&approved_ansi).unwrap();
+    let orig_txt = std::fs::read(&approved_txt).unwrap();
+    let orig_html = std::fs::read(&approved_html).unwrap();
+    let orig_png = std::fs::read(&approved_png).unwrap();
 
+    // 3. Test missing artifact rejection for each format -> MissingApproval
+    // 3a. Missing .ansi
+    std::fs::remove_file(&approved_ansi).unwrap();
+    assert_eq!(
+        store.check_with(&mut renderer, case_name, &frame, 1.0).unwrap().status(),
+        Status::MissingApproval
+    );
+    std::fs::write(&approved_ansi, &orig_ansi).unwrap();
 
-    // 4. Missing one of the four artifacts -> fails closed as MissingApproval
+    // 3b. Missing .txt
+    std::fs::remove_file(&approved_txt).unwrap();
+    assert_eq!(
+        store.check_with(&mut renderer, case_name, &frame, 1.0).unwrap().status(),
+        Status::MissingApproval
+    );
+    std::fs::write(&approved_txt, &orig_txt).unwrap();
+
+    // 3c. Missing .html
+    std::fs::remove_file(&approved_html).unwrap();
+    assert_eq!(
+        store.check_with(&mut renderer, case_name, &frame, 1.0).unwrap().status(),
+        Status::MissingApproval
+    );
+    std::fs::write(&approved_html, &orig_html).unwrap();
+
+    // 3d. Missing .png
     std::fs::remove_file(&approved_png).unwrap();
-    let missing_artifact_outcome = store.check_with(&mut renderer, case_name, &frame, 1.0).unwrap();
-    assert_eq!(missing_artifact_outcome.status(), Status::MissingApproval);
+    assert_eq!(
+        store.check_with(&mut renderer, case_name, &frame, 1.0).unwrap().status(),
+        Status::MissingApproval
+    );
+    std::fs::write(&approved_png, &orig_png).unwrap();
+
+    // 4. Test corrupted artifact rejection for each format
+    // 4a. Corrupted .ansi (bytes modified) -> CellsDiffer
+    std::fs::write(&approved_ansi, b"corrupted ansi content").unwrap();
+    assert_eq!(
+        store.check_with(&mut renderer, case_name, &frame, 1.0).unwrap().status(),
+        Status::CellsDiffer
+    );
+    std::fs::write(&approved_ansi, &orig_ansi).unwrap();
+
+    // 4b. Corrupted .txt (bytes modified) -> CellsDiffer
+    std::fs::write(&approved_txt, b"corrupted txt content").unwrap();
+    assert_eq!(
+        store.check_with(&mut renderer, case_name, &frame, 1.0).unwrap().status(),
+        Status::CellsDiffer
+    );
+    std::fs::write(&approved_txt, &orig_txt).unwrap();
+
+    // 4c. Corrupted .png (invalid PNG bytes) -> SnapshotError or non-Matched
+    std::fs::write(&approved_png, b"NOT_A_VALID_PNG_CORRUPT_BYTES").unwrap();
+    let corrupt_png_outcome = store.check_with(&mut renderer, case_name, &frame, 1.0);
+    match corrupt_png_outcome {
+        Ok(res) => assert_ne!(res.status(), Status::Matched),
+        Err(_) => {} // Expected: error decoding invalid PNG bytes
+    }
+    std::fs::write(&approved_png, &orig_png).unwrap();
+
+    // Verify restore works
+    assert_eq!(
+        store.check_with(&mut renderer, case_name, &frame, 1.0).unwrap().status(),
+        Status::Matched
+    );
 }
 

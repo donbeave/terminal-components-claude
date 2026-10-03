@@ -27,6 +27,8 @@ use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
+use sha2::{Digest, Sha256};
+
 use tuiscotti::formats::{
     assert_no_escapes, assert_normalized_sgr, assert_opaque_rgb, assert_seven_bit,
     assert_static_offline, capture_all, parse_canonical,
@@ -644,64 +646,309 @@ thread_local! {
     );
 }
 
+pub const DEFAULT_BASELINE_STORE: &str = "snapshots";
+
+pub fn baseline_store_root() -> PathBuf {
+    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    match std::env::var("VISUAL_BASELINE_STORE").as_deref() {
+        Ok("tuiscotti" | "tuiscotti-v1" | "baselines/tuiscotti-v1") => {
+            let path = manifest_dir.join("baselines/tuiscotti-v1");
+            if !path.is_dir() {
+                panic!(
+                    "explicit VISUAL_BASELINE_STORE target does not exist: {}",
+                    path.display()
+                );
+            }
+            path
+        }
+        Ok("snapshots" | "legacy") => {
+            let path = manifest_dir.join("snapshots");
+            if !path.is_dir() {
+                panic!(
+                    "explicit VISUAL_BASELINE_STORE target does not exist: {}",
+                    path.display()
+                );
+            }
+            path
+        }
+        Ok(other) => panic!(
+            "unknown VISUAL_BASELINE_STORE `{other}` (expected 'tuiscotti-v1' or 'snapshots')"
+        ),
+        Err(std::env::VarError::NotPresent) => {
+            let path = manifest_dir.join(DEFAULT_BASELINE_STORE);
+            if !path.is_dir() {
+                panic!(
+                    "default baseline store does not exist: {} (set VISUAL_BASELINE_STORE or create store)",
+                    path.display()
+                );
+            }
+            path
+        }
+        Err(std::env::VarError::NotUnicode(_)) => {
+            panic!("VISUAL_BASELINE_STORE is not valid unicode")
+        }
+    }
+}
+
 pub fn store() -> GroupedStore {
-    let base = if Path::new("baselines/tuiscotti-v1").exists() {
-        Path::new("baselines/tuiscotti-v1")
-    } else {
-        Path::new("snapshots")
-    };
-    GroupedStore::new(base)
+    let base = baseline_store_root();
+    GroupedStore::new(&base)
         .with_actual_root(Path::new("target/tuiscotti/actual"))
         .with_diff_root(Path::new("target/tuiscotti/diff"))
         .with_report_path(Path::new("target/tuiscotti/report.html"))
 }
 
-pub fn gate(name: &str, frame: &Frame) -> GroupedOutcome {
-    RENDERER.with(|r| {
-        let mut renderer = r.borrow_mut();
-        let bundle = capture_all(&mut renderer, frame, name)
-            .unwrap_or_else(|e| panic!("capture_all `{name}` failed: {e}"));
+fn sha256_hex(bytes: &[u8]) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(bytes);
+    format!("{:x}", hasher.finalize())
+}
 
-        assert_seven_bit(&bundle.ascii.text).expect("ascii 7-bit");
-        assert_no_escapes(&bundle.txt).expect("txt clean");
-        assert_normalized_sgr(&bundle.ansi).expect("ansi normalized");
-        assert_opaque_rgb(&bundle.png).expect("png opaque");
-        assert_static_offline(&bundle.html).expect("html static");
-        let _ = parse_canonical(&bundle.json).expect("valid frame json");
+fn write_artifact_strictly(path: &Path, content: &[u8]) -> Result<(), String> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("failed to create dir {}: {e}", parent.display()))?;
+    }
+    let temp_path = path.with_extension(format!("tmp.{}", std::process::id()));
+    std::fs::write(&temp_path, content)
+        .map_err(|e| format!("failed to write temp file {}: {e}", temp_path.display()))?;
+    std::fs::rename(&temp_path, path)
+        .map_err(|e| format!("failed to rename {} to {}: {e}", temp_path.display(), path.display()))?;
+    Ok(())
+}
 
-        let actual_root = Path::new("target/tuiscotti/actual");
-        let ascii_path = actual_root.join(format!("{name}.ascii"));
-        let ascii_loss_path = actual_root.join(format!("{name}.ascii.loss.json"));
-        let frame_json_path = actual_root.join(format!("{name}.frame.json"));
-        let manifest_path = actual_root.join(format!("{name}.manifest.json"));
+fn now_iso8601() -> String {
+    use std::time::SystemTime;
+    let dur = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap_or_default();
+    let secs = dur.as_secs();
+    let days = secs / 86400;
+    let rem_secs = secs % 86400;
+    let hours = rem_secs / 3600;
+    let rem_secs = rem_secs % 3600;
+    let minutes = rem_secs / 60;
+    let seconds = rem_secs % 60;
 
-        if let Some(parent) = ascii_path.parent() {
-            let _ = std::fs::create_dir_all(parent);
+    let mut year = 1970;
+    let mut d = days;
+    loop {
+        let leap = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+        let days_in_year = if leap { 366 } else { 365 };
+        if d < days_in_year {
+            break;
         }
-        let _ = std::fs::write(&ascii_path, bundle.ascii.text.as_bytes());
-        let subs: Vec<serde_json::Value> = bundle.ascii.substitutions.iter().map(|s| {
+        d -= days_in_year;
+        year += 1;
+    }
+    let leap = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+    let month_days = [
+        31,
+        if leap { 29 } else { 28 },
+        31, 30, 31, 30, 31, 31, 30, 31, 30, 31,
+    ];
+    let mut month = 1;
+    for &md in &month_days {
+        if d < md {
+            break;
+        }
+        d -= md;
+        month += 1;
+    }
+    let day = d + 1;
+    format!("{year:04}-{month:02}-{day:02}T{hours:02}:{minutes:02}:{seconds:02}Z")
+}
+
+pub fn write_10_artifact_bundle(
+    root: &Path,
+    name: &str,
+    frame: &Frame,
+    renderer: &mut Renderer,
+) -> Result<(), String> {
+    let bundle = capture_all(renderer, frame, name)
+        .map_err(|e| format!("capture_all `{name}` failed: {e}"))?;
+
+    assert_seven_bit(&bundle.ascii.text).map_err(|e| format!("ascii 7-bit `{name}`: {e}"))?;
+    assert_no_escapes(&bundle.txt).map_err(|e| format!("txt clean `{name}`: {e}"))?;
+    assert_normalized_sgr(&bundle.ansi).map_err(|e| format!("ansi normalized `{name}`: {e}"))?;
+    assert_opaque_rgb(&bundle.png).map_err(|e| format!("png opaque `{name}`: {e}"))?;
+    assert_static_offline(&bundle.html).map_err(|e| format!("html static `{name}`: {e}"))?;
+    let _ = parse_canonical(&bundle.json).map_err(|e| format!("valid frame json `{name}`: {e}"))?;
+
+    let rendered = renderer
+        .render(frame)
+        .map_err(|e| format!("renderer.render `{name}` failed: {e}"))?;
+    let fidelity_json = rendered.fidelity.to_json();
+
+    let substitutions: Vec<serde_json::Value> = bundle
+        .ascii
+        .substitutions
+        .iter()
+        .map(|s| {
             serde_json::json!({
                 "x": s.x,
                 "y": s.y,
                 "original": s.original,
                 "replacement": s.replacement,
             })
-        }).collect();
-        let loss_json = serde_json::to_string_pretty(&subs).unwrap_or_default();
-        let _ = std::fs::write(&ascii_loss_path, loss_json.as_bytes());
-        let _ = std::fs::write(&frame_json_path, bundle.json.as_bytes());
+        })
+        .collect();
+    let ascii_loss_obj = serde_json::json!({
+        "lossy": bundle.ascii.lossy(),
+        "substitutions_count": bundle.ascii.substitutions.len(),
+        "substitutions": substitutions,
+    });
+    let ascii_loss_json = serde_json::to_string_pretty(&ascii_loss_obj)
+        .map_err(|e| format!("serialize ascii loss `{name}`: {e}"))?;
 
-        let manifest_obj = serde_json::json!({
-            "name": name,
-            "generation": bundle.generation.id,
-            "frame_digest": bundle.generation.frame_digest,
-            "profile": bundle.generation.profile,
-            "ascii_substitutions_count": bundle.ascii.substitutions.len(),
-            "timestamp": "pinned",
-        });
-        let _ = std::fs::write(&manifest_path, manifest_obj.to_string().as_bytes());
+    let observations_obj = serde_json::json!({
+        "name": name,
+        "cols": frame.cols,
+        "rows": frame.rows,
+        "cursor": {
+            "x": frame.cursor.x,
+            "y": frame.cursor.y,
+            "visible": frame.cursor.visible,
+        },
+        "provenance": {
+            "tool": frame.provenance.tool,
+            "tool_version": frame.provenance.tool_version,
+            "profile": frame.provenance.profile,
+            "source": frame.provenance.source,
+            "argv": frame.provenance.argv,
+            "created_unix": frame.provenance.created_unix,
+        },
+        "cell_count": frame.cells.len(),
+        "non_empty_cells": frame.cells.iter().filter(|c| c.symbol != " ").count(),
+        "frame_digest": frame.digest(),
+    });
+    let observations_json = serde_json::to_string_pretty(&observations_obj)
+        .map_err(|e| format!("serialize observations `{name}`: {e}"))?;
 
-        store().check_with(&mut renderer, name, frame, 1.0)
+    // 1-6: 6 primary data formats
+    let frame_json_path = root.join(format!("{name}.frame.json"));
+    let ansi_path = root.join(format!("{name}.ansi"));
+    let txt_path = root.join(format!("{name}.txt"));
+    let png_path = root.join(format!("{name}.png"));
+    let html_path = root.join(format!("{name}.html"));
+    let ascii_path = root.join(format!("{name}.ascii"));
+
+    // 7-9: 3 companion artifacts
+    let ascii_loss_path = root.join(format!("{name}.ascii.loss.json"));
+    let png_fidelity_path = root.join(format!("{name}.png.fidelity.json"));
+    let observations_path = root.join(format!("{name}.observations.json"));
+
+    // 10: manifest artifact
+    let manifest_path = root.join(format!("{name}.manifest.json"));
+
+    write_artifact_strictly(&frame_json_path, bundle.json.as_bytes())?;
+    write_artifact_strictly(&ansi_path, bundle.ansi.as_bytes())?;
+    write_artifact_strictly(&txt_path, bundle.txt.as_bytes())?;
+    write_artifact_strictly(&png_path, &bundle.png)?;
+    write_artifact_strictly(&html_path, bundle.html.as_bytes())?;
+    write_artifact_strictly(&ascii_path, bundle.ascii.text.as_bytes())?;
+    write_artifact_strictly(&ascii_loss_path, ascii_loss_json.as_bytes())?;
+    write_artifact_strictly(&png_fidelity_path, fidelity_json.as_bytes())?;
+    write_artifact_strictly(&observations_path, observations_json.as_bytes())?;
+
+    let manifest_obj = serde_json::json!({
+        "schema_version": 1,
+        "name": name,
+        "generation": bundle.generation.id,
+        "frame_digest": bundle.generation.frame_digest,
+        "profile": bundle.generation.profile,
+        "dimensions": {
+            "cols": frame.cols,
+            "rows": frame.rows,
+        },
+        "ascii_substitutions_count": bundle.ascii.substitutions.len(),
+        "artifacts": {
+            "frame_json": {
+                "file": format!("{name}.frame.json"),
+                "sha256": sha256_hex(bundle.json.as_bytes()),
+                "bytes": bundle.json.len(),
+            },
+            "ansi": {
+                "file": format!("{name}.ansi"),
+                "sha256": sha256_hex(bundle.ansi.as_bytes()),
+                "bytes": bundle.ansi.len(),
+            },
+            "txt": {
+                "file": format!("{name}.txt"),
+                "sha256": sha256_hex(bundle.txt.as_bytes()),
+                "bytes": bundle.txt.len(),
+            },
+            "png": {
+                "file": format!("{name}.png"),
+                "sha256": sha256_hex(&bundle.png),
+                "bytes": bundle.png.len(),
+            },
+            "html": {
+                "file": format!("{name}.html"),
+                "sha256": sha256_hex(bundle.html.as_bytes()),
+                "bytes": bundle.html.len(),
+            },
+            "ascii": {
+                "file": format!("{name}.ascii"),
+                "sha256": sha256_hex(bundle.ascii.text.as_bytes()),
+                "bytes": bundle.ascii.text.len(),
+            },
+            "ascii_loss_json": {
+                "file": format!("{name}.ascii.loss.json"),
+                "sha256": sha256_hex(ascii_loss_json.as_bytes()),
+                "bytes": ascii_loss_json.len(),
+            },
+            "png_fidelity_json": {
+                "file": format!("{name}.png.fidelity.json"),
+                "sha256": sha256_hex(fidelity_json.as_bytes()),
+                "bytes": fidelity_json.len(),
+            },
+            "observations_json": {
+                "file": format!("{name}.observations.json"),
+                "sha256": sha256_hex(observations_json.as_bytes()),
+                "bytes": observations_json.len(),
+            },
+        },
+        "timestamp_utc": now_iso8601(),
+    });
+    let manifest_json = serde_json::to_string_pretty(&manifest_obj)
+        .map_err(|e| format!("serialize manifest `{name}`: {e}"))?;
+
+    write_artifact_strictly(&manifest_path, manifest_json.as_bytes())?;
+
+    // Verify all 10 artifacts exist and are non-empty
+    let paths = [
+        &frame_json_path,
+        &ansi_path,
+        &txt_path,
+        &png_path,
+        &html_path,
+        &ascii_path,
+        &ascii_loss_path,
+        &png_fidelity_path,
+        &observations_path,
+        &manifest_path,
+    ];
+    for p in paths {
+        let meta = std::fs::metadata(p)
+            .map_err(|e| format!("verify artifact {} failed: {e}", p.display()))?;
+        if meta.len() == 0 {
+            return Err(format!("artifact {} was written with 0 bytes", p.display()));
+        }
+    }
+
+    Ok(())
+}
+
+pub fn gate(name: &str, frame: &Frame) -> GroupedOutcome {
+    RENDERER.with(|r| {
+        let mut renderer = r.borrow_mut();
+        let actual_root = Path::new("target/tuiscotti/actual");
+        write_10_artifact_bundle(actual_root, name, frame, &mut renderer)
+            .unwrap_or_else(|e| panic!("write_10_artifact_bundle `{name}` failed: {e}"));
+
+        store()
+            .check_with(&mut renderer, name, frame, 1.0)
             .unwrap_or_else(|e| panic!("gate `{name}` failed: {e}"))
     })
 }
