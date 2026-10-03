@@ -10,9 +10,9 @@ use rayon::prelude::*;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use tuiscotti::formats::{
-    ansi_normalized, ascii_projection, assert_no_escapes, assert_normalized_sgr,
-    assert_opaque_rgb, assert_seven_bit, assert_static_offline, generation_for, html_static,
-    parse_canonical, txt_projection,
+    ansi_normalized, ascii_projection, assert_no_escapes, assert_normalized_sgr, assert_opaque_rgb,
+    assert_seven_bit, assert_static_offline, generation_for, html_static, parse_canonical,
+    txt_projection,
 };
 use tuiscotti::render::frame_from_screen;
 use tuiscotti::tui_shell::replay_bytes;
@@ -61,7 +61,8 @@ fn write_file(path: &Path, content: &[u8]) {
     if let Some(parent) = path.parent() {
         let _ = std::fs::create_dir_all(parent);
     }
-    std::fs::write(path, content).unwrap_or_else(|e| panic!("failed to write {}: {e}", path.display()));
+    std::fs::write(path, content)
+        .unwrap_or_else(|e| panic!("failed to write {}: {e}", path.display()));
 }
 
 fn now_iso8601() -> String {
@@ -92,7 +93,16 @@ fn now_iso8601() -> String {
     let month_days = [
         31,
         if leap { 29 } else { 28 },
-        31, 30, 31, 30, 31, 31, 30, 31, 30, 31,
+        31,
+        30,
+        31,
+        30,
+        31,
+        31,
+        30,
+        31,
+        30,
+        31,
     ];
     let mut month = 1;
     for &md in &month_days {
@@ -109,16 +119,14 @@ fn now_iso8601() -> String {
 fn ansi_to_positioned_stream(ansi: &[u8], rows: u16) -> Vec<u8> {
     let mut stream = Vec::new();
     stream.extend_from_slice(b"\x1b[H");
-    let mut row: u16 = 1;
     let lines = ansi.split(|&b| b == b'\n');
-    for line in lines {
+    for (row, line) in (1_u16..).zip(lines) {
         if row > rows {
             break;
         }
         let pos = format!("\x1b[{row};1H");
         stream.extend_from_slice(pos.as_bytes());
         stream.extend_from_slice(line);
-        row += 1;
     }
     stream
 }
@@ -151,9 +159,15 @@ fn test_stage_entire_tuiscotti_corpus_and_audit() {
         },
         |renderer, entry| {
             let (cols, rows) = parse_geometry(&entry.geometry);
-            let legacy_ansi_path = manifest_dir.join("snapshots").join(format!("{}.ansi", entry.legacy_path));
-            let legacy_txt_path = manifest_dir.join("snapshots").join(format!("{}.txt", entry.legacy_path));
-            let legacy_png_path = manifest_dir.join("snapshots").join(format!("{}.png", entry.legacy_path));
+            let legacy_ansi_path = manifest_dir
+                .join("snapshots")
+                .join(format!("{}.ansi", entry.legacy_path));
+            let legacy_txt_path = manifest_dir
+                .join("snapshots")
+                .join(format!("{}.txt", entry.legacy_path));
+            let legacy_png_path = manifest_dir
+                .join("snapshots")
+                .join(format!("{}.png", entry.legacy_path));
 
             let ansi_bytes = std::fs::read(&legacy_ansi_path).expect("read ansi");
             let expected_txt = std::fs::read_to_string(&legacy_txt_path).expect("read txt");
@@ -246,9 +260,12 @@ fn test_stage_entire_tuiscotti_corpus_and_audit() {
             let png_path = target_base.join(format!("{}.png", entry.target_path));
             let html_path = target_base.join(format!("{}.html", entry.target_path));
             let ascii_path = target_base.join(format!("{}.ascii", entry.target_path));
-            let ascii_loss_path = target_base.join(format!("{}.ascii.loss.json", entry.target_path));
-            let png_fidelity_path = target_base.join(format!("{}.png.fidelity.json", entry.target_path));
-            let observations_path = target_base.join(format!("{}.observations.json", entry.target_path));
+            let ascii_loss_path =
+                target_base.join(format!("{}.ascii.loss.json", entry.target_path));
+            let png_fidelity_path =
+                target_base.join(format!("{}.png.fidelity.json", entry.target_path));
+            let observations_path =
+                target_base.join(format!("{}.observations.json", entry.target_path));
             let manifest_path = target_base.join(format!("{}.manifest.json", entry.target_path));
 
             write_file(&frame_json_path, frame_json.as_bytes());
@@ -331,7 +348,12 @@ fn test_stage_entire_tuiscotti_corpus_and_audit() {
             let manifest_json = serde_json::to_string_pretty(&manifest_obj).unwrap();
             write_file(&manifest_path, manifest_json.as_bytes());
 
-            let app = entry.target_path.split('/').next().unwrap_or("unknown").to_string();
+            let app = entry
+                .target_path
+                .split('/')
+                .next()
+                .unwrap_or("unknown")
+                .to_string();
             metrics.lock().unwrap().push(DiffMetric {
                 target_path: entry.target_path.clone(),
                 legacy_path: entry.legacy_path.clone(),
@@ -343,14 +365,18 @@ fn test_stage_entire_tuiscotti_corpus_and_audit() {
             });
 
             let done = completed_count.fetch_add(1, Ordering::Relaxed) + 1;
-        if done % 1000 == 0 || done == 7550 {
-            println!("  Staged and admitted {done}/7550 captures...");
-        }
-    });
+            if done.is_multiple_of(1000) || done == 7550 {
+                println!("  Staged and admitted {done}/7550 captures...");
+            }
+        },
+    );
 
     let elapsed = start.elapsed();
     let metrics = metrics.into_inner().unwrap();
-    println!("Completed staging 7550 captures in {:.2}s!", elapsed.as_secs_f64());
+    println!(
+        "Completed staging 7550 captures in {:.2}s!",
+        elapsed.as_secs_f64()
+    );
 
     // Generate Corpus Index
     let mut app_counts: BTreeMap<String, (usize, usize)> = BTreeMap::new();
@@ -358,7 +384,7 @@ fn test_stage_entire_tuiscotti_corpus_and_audit() {
         let entry = app_counts.entry(m.app.clone()).or_insert((0, 0));
         entry.1 += 1;
     }
-    for (_app, counts) in &mut app_counts {
+    for counts in app_counts.values_mut() {
         counts.0 = counts.1 / 25;
     }
 
@@ -375,8 +401,11 @@ fn test_stage_entire_tuiscotti_corpus_and_audit() {
         "applications": app_counts,
     });
     let corpus_index_path = target_base.join("corpus-index.json");
-    std::fs::write(&corpus_index_path, serde_json::to_string_pretty(&corpus_index).unwrap())
-        .expect("write corpus index");
+    std::fs::write(
+        &corpus_index_path,
+        serde_json::to_string_pretty(&corpus_index).unwrap(),
+    )
+    .expect("write corpus index");
 
     // Compute Metrics for Audit
     let total_captures = metrics.len();
@@ -386,9 +415,18 @@ fn test_stage_entire_tuiscotti_corpus_and_audit() {
     let max_score = metrics.iter().map(|m| m.png_score).fold(0.0f64, f64::max);
     let avg_score: f64 = metrics.iter().map(|m| m.png_score).sum::<f64>() / total_captures as f64;
 
-    let exact_1_0 = metrics.iter().filter(|m| m.png_score >= 1.0 - f64::EPSILON).count();
-    let ge_99 = metrics.iter().filter(|m| m.png_score >= 0.99 && m.png_score < 1.0 - f64::EPSILON).count();
-    let ge_95 = metrics.iter().filter(|m| m.png_score >= 0.95 && m.png_score < 0.99).count();
+    let exact_1_0 = metrics
+        .iter()
+        .filter(|m| m.png_score >= 1.0 - f64::EPSILON)
+        .count();
+    let ge_99 = metrics
+        .iter()
+        .filter(|m| m.png_score >= 0.99 && m.png_score < 1.0 - f64::EPSILON)
+        .count();
+    let ge_95 = metrics
+        .iter()
+        .filter(|m| m.png_score >= 0.95 && m.png_score < 0.99)
+        .count();
     let lt_95 = metrics.iter().filter(|m| m.png_score < 0.95).count();
 
     // Admission Record
@@ -413,12 +451,15 @@ fn test_stage_entire_tuiscotti_corpus_and_audit() {
         }
     });
     let admission_path = target_base.join("admission-record.json");
-    std::fs::write(&admission_path, serde_json::to_string_pretty(&admission_record).unwrap())
-        .expect("write admission record");
+    std::fs::write(
+        &admission_path,
+        serde_json::to_string_pretty(&admission_record).unwrap(),
+    )
+    .expect("write admission record");
 
     // Migration Audit Document
     let audit_md = format!(
-r#"# Tuiscotti Baseline Migration & Cutover Audit
+        r#"# Tuiscotti Baseline Migration & Cutover Audit
 
 ## 1. Executive Summary
 

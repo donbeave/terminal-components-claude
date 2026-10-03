@@ -16,7 +16,7 @@
 
 use std::time::Duration;
 
-use crate::support::{MouseButton, Scroll, Session, ScreenExt};
+use crate::support::{MouseButton, ScreenExt, Scroll, Session};
 
 use crate::support::{self, Case, Color, HOLLA, SHOWCASE, TABLEPRO};
 

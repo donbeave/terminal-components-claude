@@ -11,9 +11,15 @@ use std::path::Path;
 
 #[test]
 fn test_tool_and_commit_pins() {
-    assert_eq!(REFERENCE_APP_SHA, "7bd6a331721737514a2477c894d922cb262ef07b");
+    assert_eq!(
+        REFERENCE_APP_SHA,
+        "7bd6a331721737514a2477c894d922cb262ef07b"
+    );
     assert_eq!(HISTORICAL_BASELINE_TAG, "visual-baseline");
-    assert_eq!(HISTORICAL_BASELINE_COMMIT, "4a79c0a2d40fca46fc406b77157ce3b3f12ec16b");
+    assert_eq!(
+        HISTORICAL_BASELINE_COMMIT,
+        "4a79c0a2d40fca46fc406b77157ce3b3f12ec16b"
+    );
     assert_eq!(TUISCOTTI_SHA, "a47c9aaefb34e4c00026f99d8a8dd7ee5916b274");
 }
 
@@ -21,13 +27,34 @@ fn test_tool_and_commit_pins() {
 fn test_manifest_loads_and_counts_match() {
     let manifest = RequiredCasesManifest::load();
 
-    assert_eq!(manifest.components_count, 45, "must declare exactly 45 components (W01-W45)");
-    assert_eq!(manifest.foundations_count, 12, "must declare exactly 12 foundations (F01-F12)");
-    assert_eq!(manifest.family_dispositions_count, 54, "must declare exactly 54 family dispositions (C01-C54)");
-    assert_eq!(manifest.capture_plans_count, 45, "must declare exactly 45 capture plans");
-    assert_eq!(manifest.component_cases_count, 222, "must declare exactly 222 component cases");
-    assert_eq!(manifest.legacy_roots_count, 302, "must declare exactly 302 legacy snapshot roots");
-    assert_eq!(manifest.total_cases_count, 524, "total cases must equal 222 + 302 = 524");
+    assert_eq!(
+        manifest.components_count, 45,
+        "must declare exactly 45 components (W01-W45)"
+    );
+    assert_eq!(
+        manifest.foundations_count, 12,
+        "must declare exactly 12 foundations (F01-F12)"
+    );
+    assert_eq!(
+        manifest.family_dispositions_count, 54,
+        "must declare exactly 54 family dispositions (C01-C54)"
+    );
+    assert_eq!(
+        manifest.capture_plans_count, 45,
+        "must declare exactly 45 capture plans"
+    );
+    assert_eq!(
+        manifest.component_cases_count, 222,
+        "must declare exactly 222 component cases"
+    );
+    assert_eq!(
+        manifest.legacy_roots_count, 302,
+        "must declare exactly 302 legacy snapshot roots"
+    );
+    assert_eq!(
+        manifest.total_cases_count, 524,
+        "total cases must equal 222 + 302 = 524"
+    );
     assert_eq!(manifest.cases.len(), 524);
 
     assert_eq!(manifest.components.len(), 45);
@@ -39,7 +66,11 @@ fn test_manifest_loads_and_counts_match() {
 fn test_case_registry_integrity_and_authority_lanes() {
     let manifest = RequiredCasesManifest::load();
     let cases_map = manifest.cases_by_id();
-    assert_eq!(cases_map.len(), manifest.cases.len(), "all case IDs must be strictly unique");
+    assert_eq!(
+        cases_map.len(),
+        manifest.cases.len(),
+        "all case IDs must be strictly unique"
+    );
 
     let mut existing_count = 0;
     let mut extracted_count = 0;
@@ -56,21 +87,36 @@ fn test_case_registry_integrity_and_authority_lanes() {
         match case.authority_lane {
             AuthorityLane::ExistingOracle => {
                 existing_count += 1;
-                assert_eq!(case.approval_state, "approved", "existing legacy oracle case `{}` must be approved", case.id);
+                assert_eq!(
+                    case.approval_state, "approved",
+                    "existing legacy oracle case `{}` must be approved",
+                    case.id
+                );
             }
             AuthorityLane::ExtractedOracle => {
                 extracted_count += 1;
-                assert_eq!(case.approval_state, "planned", "unextracted component case `{}` must be planned", case.id);
+                assert_eq!(
+                    case.approval_state, "planned",
+                    "unextracted component case `{}` must be planned",
+                    case.id
+                );
             }
             AuthorityLane::Extension => {
                 extension_count += 1;
-                assert_eq!(case.approval_state, "planned", "extension case `{}` must be planned", case.id);
+                assert_eq!(
+                    case.approval_state, "planned",
+                    "extension case `{}` must be planned",
+                    case.id
+                );
             }
         }
     }
 
     assert!(existing_count > 0);
-    assert_eq!(extension_count, 6, "only W44-01..W44-06 terminal-view cases are extensions");
+    assert_eq!(
+        extension_count, 6,
+        "only W44-01..W44-06 terminal-view cases are extensions"
+    );
     eprintln!(
         "Registry authority lane distribution: ExistingOracle={}, ExtractedOracle={}, Extension={}",
         existing_count, extracted_count, extension_count
@@ -93,7 +139,9 @@ fn test_legacy_roots_match_snapshot_disk_tree() {
     )
     .expect("read migration map");
     let map: serde_json::Value = serde_json::from_slice(&map_bytes).expect("parse migration map");
-    let root_mappings = map["root_mappings"].as_array().expect("root mappings array");
+    let root_mappings = map["root_mappings"]
+        .as_array()
+        .expect("root mappings array");
     let rmaps: std::collections::BTreeMap<&str, &str> = root_mappings
         .iter()
         .map(|r| {
@@ -114,9 +162,9 @@ fn test_legacy_roots_match_snapshot_disk_tree() {
 
     for case in legacy_cases {
         let legacy_root = case.id.strip_prefix("LEGACY:").unwrap();
-        let target_root = rmaps.get(legacy_root).unwrap_or_else(|| {
-            panic!("legacy root `{legacy_root}` must be in migration map")
-        });
+        let target_root = rmaps
+            .get(legacy_root)
+            .unwrap_or_else(|| panic!("legacy root `{legacy_root}` must be in migration map"));
         let root_path = baseline_dir.join(target_root);
         assert!(
             root_path.exists(),
@@ -158,6 +206,8 @@ fn test_negative_manifest_mutations_fail_validation() {
         .join("baselines/tuiscotti-v1")
         .join("nonexistent_app")
         .join("invalid_page");
-    assert!(!fictitious_root.exists(), "fictitious legacy root must not exist");
+    assert!(
+        !fictitious_root.exists(),
+        "fictitious legacy root must not exist"
+    );
 }
-

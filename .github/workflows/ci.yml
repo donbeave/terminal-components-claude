@@ -429,7 +429,7 @@ jobs:
           NODE_AUTH_TOKEN: ""
           NPM_TOKEN: ""
           RUSTUP_TOOLCHAIN: 1.98.1
-          VELNOR_DOWNSTREAM_TASK_IDS: stack/rust/root/build/default,stack/rust/root/nextest/default,stack/rust/root/doctest/default,stack/rust/root/doc/default
+          VELNOR_DOWNSTREAM_TASK_IDS: stack/rust/root/build/default,stack/rust/root/nextest/default,stack/rust/root/doc/default
           VELNOR_MATRIX_ID: stack:rust|task:stack/rust/root/clippy/default
           VELNOR_MATRIX_KEY: m-ef27644090a4cf0f
           VELNOR_TASK_DIGEST: b3-89df62538745278fc5adadc983a3bc822a787540002af88561b00e7763168e24
@@ -458,7 +458,7 @@ jobs:
           NODE_AUTH_TOKEN: ""
           NPM_TOKEN: ""
           RUSTUP_TOOLCHAIN: 1.98.1
-          VELNOR_DOWNSTREAM_TASK_IDS: stack/rust/root/nextest/default,stack/rust/root/doctest/default,stack/rust/root/doc/default
+          VELNOR_DOWNSTREAM_TASK_IDS: stack/rust/root/nextest/default,stack/rust/root/doc/default
           VELNOR_MATRIX_ID: stack:rust|task:stack/rust/root/build/default
           VELNOR_MATRIX_KEY: m-9f41ea1f8f3bb143
           VELNOR_TASK_DIGEST: b3-9da722076566482d6dcffb4f3c8b2b2601114d78a15134870829a57b50c21f93
@@ -487,41 +487,12 @@ jobs:
           NODE_AUTH_TOKEN: ""
           NPM_TOKEN: ""
           RUSTUP_TOOLCHAIN: 1.98.1
-          VELNOR_DOWNSTREAM_TASK_IDS: stack/rust/root/doctest/default,stack/rust/root/doc/default
+          VELNOR_DOWNSTREAM_TASK_IDS: stack/rust/root/doc/default
           VELNOR_MATRIX_ID: stack:rust|task:stack/rust/root/nextest/default
           VELNOR_MATRIX_KEY: m-ef8115be6522bff0
           VELNOR_TASK_DIGEST: b3-40213ca7250194fccde7385276bcb43bb1b995363b45ec516676bd89aa3685d5
           VELNOR_TASK_ID: stack/rust/root/nextest/default
         run: "sh -c 'unset ACTIONS_ID_TOKEN_REQUEST_TOKEN ACTIONS_ID_TOKEN_REQUEST_URL ACTIONS_RUNTIME_TOKEN GITHUB_TOKEN MISE_GITHUB_TOKEN GH_TOKEN GH_HOST GH_CONFIG_DIR; date +%s%3N > \"$RUNNER_TEMP/velnor/start-m-ef8115be6522bff0\"; mise --no-config --no-env --no-hooks exec rust@1.98.1 aqua:nextest-rs/nextest/cargo-nextest@0.9.146 -- cargo nextest run --profile ci --locked --offline --manifest-path Cargo.toml --package junie-tui --no-tests fail; code=$?; read -r start_ms rest < \"$RUNNER_TEMP/velnor/start-m-ef8115be6522bff0\"; VELNOR_EXIT_CODE=\"$code\" VELNOR_START_MS=\"$start_ms\" VELNOR_INTERNAL_OP=write-task-report-v1 \"$RUNNER_TEMP/velnor/bin/velnor-actions-0.1.0\"; helper_code=$?; if [ \"$code\" -ne 0 ]; then exit \"$code\"; fi; exit \"$helper_code\"'"
-      - name: Doctests
-        if: "!contains(needs.plan.outputs.covered_tasks, ',stack/rust/root/doctest/default,')"
-        env:
-          ACTIONS_ID_TOKEN_REQUEST_TOKEN: ""
-          ACTIONS_ID_TOKEN_REQUEST_URL: ""
-          ACTIONS_RUNTIME_TOKEN: ""
-          CARGO_REGISTRY_TOKEN: ""
-          GH_CONFIG_DIR: ""
-          GH_HOST: ""
-          GH_TOKEN: ""
-          GITHUB_TOKEN: ""
-          MISE_AUTO_INSTALL: "false"
-          MISE_CARGO_HOME: ${{ runner.temp }}/velnor/cargo
-          MISE_EXEC_AUTO_INSTALL: "false"
-          MISE_GITHUB_TOKEN: ""
-          MISE_LOCKFILE: "0"
-          MISE_NO_CONFIG: "1"
-          MISE_NO_ENV: "1"
-          MISE_NO_HOOKS: "1"
-          MISE_RUSTUP_HOME: ${{ runner.temp }}/velnor/rustup
-          NODE_AUTH_TOKEN: ""
-          NPM_TOKEN: ""
-          RUSTUP_TOOLCHAIN: 1.98.1
-          VELNOR_DOWNSTREAM_TASK_IDS: stack/rust/root/doc/default
-          VELNOR_MATRIX_ID: stack:rust|task:stack/rust/root/doctest/default
-          VELNOR_MATRIX_KEY: m-55d9e893afdceb78
-          VELNOR_TASK_DIGEST: b3-b171721003f506de0d58d3d3c0848d2e8481c165d564c745de5827bdd29f80e0
-          VELNOR_TASK_ID: stack/rust/root/doctest/default
-        run: "sh -c 'unset ACTIONS_ID_TOKEN_REQUEST_TOKEN ACTIONS_ID_TOKEN_REQUEST_URL ACTIONS_RUNTIME_TOKEN GITHUB_TOKEN MISE_GITHUB_TOKEN GH_TOKEN GH_HOST GH_CONFIG_DIR; date +%s%3N > \"$RUNNER_TEMP/velnor/start-m-55d9e893afdceb78\"; mise --no-config --no-env --no-hooks exec rust@1.98.1 aqua:nextest-rs/nextest/cargo-nextest@0.9.146 -- cargo test --locked --offline --manifest-path Cargo.toml --package junie-tui --doc; code=$?; read -r start_ms rest < \"$RUNNER_TEMP/velnor/start-m-55d9e893afdceb78\"; VELNOR_EXIT_CODE=\"$code\" VELNOR_START_MS=\"$start_ms\" VELNOR_INTERNAL_OP=write-task-report-v1 \"$RUNNER_TEMP/velnor/bin/velnor-actions-0.1.0\"; helper_code=$?; if [ \"$code\" -ne 0 ]; then exit \"$code\"; fi; exit \"$helper_code\"'"
       - name: Documentation
         if: "!contains(needs.plan.outputs.covered_tasks, ',stack/rust/root/doc/default,')"
         env:

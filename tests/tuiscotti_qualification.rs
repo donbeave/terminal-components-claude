@@ -29,9 +29,14 @@ fn qualify_pure_ratatui_capture_and_six_formats() {
     let rows = 24;
 
     // Render pure Ratatui widget into Screen
-    let capture = render_screen(cols, rows, |f| {
-        f.render_widget("Pure Ratatui Render Invariant Check", f.area());
-    }, EdgePolicy::ClipWithReplacement)
+    let capture = render_screen(
+        cols,
+        rows,
+        |f| {
+            f.render_widget("Pure Ratatui Render Invariant Check", f.area());
+        },
+        EdgePolicy::ClipWithReplacement,
+    )
     .expect("render_screen succeeds");
 
     assert_eq!(capture.screen.cols(), cols);
@@ -47,8 +52,8 @@ fn qualify_pure_ratatui_capture_and_six_formats() {
     let mut renderer = profile
         .renderer(&VENDORED_FACES)
         .expect("vendored faces parse");
-    let bundle = capture_all(&mut renderer, &frame, "pure-ratatui-qual")
-        .expect("capture_all succeeds");
+    let bundle =
+        capture_all(&mut renderer, &frame, "pure-ratatui-qual").expect("capture_all succeeds");
 
     // 1. .ascii validation
     assert_seven_bit(&bundle.ascii.text).expect("ascii projection is 7-bit");
@@ -99,7 +104,11 @@ fn qualify_pty_session_lifecycle_and_capture() {
     let cancel = tuiscotti::tui::CancelToken::new();
     let obs = session
         .wait_predicate(
-            |obs| frame_from_screen(&obs.screen, "default").text().contains("Junie"),
+            |obs| {
+                frame_from_screen(&obs.screen, "default")
+                    .text()
+                    .contains("Junie")
+            },
             deadline,
             &cancel,
         )
@@ -163,9 +172,14 @@ fn qualify_grouped_store_and_negative_detection() {
         .expect("vendored faces parse");
 
     // Create frame A
-    let capture_a = render_screen(40, 10, |f| {
-        f.render_widget("Hello World", f.area());
-    }, EdgePolicy::ClipWithReplacement)
+    let capture_a = render_screen(
+        40,
+        10,
+        |f| {
+            f.render_widget("Hello World", f.area());
+        },
+        EdgePolicy::ClipWithReplacement,
+    )
     .expect("render_screen");
     let frame_a = frame_from_screen(&capture_a.screen, &profile.name);
 
@@ -193,9 +207,14 @@ fn qualify_grouped_store_and_negative_detection() {
     assert_eq!(outcome2.status(), Status::Matched);
 
     // 4. Negative test: mutate cell text -> CellsDiffer
-    let capture_b = render_screen(40, 10, |f| {
-        f.render_widget("Hello Earth", f.area());
-    }, EdgePolicy::ClipWithReplacement)
+    let capture_b = render_screen(
+        40,
+        10,
+        |f| {
+            f.render_widget("Hello Earth", f.area());
+        },
+        EdgePolicy::ClipWithReplacement,
+    )
     .expect("render_screen");
     let frame_b = frame_from_screen(&capture_b.screen, &profile.name);
 
@@ -223,9 +242,14 @@ fn qualify_grouped_store_and_negative_detection() {
     assert_eq!(outcome_mut_color.status(), Status::CellsDiffer);
 
     // 6. Negative test: mutate dimension -> DimensionMismatch
-    let capture_d = render_screen(50, 10, |f| {
-        f.render_widget("Hello World", f.area());
-    }, EdgePolicy::ClipWithReplacement)
+    let capture_d = render_screen(
+        50,
+        10,
+        |f| {
+            f.render_widget("Hello World", f.area());
+        },
+        EdgePolicy::ClipWithReplacement,
+    )
     .expect("render_screen");
     let frame_d = frame_from_screen(&capture_d.screen, &profile.name);
 
@@ -271,21 +295,30 @@ fn qualify_corrupt_and_tampered_artifact_rejection() {
         .renderer(&VENDORED_FACES)
         .expect("vendored faces parse");
 
-    let capture = render_screen(40, 10, |f| {
-        f.render_widget("Invariant Protection Gate", f.area());
-    }, EdgePolicy::ClipWithReplacement)
+    let capture = render_screen(
+        40,
+        10,
+        |f| {
+            f.render_widget("Invariant Protection Gate", f.area());
+        },
+        EdgePolicy::ClipWithReplacement,
+    )
     .expect("render_screen");
     let frame = frame_from_screen(&capture.screen, &profile.name);
 
     let case_name = "test/qual/tamper";
 
     // 1. Initial check fails closed as MissingApproval
-    let outcome = store.check_with(&mut renderer, case_name, &frame, 1.0).unwrap();
+    let outcome = store
+        .check_with(&mut renderer, case_name, &frame, 1.0)
+        .unwrap();
     assert_eq!(outcome.status(), Status::MissingApproval);
 
     // 2. Accept into approved
     store.accept(case_name).expect("accept");
-    let matched = store.check_with(&mut renderer, case_name, &frame, 1.0).unwrap();
+    let matched = store
+        .check_with(&mut renderer, case_name, &frame, 1.0)
+        .unwrap();
     assert_eq!(matched.status(), Status::Matched);
 
     // Backup valid approved artifacts
@@ -303,7 +336,10 @@ fn qualify_corrupt_and_tampered_artifact_rejection() {
     // 3a. Missing .ansi
     std::fs::remove_file(&approved_ansi).unwrap();
     assert_eq!(
-        store.check_with(&mut renderer, case_name, &frame, 1.0).unwrap().status(),
+        store
+            .check_with(&mut renderer, case_name, &frame, 1.0)
+            .unwrap()
+            .status(),
         Status::MissingApproval
     );
     std::fs::write(&approved_ansi, &orig_ansi).unwrap();
@@ -311,7 +347,10 @@ fn qualify_corrupt_and_tampered_artifact_rejection() {
     // 3b. Missing .txt
     std::fs::remove_file(&approved_txt).unwrap();
     assert_eq!(
-        store.check_with(&mut renderer, case_name, &frame, 1.0).unwrap().status(),
+        store
+            .check_with(&mut renderer, case_name, &frame, 1.0)
+            .unwrap()
+            .status(),
         Status::MissingApproval
     );
     std::fs::write(&approved_txt, &orig_txt).unwrap();
@@ -319,7 +358,10 @@ fn qualify_corrupt_and_tampered_artifact_rejection() {
     // 3c. Missing .html
     std::fs::remove_file(&approved_html).unwrap();
     assert_eq!(
-        store.check_with(&mut renderer, case_name, &frame, 1.0).unwrap().status(),
+        store
+            .check_with(&mut renderer, case_name, &frame, 1.0)
+            .unwrap()
+            .status(),
         Status::MissingApproval
     );
     std::fs::write(&approved_html, &orig_html).unwrap();
@@ -327,7 +369,10 @@ fn qualify_corrupt_and_tampered_artifact_rejection() {
     // 3d. Missing .png
     std::fs::remove_file(&approved_png).unwrap();
     assert_eq!(
-        store.check_with(&mut renderer, case_name, &frame, 1.0).unwrap().status(),
+        store
+            .check_with(&mut renderer, case_name, &frame, 1.0)
+            .unwrap()
+            .status(),
         Status::MissingApproval
     );
     std::fs::write(&approved_png, &orig_png).unwrap();
@@ -336,7 +381,10 @@ fn qualify_corrupt_and_tampered_artifact_rejection() {
     // 4a. Corrupted .ansi (bytes modified) -> CellsDiffer
     std::fs::write(&approved_ansi, b"corrupted ansi content").unwrap();
     assert_eq!(
-        store.check_with(&mut renderer, case_name, &frame, 1.0).unwrap().status(),
+        store
+            .check_with(&mut renderer, case_name, &frame, 1.0)
+            .unwrap()
+            .status(),
         Status::CellsDiffer
     );
     std::fs::write(&approved_ansi, &orig_ansi).unwrap();
@@ -344,7 +392,10 @@ fn qualify_corrupt_and_tampered_artifact_rejection() {
     // 4b. Corrupted .txt (bytes modified) -> CellsDiffer
     std::fs::write(&approved_txt, b"corrupted txt content").unwrap();
     assert_eq!(
-        store.check_with(&mut renderer, case_name, &frame, 1.0).unwrap().status(),
+        store
+            .check_with(&mut renderer, case_name, &frame, 1.0)
+            .unwrap()
+            .status(),
         Status::CellsDiffer
     );
     std::fs::write(&approved_txt, &orig_txt).unwrap();
@@ -352,16 +403,17 @@ fn qualify_corrupt_and_tampered_artifact_rejection() {
     // 4c. Corrupted .png (invalid PNG bytes) -> SnapshotError or non-Matched
     std::fs::write(&approved_png, b"NOT_A_VALID_PNG_CORRUPT_BYTES").unwrap();
     let corrupt_png_outcome = store.check_with(&mut renderer, case_name, &frame, 1.0);
-    match corrupt_png_outcome {
-        Ok(res) => assert_ne!(res.status(), Status::Matched),
-        Err(_) => {} // Expected: error decoding invalid PNG bytes
+    if let Ok(res) = corrupt_png_outcome {
+        assert_ne!(res.status(), Status::Matched);
     }
     std::fs::write(&approved_png, &orig_png).unwrap();
 
     // Verify restore works
     assert_eq!(
-        store.check_with(&mut renderer, case_name, &frame, 1.0).unwrap().status(),
+        store
+            .check_with(&mut renderer, case_name, &frame, 1.0)
+            .unwrap()
+            .status(),
         Status::Matched
     );
 }
-

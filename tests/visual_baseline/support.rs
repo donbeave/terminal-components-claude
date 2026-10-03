@@ -36,9 +36,9 @@ use tuiscotti::formats::{
 use tuiscotti::grouped::{GroupedOutcome, GroupedStore};
 use tuiscotti::render::frame_from_screen;
 use tuiscotti::snapshot::Status;
-use tuiscotti::tui::{CancelToken, MouseMods, Wheel};
 pub use tuiscotti::tui::MouseButton;
 use tuiscotti::tui::Tui;
+use tuiscotti::tui::{CancelToken, MouseMods, Wheel};
 pub use tuiscotti::{Frame, Profile, Renderer, VENDORED_FACES};
 
 pub const SHOWCASE: &str = env!("CARGO_BIN_EXE_showcase");
@@ -481,7 +481,6 @@ impl ScreenExt for tuiscotti::Screen {
                     col_offsets.push((row_str.len(), x));
                     row_str.push_str(&cell.symbol);
                 }
-
             }
             if let Some(byte_idx) = row_str.find(needle) {
                 for &(b_idx, col) in col_offsets.iter().rev() {
@@ -519,18 +518,13 @@ impl Session {
         let deadline = std::time::Instant::now() + Duration::from_secs(8);
         let cancel = CancelToken::new();
         let pred_cell = std::cell::RefCell::new(pred);
-        self.inner.wait_predicate(
-            |obs| pred_cell.borrow_mut()(&obs.screen),
-            deadline,
-            &cancel,
-        )?;
+        self.inner
+            .wait_predicate(|obs| pred_cell.borrow_mut()(&obs.screen), deadline, &cancel)?;
         Ok(())
     }
 
     pub fn wait_for_text(&mut self, needle: &str) -> Result<(), tuiscotti::tui::WaitError> {
-        self.wait_until(|screen| {
-            frame_from_screen(screen, "default").text().contains(needle)
-        })
+        self.wait_until(|screen| frame_from_screen(screen, "default").text().contains(needle))
     }
 
     pub fn wait_idle(&mut self, quiet: Duration) -> Result<(), tuiscotti::tui::WaitError> {
@@ -555,16 +549,28 @@ impl Session {
         self.inner.press(key)
     }
 
-    pub fn scroll(&mut self, col: u16, row: u16, scroll: Scroll) -> Result<(), tuiscotti::tui::TuiError> {
+    pub fn scroll(
+        &mut self,
+        col: u16,
+        row: u16,
+        scroll: Scroll,
+    ) -> Result<(), tuiscotti::tui::TuiError> {
         let wheel = match scroll {
             Scroll::Up => Wheel::Up,
             Scroll::Down => Wheel::Down,
         };
-        self.inner.mouse_wheel(wheel, col, row, MouseMods::default())
+        self.inner
+            .mouse_wheel(wheel, col, row, MouseMods::default())
     }
 
-    pub fn click_with(&mut self, button: MouseButton, col: u16, row: u16) -> Result<(), tuiscotti::tui::TuiError> {
-        self.inner.mouse_down(button, col, row, MouseMods::default())?;
+    pub fn click_with(
+        &mut self,
+        button: MouseButton,
+        col: u16,
+        row: u16,
+    ) -> Result<(), tuiscotti::tui::TuiError> {
+        self.inner
+            .mouse_down(button, col, row, MouseMods::default())?;
         std::thread::sleep(Duration::from_millis(50));
         self.inner.mouse_up(button, col, row, MouseMods::default())
     }
@@ -573,12 +579,21 @@ impl Session {
         self.click_with(MouseButton::Left, col, row)
     }
 
-    pub fn drag(&mut self, from_col: u16, from_row: u16, to_col: u16, to_row: u16) -> Result<(), tuiscotti::tui::TuiError> {
-        self.inner.mouse_down(MouseButton::Left, from_col, from_row, MouseMods::default())?;
+    pub fn drag(
+        &mut self,
+        from_col: u16,
+        from_row: u16,
+        to_col: u16,
+        to_row: u16,
+    ) -> Result<(), tuiscotti::tui::TuiError> {
+        self.inner
+            .mouse_down(MouseButton::Left, from_col, from_row, MouseMods::default())?;
         std::thread::sleep(Duration::from_millis(20));
-        self.inner.mouse_drag(MouseButton::Left, to_col, to_row, MouseMods::default())?;
+        self.inner
+            .mouse_drag(MouseButton::Left, to_col, to_row, MouseMods::default())?;
         std::thread::sleep(Duration::from_millis(20));
-        self.inner.mouse_up(MouseButton::Left, to_col, to_row, MouseMods::default())
+        self.inner
+            .mouse_up(MouseButton::Left, to_col, to_row, MouseMods::default())
     }
 
     pub fn resize(&mut self, cols: u16, rows: u16) -> Result<(), tuiscotti::tui::TuiError> {
@@ -606,7 +621,8 @@ pub fn spawn(case: &Case) -> Session {
         builder = builder.env("NO_COLOR", "1");
     }
 
-    let inner = builder.spawn()
+    let inner = builder
+        .spawn()
         .unwrap_or_else(|e| panic!("spawn `{}` failed: {e:#}", case.name));
     Session {
         inner,
@@ -628,9 +644,14 @@ pub fn boot(session: &mut Session, needle: &str) {
     if !needle.is_empty() {
         let deadline = std::time::Instant::now() + Duration::from_secs(8);
         let cancel = CancelToken::new();
-        session.inner
+        session
+            .inner
             .wait_predicate(
-                |obs| frame_from_screen(&obs.screen, "default").text().contains(needle),
+                |obs| {
+                    frame_from_screen(&obs.screen, "default")
+                        .text()
+                        .contains(needle)
+                },
                 deadline,
                 &cancel,
             )
@@ -639,7 +660,8 @@ pub fn boot(session: &mut Session, needle: &str) {
     }
     let deadline = std::time::Instant::now() + Duration::from_secs(8);
     let cancel = CancelToken::new();
-    session.inner
+    session
+        .inner
         .wait_stable_quiet(deadline, Duration::from_millis(200), &cancel)
         .unwrap_or_else(|e| panic!("boot idle failed: {e:#}"));
 }
@@ -651,9 +673,14 @@ pub fn drive(session: &mut Session, steps: &[&str]) {
         } else if let Some(needle) = step.strip_prefix("wait:") {
             let deadline = std::time::Instant::now() + Duration::from_secs(8);
             let cancel = CancelToken::new();
-            session.inner
+            session
+                .inner
                 .wait_predicate(
-                    |obs| frame_from_screen(&obs.screen, "default").text().contains(needle),
+                    |obs| {
+                        frame_from_screen(&obs.screen, "default")
+                            .text()
+                            .contains(needle)
+                    },
                     deadline,
                     &cancel,
                 )
@@ -671,7 +698,8 @@ pub fn drive(session: &mut Session, steps: &[&str]) {
 pub fn settle_and_gate(session: &mut Session, name: &str) {
     let cancel = CancelToken::new();
     let deadline = std::time::Instant::now() + Duration::from_secs(8);
-    let obs = session.inner
+    let obs = session
+        .inner
         .wait_stable_quiet(deadline, SETTLE, &cancel)
         .unwrap_or_else(|e| panic!("`{name}` never settled: {e:#}"));
     let frame = frame_from_screen(&obs.screen, "default");
@@ -711,9 +739,9 @@ pub fn baseline_store_root() -> PathBuf {
             }
             path
         }
-        Ok(other) => panic!(
-            "unknown VISUAL_BASELINE_STORE `{other}` (expected 'baselines/tuiscotti-v1')"
-        ),
+        Ok(other) => {
+            panic!("unknown VISUAL_BASELINE_STORE `{other}` (expected 'baselines/tuiscotti-v1')")
+        }
         Err(std::env::VarError::NotPresent) => {
             let path = manifest_dir.join(DEFAULT_BASELINE_STORE);
             if !path.is_dir() {
@@ -752,8 +780,13 @@ fn write_artifact_strictly(path: &Path, content: &[u8]) -> Result<(), String> {
     let temp_path = path.with_extension(format!("tmp.{}", std::process::id()));
     std::fs::write(&temp_path, content)
         .map_err(|e| format!("failed to write temp file {}: {e}", temp_path.display()))?;
-    std::fs::rename(&temp_path, path)
-        .map_err(|e| format!("failed to rename {} to {}: {e}", temp_path.display(), path.display()))?;
+    std::fs::rename(&temp_path, path).map_err(|e| {
+        format!(
+            "failed to rename {} to {}: {e}",
+            temp_path.display(),
+            path.display()
+        )
+    })?;
     Ok(())
 }
 
@@ -785,7 +818,16 @@ fn now_iso8601() -> String {
     let month_days = [
         31,
         if leap { 29 } else { 28 },
-        31, 30, 31, 30, 31, 31, 30, 31, 30, 31,
+        31,
+        30,
+        31,
+        30,
+        31,
+        31,
+        30,
+        31,
+        30,
+        31,
     ];
     let mut month = 1;
     for &md in &month_days {
@@ -1037,15 +1079,23 @@ pub fn check_baseline_bundle(
         }
     };
 
-    let approved_txt_bytes = std::fs::read(&approved_paths.txt).map_err(|e| format!("read approved txt: {e}"))?;
-    let approved_png_bytes = std::fs::read(&approved_paths.png).map_err(|e| format!("read approved png: {e}"))?;
-    let approved_html_bytes = std::fs::read(&approved_paths.html).map_err(|e| format!("read approved html: {e}"))?;
-    let approved_frame_bytes = std::fs::read(&approved_paths.frame_json).map_err(|e| format!("read approved frame.json: {e}"))?;
+    let approved_txt_bytes =
+        std::fs::read(&approved_paths.txt).map_err(|e| format!("read approved txt: {e}"))?;
+    let approved_png_bytes =
+        std::fs::read(&approved_paths.png).map_err(|e| format!("read approved png: {e}"))?;
+    let approved_html_bytes =
+        std::fs::read(&approved_paths.html).map_err(|e| format!("read approved html: {e}"))?;
+    let approved_frame_bytes = std::fs::read(&approved_paths.frame_json)
+        .map_err(|e| format!("read approved frame.json: {e}"))?;
 
-    let actual_ansi_bytes = std::fs::read(&actual_paths.ansi).map_err(|e| format!("read actual ansi: {e}"))?;
-    let actual_txt_bytes = std::fs::read(&actual_paths.txt).map_err(|e| format!("read actual txt: {e}"))?;
-    let actual_png_bytes = std::fs::read(&actual_paths.png).map_err(|e| format!("read actual png: {e}"))?;
-    let actual_html_bytes = std::fs::read(&actual_paths.html).map_err(|e| format!("read actual html: {e}"))?;
+    let actual_ansi_bytes =
+        std::fs::read(&actual_paths.ansi).map_err(|e| format!("read actual ansi: {e}"))?;
+    let actual_txt_bytes =
+        std::fs::read(&actual_paths.txt).map_err(|e| format!("read actual txt: {e}"))?;
+    let actual_png_bytes =
+        std::fs::read(&actual_paths.png).map_err(|e| format!("read actual png: {e}"))?;
+    let actual_html_bytes =
+        std::fs::read(&actual_paths.html).map_err(|e| format!("read actual html: {e}"))?;
 
     let ansi_matched = approved_ansi_bytes == actual_ansi_bytes;
     let txt_matched = approved_txt_bytes == actual_txt_bytes;
@@ -1074,7 +1124,10 @@ pub fn check_baseline_bundle(
 
     if !verdict.dims_equal {
         status = Status::DimensionMismatch;
-        notes.push(format!("dimensions differ: {:?} vs {:?}", verdict.expected_dims, verdict.actual_dims));
+        notes.push(format!(
+            "dimensions differ: {:?} vs {:?}",
+            verdict.expected_dims, verdict.actual_dims
+        ));
     } else if verdict.score < 1.0 {
         if status.matched() {
             status = Status::PixelsDiffer;
@@ -1339,4 +1392,3 @@ macro_rules! baseline_case_with_variants {
         }
     };
 }
-
