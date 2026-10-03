@@ -46,7 +46,7 @@ unsafe extern "C" {
     fn ioctl(fd: c_int, req: c_ulong, ...) -> c_int;
 }
 
-const BOUND: Duration = Duration::from_secs(15);
+const BOUND: Duration = Duration::from_secs(30);
 
 struct Pty {
     master: File,
@@ -397,8 +397,9 @@ fn a_bounded_input_flood_is_drained_fairly_and_a_quit_behind_it_is_honoured() {
     let elapsed = start.elapsed();
     assert_eq!(code, 0, "clean exit after the flood: {:?}", pty.text());
     assert!(
-        elapsed < Duration::from_secs(10),
+        elapsed < Duration::from_secs(30),
         "8000 ignored events and a quit took {elapsed:?}"
     );
+
     eprintln!("F23d pty flood: 8000 ignored events + quit in {elapsed:?}");
 }

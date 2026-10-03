@@ -31,8 +31,10 @@ filter = '''
   or test(showcase_audit)
   or test(terminal_default)
   or test(docker_done)
+  or test(holla_pty)
 '''
 threads-required = 2
+
 
 [profile.ci]
 fail-fast = false
