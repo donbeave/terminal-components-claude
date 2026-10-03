@@ -87,6 +87,44 @@ pub const AUDIT_MATRIX_PREFIXES: [&str; 9] = [
     AUDIT_PREFIX_TABLEPRO_PRODUCTION,
 ];
 
+#[derive(serde::Deserialize)]
+struct RootMapEntry {
+    legacy_root: String,
+    target_root: String,
+}
+
+#[derive(serde::Deserialize)]
+struct MigrationMapHeader {
+    root_mappings: Vec<RootMapEntry>,
+}
+
+static ROOT_MAP: std::sync::OnceLock<std::collections::BTreeMap<String, String>> =
+    std::sync::OnceLock::new();
+
+pub fn screen_first_path(p: &str) -> String {
+    let map = ROOT_MAP.get_or_init(|| {
+        let json_str = include_str!("../../docs/verification/snapshot-migration-map.json");
+        let header: MigrationMapHeader =
+            serde_json::from_str(json_str).expect("parse migration map header");
+        header
+            .root_mappings
+            .into_iter()
+            .map(|r| (r.legacy_root, r.target_root))
+            .collect()
+    });
+
+    let parts: Vec<&str> = p.split('/').collect();
+    if parts.len() >= 3 {
+        let color = parts[parts.len() - 1];
+        let size = parts[parts.len() - 2];
+        let root = parts[..parts.len() - 2].join("/");
+        if let Some(target_root) = map.get(&root) {
+            return format!("{target_root}/{size}/{color}");
+        }
+    }
+    p.to_string()
+}
+
 pub fn audit_default_name(prefix: &str, cols: u16, rows: u16, color: Color) -> String {
     format!("{prefix}/{cols}x{rows}/{}", color.suffix())
 }
@@ -96,7 +134,7 @@ pub fn audit_default_name(prefix: &str, cols: u16, rows: u16, color: Color) -> S
 pub fn suite_capture_names() -> BTreeSet<String> {
     let mut names = parse_case_new_names();
     names.extend(generated_matrix_names());
-    names
+    names.into_iter().map(|n| screen_first_path(&n)).collect()
 }
 
 fn generated_matrix_names() -> BTreeSet<String> {
@@ -320,8 +358,9 @@ impl Case {
         color: Color,
         needle: &'static str,
     ) -> Self {
+        let sf_name = screen_first_path(name);
         Self {
-            name: Cow::Borrowed(name),
+            name: Cow::Owned(sf_name),
             bin,
             args,
             cols,
@@ -342,8 +381,9 @@ impl Case {
         color: Color,
         needle: &'static str,
     ) -> Self {
+        let sf_name = screen_first_path(&name);
         Self {
-            name: Cow::Owned(name),
+            name: Cow::Owned(sf_name),
             bin,
             args,
             cols,
@@ -646,7 +686,7 @@ thread_local! {
     );
 }
 
-pub const DEFAULT_BASELINE_STORE: &str = "snapshots";
+pub const DEFAULT_BASELINE_STORE: &str = "baselines/tuiscotti-v1";
 
 pub fn baseline_store_root() -> PathBuf {
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -672,7 +712,7 @@ pub fn baseline_store_root() -> PathBuf {
             path
         }
         Ok(other) => panic!(
-            "unknown VISUAL_BASELINE_STORE `{other}` (expected 'tuiscotti-v1' or 'snapshots')"
+            "unknown VISUAL_BASELINE_STORE `{other}` (expected 'baselines/tuiscotti-v1')"
         ),
         Err(std::env::VarError::NotPresent) => {
             let path = manifest_dir.join(DEFAULT_BASELINE_STORE);
@@ -940,16 +980,153 @@ pub fn write_10_artifact_bundle(
     Ok(())
 }
 
+pub fn check_baseline_bundle(
+    name: &str,
+    frame: &Frame,
+    renderer: &mut Renderer,
+) -> Result<GroupedOutcome, String> {
+    let actual_root = Path::new("target/tuiscotti/actual");
+    let diff_root = Path::new("target/tuiscotti/diff");
+    let approved_root = baseline_store_root();
+
+    write_10_artifact_bundle(actual_root, name, frame, renderer)?;
+
+    let actual_paths = tuiscotti::grouped::ArtifactPaths {
+        ansi: actual_root.join(format!("{name}.ansi")),
+        txt: actual_root.join(format!("{name}.txt")),
+        png: actual_root.join(format!("{name}.png")),
+        html: actual_root.join(format!("{name}.html")),
+        frame_json: actual_root.join(format!("{name}.frame.json")),
+    };
+
+    let approved_paths = tuiscotti::grouped::ArtifactPaths {
+        ansi: approved_root.join(format!("{name}.ansi")),
+        txt: approved_root.join(format!("{name}.txt")),
+        png: approved_root.join(format!("{name}.png")),
+        html: approved_root.join(format!("{name}.html")),
+        frame_json: approved_root.join(format!("{name}.frame.json")),
+    };
+
+    let approved_ansi_bytes = match std::fs::read(&approved_paths.ansi) {
+        Ok(b) => b,
+        Err(_) => {
+            return Ok(GroupedOutcome {
+                outcome: tuiscotti::snapshot::CompareOutcome {
+                    name: name.to_string(),
+                    status: Status::MissingApproval,
+                    cell_diffs: Vec::new(),
+                    cell_diff_total: 0,
+                    pixel_score: None,
+                    approved_png_regenerated: false,
+                    digest_expected: None,
+                    digest_actual: frame.digest().to_string(),
+                    actual_frame: actual_paths.frame_json.clone(),
+                    actual_png: actual_paths.png.clone(),
+                    expected_frame: approved_paths.frame_json.clone(),
+                    expected_png: None,
+                    expected_png_bytes: None,
+                    diff_png: None,
+                    note: "missing approved ansi".to_string(),
+                },
+                ansi_match: None,
+                txt_match: None,
+                html_match: None,
+                actual: actual_paths,
+                approved: approved_paths,
+            });
+        }
+    };
+
+    let approved_txt_bytes = std::fs::read(&approved_paths.txt).map_err(|e| format!("read approved txt: {e}"))?;
+    let approved_png_bytes = std::fs::read(&approved_paths.png).map_err(|e| format!("read approved png: {e}"))?;
+    let approved_html_bytes = std::fs::read(&approved_paths.html).map_err(|e| format!("read approved html: {e}"))?;
+    let approved_frame_bytes = std::fs::read(&approved_paths.frame_json).map_err(|e| format!("read approved frame.json: {e}"))?;
+
+    let actual_ansi_bytes = std::fs::read(&actual_paths.ansi).map_err(|e| format!("read actual ansi: {e}"))?;
+    let actual_txt_bytes = std::fs::read(&actual_paths.txt).map_err(|e| format!("read actual txt: {e}"))?;
+    let actual_png_bytes = std::fs::read(&actual_paths.png).map_err(|e| format!("read actual png: {e}"))?;
+    let actual_html_bytes = std::fs::read(&actual_paths.html).map_err(|e| format!("read actual html: {e}"))?;
+
+    let ansi_matched = approved_ansi_bytes == actual_ansi_bytes;
+    let txt_matched = approved_txt_bytes == actual_txt_bytes;
+    let html_matched = approved_html_bytes == actual_html_bytes;
+
+    let verdict = tuiscotti::diff::compare_png(&approved_png_bytes, &actual_png_bytes)
+        .map_err(|e| format!("compare png: {e}"))?;
+
+    let approved_frame: Frame = serde_json::from_slice(&approved_frame_bytes)
+        .map_err(|e| format!("parse approved frame: {e}"))?;
+
+    let mut status = Status::Matched;
+    let mut notes = Vec::new();
+    let mut diff_png = None;
+
+    if !txt_matched {
+        status = Status::CellsDiffer;
+        notes.push("txt differs".to_string());
+    } else if !ansi_matched {
+        status = Status::CellsDiffer;
+        notes.push("ansi differs".to_string());
+    } else if approved_frame.digest() != frame.digest() {
+        status = Status::CellsDiffer;
+        notes.push("frame digest differs".to_string());
+    }
+
+    if !verdict.dims_equal {
+        status = Status::DimensionMismatch;
+        notes.push(format!("dimensions differ: {:?} vs {:?}", verdict.expected_dims, verdict.actual_dims));
+    } else if verdict.score < 1.0 {
+        if status.matched() {
+            status = Status::PixelsDiffer;
+        }
+        let diff_path = diff_root.join(format!("{name}.png"));
+        if let Some(parent) = diff_path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        let _ = std::fs::write(&diff_path, &verdict.diff_png);
+        diff_png = Some(diff_path);
+        notes.push(format!("pixel similarity: {:.6}", verdict.score));
+    }
+
+    if !html_matched {
+        if status.matched() {
+            status = Status::PixelsDiffer;
+        }
+        notes.push("html differs".to_string());
+    }
+
+    Ok(GroupedOutcome {
+        outcome: tuiscotti::snapshot::CompareOutcome {
+            name: name.to_string(),
+            status,
+            cell_diffs: Vec::new(),
+            cell_diff_total: 0,
+            pixel_score: Some(verdict.score),
+            approved_png_regenerated: false,
+            digest_expected: Some(approved_frame.digest().to_string()),
+            digest_actual: frame.digest().to_string(),
+            actual_frame: actual_paths.frame_json.clone(),
+            actual_png: actual_paths.png.clone(),
+            expected_frame: approved_paths.frame_json.clone(),
+            expected_png: Some(approved_paths.png.clone()),
+            expected_png_bytes: Some(approved_png_bytes),
+            diff_png,
+            note: notes.join("; "),
+        },
+        ansi_match: Some(ansi_matched),
+        txt_match: Some(txt_matched),
+        html_match: Some(html_matched),
+        actual: actual_paths,
+        approved: approved_paths,
+    })
+}
+
 pub fn gate(name: &str, frame: &Frame) -> GroupedOutcome {
+    let target_name = screen_first_path(name);
     RENDERER.with(|r| {
         let mut renderer = r.borrow_mut();
-        let actual_root = Path::new("target/tuiscotti/actual");
-        write_10_artifact_bundle(actual_root, name, frame, &mut renderer)
-            .unwrap_or_else(|e| panic!("write_10_artifact_bundle `{name}` failed: {e}"));
-
-        store()
-            .check_with(&mut renderer, name, frame, 1.0)
-            .unwrap_or_else(|e| panic!("gate `{name}` failed: {e}"))
+        check_baseline_bundle(&target_name, frame, &mut renderer)
+            .unwrap_or_else(|e| panic!("gate `{target_name}` failed: {e}"))
     })
 }
 

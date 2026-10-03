@@ -673,7 +673,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:brand.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W01-02",
@@ -730,7 +730,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:brand.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W01-03",
@@ -787,7 +787,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:brand.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W01-04",
@@ -844,7 +844,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:brand.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W02-01",
@@ -901,7 +901,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:button.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W02-02",
@@ -958,7 +958,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:button.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W02-03",
@@ -1015,7 +1015,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:button.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W02-04",
@@ -1072,7 +1072,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:button.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W02-05",
@@ -1129,7 +1129,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:button.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W03-01",
@@ -1186,7 +1186,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:checkbox.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W03-02",
@@ -1243,7 +1243,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:checkbox.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W03-03",
@@ -1300,7 +1300,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:checkbox.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W03-04",
@@ -1357,7 +1357,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:checkbox.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W06-01",
@@ -1414,7 +1414,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:chip-bar.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W06-02",
@@ -1471,7 +1471,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:chip-bar.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W06-03",
@@ -1528,7 +1528,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:chip-bar.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W06-04",
@@ -1585,7 +1585,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:chip-bar.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W06-05",
@@ -1642,7 +1642,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:chip-bar.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W29-01",
@@ -1699,7 +1699,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:code-editor.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W29-02",
@@ -1756,7 +1756,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:code-editor.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W29-03",
@@ -1813,7 +1813,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:code-editor.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W29-04",
@@ -1870,7 +1870,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:code-editor.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W29-05",
@@ -1927,7 +1927,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:code-editor.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W29-06",
@@ -1984,7 +1984,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:code-editor.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W29-07",
@@ -2041,7 +2041,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:code-editor.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W19-01",
@@ -2098,7 +2098,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:command-palette.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W19-02",
@@ -2155,7 +2155,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:command-palette.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W19-03",
@@ -2212,7 +2212,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:command-palette.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W19-04",
@@ -2269,7 +2269,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:command-palette.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W21-01",
@@ -2326,7 +2326,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:completion.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W21-02",
@@ -2383,7 +2383,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:completion.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W21-03",
@@ -2440,7 +2440,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:completion.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W21-04",
@@ -2497,7 +2497,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:completion.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W21-05",
@@ -2554,7 +2554,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:completion.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W24-01",
@@ -2611,7 +2611,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:context-menu.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W24-02",
@@ -2668,7 +2668,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:context-menu.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W24-03",
@@ -2725,7 +2725,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:context-menu.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W24-04",
@@ -2782,7 +2782,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:context-menu.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W22-01",
@@ -2839,7 +2839,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:dialog.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W22-02",
@@ -2896,7 +2896,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:dialog.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W22-03",
@@ -2953,7 +2953,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:dialog.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W22-04",
@@ -3010,7 +3010,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:dialog.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W22-05",
@@ -3067,7 +3067,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:dialog.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W30-01",
@@ -3124,7 +3124,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:diff-view.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W30-02",
@@ -3181,7 +3181,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:diff-view.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W30-03",
@@ -3238,7 +3238,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:diff-view.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W30-04",
@@ -3295,7 +3295,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:diff-view.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W30-05",
@@ -3352,7 +3352,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:diff-view.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W30-06",
@@ -3409,7 +3409,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:diff-view.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W36-01",
@@ -3466,7 +3466,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:empty.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W36-02",
@@ -3523,7 +3523,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:empty.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W36-03",
@@ -3580,7 +3580,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:empty.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W36-04",
@@ -3637,7 +3637,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:empty.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W07-01",
@@ -3694,7 +3694,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:field.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W07-02",
@@ -3751,7 +3751,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:field.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W07-03",
@@ -3808,7 +3808,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:field.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W07-04",
@@ -3865,7 +3865,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:field.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W13-01",
@@ -3922,7 +3922,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:filter-list.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W13-02",
@@ -3979,7 +3979,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:filter-list.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W13-03",
@@ -4036,7 +4036,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:filter-list.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W13-04",
@@ -4093,7 +4093,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:filter-list.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W13-05",
@@ -4150,7 +4150,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:filter-list.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W11-01",
@@ -4207,7 +4207,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:form.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W11-02",
@@ -4264,7 +4264,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:form.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W11-03",
@@ -4321,7 +4321,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:form.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W11-04",
@@ -4378,7 +4378,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:form.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W11-05",
@@ -4435,7 +4435,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:form.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W28-01",
@@ -4492,7 +4492,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:grid.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W28-02",
@@ -4549,7 +4549,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:grid.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W28-03",
@@ -4606,7 +4606,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:grid.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W28-04",
@@ -4663,7 +4663,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:grid.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W28-05",
@@ -4720,7 +4720,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:grid.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W28-06",
@@ -4777,7 +4777,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:grid.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W28-07",
@@ -4834,7 +4834,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:grid.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W26-01",
@@ -4891,7 +4891,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:help-overlay.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W26-02",
@@ -4948,7 +4948,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:help-overlay.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W26-03",
@@ -5005,7 +5005,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:help-overlay.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W26-04",
@@ -5062,7 +5062,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:help-overlay.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W41-01",
@@ -5119,7 +5119,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:hint-bar.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W41-02",
@@ -5176,7 +5176,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:hint-bar.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W41-03",
@@ -5233,7 +5233,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:hint-bar.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W41-04",
@@ -5290,7 +5290,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:hint-bar.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W41-05",
@@ -5347,7 +5347,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:hint-bar.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W42-01",
@@ -5404,7 +5404,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:key-hint.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W42-02",
@@ -5461,7 +5461,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:key-hint.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W42-03",
@@ -5518,7 +5518,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:key-hint.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W42-04",
@@ -5575,7 +5575,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:key-hint.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W12-01",
@@ -5632,7 +5632,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:list.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W12-02",
@@ -5689,7 +5689,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:list.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W12-03",
@@ -5746,7 +5746,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:list.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W12-04",
@@ -5803,7 +5803,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:list.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W12-05",
@@ -5860,7 +5860,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:list.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W12-06",
@@ -5917,7 +5917,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:list.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W25-01",
@@ -5974,7 +5974,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:menu-bar.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W25-02",
@@ -6031,7 +6031,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:menu-bar.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W25-03",
@@ -6088,7 +6088,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:menu-bar.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W25-04",
@@ -6145,7 +6145,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:menu-bar.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W23-01",
@@ -6202,7 +6202,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:menu.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W23-02",
@@ -6259,7 +6259,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:menu.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W23-03",
@@ -6316,7 +6316,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:menu.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W23-04",
@@ -6373,7 +6373,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:menu.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W23-05",
@@ -6430,7 +6430,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:menu.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W39-01",
@@ -6487,7 +6487,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:meter.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W39-02",
@@ -6544,7 +6544,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:meter.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W39-03",
@@ -6601,7 +6601,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:meter.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W39-04",
@@ -6658,7 +6658,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:meter.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W39-05",
@@ -6715,7 +6715,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:meter.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W14-01",
@@ -6772,7 +6772,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:nav-list.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W14-02",
@@ -6829,7 +6829,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:nav-list.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W14-03",
@@ -6886,7 +6886,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:nav-list.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W14-04",
@@ -6943,7 +6943,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:nav-list.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W14-05",
@@ -7000,7 +7000,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:nav-list.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W32-01",
@@ -7057,7 +7057,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:panel.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W32-02",
@@ -7114,7 +7114,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:panel.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W32-03",
@@ -7171,7 +7171,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:panel.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W32-04",
@@ -7228,7 +7228,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:panel.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W20-01",
@@ -7285,7 +7285,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:picker-chain.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W20-02",
@@ -7342,7 +7342,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:picker-chain.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W20-03",
@@ -7399,7 +7399,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:picker-chain.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W20-04",
@@ -7456,7 +7456,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:picker-chain.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W20-05",
@@ -7513,7 +7513,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:picker-chain.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W18-01",
@@ -7570,7 +7570,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:picker.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W18-02",
@@ -7627,7 +7627,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:picker.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W18-03",
@@ -7684,7 +7684,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:picker.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W18-04",
@@ -7741,7 +7741,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:picker.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W18-05",
@@ -7798,7 +7798,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:picker.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W37-01",
@@ -7855,7 +7855,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:progress-bar.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W37-02",
@@ -7912,7 +7912,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:progress-bar.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W37-03",
@@ -7969,7 +7969,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:progress-bar.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W37-04",
@@ -8026,7 +8026,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:progress-bar.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W37-05",
@@ -8083,7 +8083,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:progress-bar.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W35-01",
@@ -8140,7 +8140,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:props-list.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W35-02",
@@ -8197,7 +8197,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:props-list.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W35-03",
@@ -8254,7 +8254,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:props-list.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W35-04",
@@ -8311,7 +8311,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:props-list.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W34-01",
@@ -8368,7 +8368,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:props.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W34-02",
@@ -8425,7 +8425,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:props.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W34-03",
@@ -8482,7 +8482,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:props.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W34-04",
@@ -8539,7 +8539,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:props.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W05-01",
@@ -8596,7 +8596,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:radio-group.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W05-02",
@@ -8653,7 +8653,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:radio-group.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W05-03",
@@ -8710,7 +8710,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:radio-group.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W05-04",
@@ -8767,7 +8767,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:radio-group.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W45-01",
@@ -8824,7 +8824,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:scroll-region.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W45-02",
@@ -8881,7 +8881,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:scroll-region.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W45-03",
@@ -8938,7 +8938,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:scroll-region.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W45-04",
@@ -8995,7 +8995,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:scroll-region.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W45-05",
@@ -9052,7 +9052,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:scroll-region.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W45-06",
@@ -9109,7 +9109,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:scroll-region.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W10-01",
@@ -9166,7 +9166,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:select.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W10-02",
@@ -9223,7 +9223,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:select.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W10-03",
@@ -9280,7 +9280,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:select.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W10-04",
@@ -9337,7 +9337,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:select.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W10-05",
@@ -9394,7 +9394,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:select.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W38-01",
@@ -9451,7 +9451,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:spinner.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W38-02",
@@ -9508,7 +9508,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:spinner.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W38-03",
@@ -9565,7 +9565,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:spinner.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W38-04",
@@ -9622,7 +9622,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:spinner.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W38-05",
@@ -9679,7 +9679,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:spinner.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W33-01",
@@ -9736,7 +9736,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:split-pane.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W33-02",
@@ -9793,7 +9793,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:split-pane.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W33-03",
@@ -9850,7 +9850,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:split-pane.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W33-04",
@@ -9907,7 +9907,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:split-pane.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W33-05",
@@ -9964,7 +9964,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:split-pane.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W40-01",
@@ -10021,7 +10021,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:status-bar.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W40-02",
@@ -10078,7 +10078,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:status-bar.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W40-03",
@@ -10135,7 +10135,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:status-bar.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W40-04",
@@ -10192,7 +10192,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:status-bar.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W40-05",
@@ -10249,7 +10249,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:status-bar.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W16-01",
@@ -10306,7 +10306,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:steps.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W16-02",
@@ -10363,7 +10363,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:steps.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W16-03",
@@ -10420,7 +10420,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:steps.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W16-04",
@@ -10477,7 +10477,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:steps.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W16-05",
@@ -10534,7 +10534,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:steps.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W17-01",
@@ -10591,7 +10591,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:tabs.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W17-02",
@@ -10648,7 +10648,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:tabs.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W17-03",
@@ -10705,7 +10705,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:tabs.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W17-04",
@@ -10762,7 +10762,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:tabs.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W17-05",
@@ -10819,7 +10819,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:tabs.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W44-01",
@@ -10876,7 +10876,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:terminal-view.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W44-02",
@@ -10933,7 +10933,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:terminal-view.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W44-03",
@@ -10990,7 +10990,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:terminal-view.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W44-04",
@@ -11047,7 +11047,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:terminal-view.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W44-05",
@@ -11104,7 +11104,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:terminal-view.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W44-06",
@@ -11161,7 +11161,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:terminal-view.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W09-01",
@@ -11218,7 +11218,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:text-area.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W09-02",
@@ -11275,7 +11275,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:text-area.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W09-03",
@@ -11332,7 +11332,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:text-area.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W09-04",
@@ -11389,7 +11389,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:text-area.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W09-05",
@@ -11446,7 +11446,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:text-area.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W09-06",
@@ -11503,7 +11503,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:text-area.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W08-01",
@@ -11560,7 +11560,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:text-input.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W08-02",
@@ -11617,7 +11617,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:text-input.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W08-03",
@@ -11674,7 +11674,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:text-input.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W08-04",
@@ -11731,7 +11731,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:text-input.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W08-05",
@@ -11788,7 +11788,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:text-input.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W08-06",
@@ -11845,7 +11845,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:text-input.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W08-07",
@@ -11902,7 +11902,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:text-input.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W31-01",
@@ -11959,7 +11959,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:text-viewport.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W31-02",
@@ -12016,7 +12016,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:text-viewport.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W31-03",
@@ -12073,7 +12073,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:text-viewport.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W31-04",
@@ -12130,7 +12130,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:text-viewport.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W31-05",
@@ -12187,7 +12187,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:text-viewport.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W31-06",
@@ -12244,7 +12244,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:text-viewport.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W31-07",
@@ -12301,7 +12301,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:text-viewport.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W04-01",
@@ -12358,7 +12358,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:toggle.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W04-02",
@@ -12415,7 +12415,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:toggle.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W04-03",
@@ -12472,7 +12472,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:toggle.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W04-04",
@@ -12529,7 +12529,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:toggle.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W43-01",
@@ -12586,7 +12586,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:too-small.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W43-02",
@@ -12643,7 +12643,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:too-small.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W43-03",
@@ -12700,7 +12700,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:too-small.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W43-04",
@@ -12757,7 +12757,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:too-small.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W15-01",
@@ -12814,7 +12814,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:tree.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W15-02",
@@ -12871,7 +12871,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:tree.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W15-03",
@@ -12928,7 +12928,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:tree.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W15-04",
@@ -12985,7 +12985,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:tree.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W15-05",
@@ -13042,7 +13042,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:tree.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W27-01",
@@ -13099,7 +13099,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:wizard.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W27-02",
@@ -13156,7 +13156,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:wizard.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W27-03",
@@ -13213,7 +13213,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:wizard.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "W27-04",
@@ -13270,7 +13270,7 @@
       ],
       "capture_method": "DirectRatatui",
       "provenance": "capture-plan:wizard.json",
-      "approval_state": "approved"
+      "approval_state": "planned"
     },
     {
       "id": "LEGACY:holla/audit/rust",

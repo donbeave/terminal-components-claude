@@ -47,15 +47,26 @@ use std::path::Path;
 use tuiscotti::grouped::{self, GroupedStore};
 use tuiscotti::{Profile, VENDORED_FACES};
 
-const STORE_EXTS: [&str; 4] = ["ansi", "txt", "png", "html"];
+const STORE_EXTS: [&str; 10] = [
+    "frame.json",
+    "ansi",
+    "txt",
+    "png",
+    "html",
+    "ascii",
+    "ascii.loss.json",
+    "png.fidelity.json",
+    "observations.json",
+    "manifest.json",
+];
 
-/// Cheap non-PTY gate: committed `snapshots/` names match the suite, each
-/// scenario is `group/sub_group/leaf` with exactly four artifacts, and the
-/// legacy `shots/` corpus is gone.
+/// Cheap non-PTY gate: committed `baselines/tuiscotti-v1` names match the suite, each
+/// scenario is screen-first `app/screen/.../geometry/color` with exactly ten artifacts,
+/// and the legacy `snapshots/` corpus is gone.
 #[test]
 fn store_integrity() {
     let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let approved = manifest.join("snapshots");
+    let approved = manifest.join("baselines/tuiscotti-v1");
     let store = GroupedStore::new(&approved);
     let store_names: BTreeSet<String> = store
         .approved_names()
@@ -66,7 +77,7 @@ fn store_integrity() {
     let (by_name, extra) = walk_store(&approved);
     assert!(
         extra.is_empty(),
-        "snapshots/ has files that are not .ansi/.txt/.png/.html: {}",
+        "baselines/tuiscotti-v1 has unexpected files: {}",
         extra.join(", ")
     );
 
@@ -83,7 +94,7 @@ fn store_integrity() {
     }
     assert!(
         incomplete.is_empty(),
-        "every scenario needs exactly four artifacts (.ansi/.txt/.png/.html): {}",
+        "every scenario needs exactly ten artifacts: {}",
         incomplete.join("; ")
     );
 
@@ -91,8 +102,8 @@ fn store_integrity() {
         grouped::validate_name(name).unwrap_or_else(|e| panic!("{e}"));
         let slashes = name.bytes().filter(|&b| b == b'/').count();
         assert!(
-            slashes >= 2,
-            "scenario `{name}` must be nested under group/sub_group/… (at least two `/`)"
+            slashes >= 3,
+            "scenario `{name}` must be nested under screen-first hierarchy (at least three `/`)"
         );
         let mut parts = name.rsplit('/');
         let color = parts.next().expect("color leaf");
@@ -136,8 +147,20 @@ fn store_integrity() {
     );
 
     assert!(
+        !Path::new("snapshots").exists(),
+        "legacy snapshots/ corpus must be deleted"
+    );
+    assert!(
         !Path::new("shots").exists(),
         "legacy shots/ corpus must be deleted"
+    );
+    assert!(
+        approved.join("corpus-index.json").is_file(),
+        "corpus-index.json must exist"
+    );
+    assert!(
+        approved.join("admission-record.json").is_file(),
+        "admission-record.json must exist"
     );
 }
 
@@ -167,16 +190,22 @@ fn walk_store_dir(
             continue;
         }
         let rel = posix_rel(root, &path);
-        let Some((name, ext)) = rel.rsplit_once('.') else {
-            extra.push(rel);
+        if rel == "corpus-index.json" || rel == "admission-record.json" {
             continue;
-        };
-        if STORE_EXTS.contains(&ext) {
-            by_name
-                .entry(name.to_string())
-                .or_default()
-                .insert(ext.to_string());
-        } else {
+        }
+        let mut matched = false;
+        for ext in STORE_EXTS {
+            let dot_ext = format!(".{ext}");
+            if let Some(name) = rel.strip_suffix(&dot_ext) {
+                by_name
+                    .entry(name.to_string())
+                    .or_default()
+                    .insert(ext.to_string());
+                matched = true;
+                break;
+            }
+        }
+        if !matched {
             extra.push(rel);
         }
     }

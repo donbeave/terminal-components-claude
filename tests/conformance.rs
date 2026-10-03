@@ -54,9 +54,18 @@ fn test_case_registry_integrity_and_authority_lanes() {
         assert!(!case.capabilities.is_empty());
 
         match case.authority_lane {
-            AuthorityLane::ExistingOracle => existing_count += 1,
-            AuthorityLane::ExtractedOracle => extracted_count += 1,
-            AuthorityLane::Extension => extension_count += 1,
+            AuthorityLane::ExistingOracle => {
+                existing_count += 1;
+                assert_eq!(case.approval_state, "approved", "existing legacy oracle case `{}` must be approved", case.id);
+            }
+            AuthorityLane::ExtractedOracle => {
+                extracted_count += 1;
+                assert_eq!(case.approval_state, "planned", "unextracted component case `{}` must be planned", case.id);
+            }
+            AuthorityLane::Extension => {
+                extension_count += 1;
+                assert_eq!(case.approval_state, "planned", "extension case `{}` must be planned", case.id);
+            }
         }
     }
 
@@ -71,7 +80,29 @@ fn test_case_registry_integrity_and_authority_lanes() {
 #[test]
 fn test_legacy_roots_match_snapshot_disk_tree() {
     let manifest = RequiredCasesManifest::load();
-    let snapshots_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("snapshots");
+    let baseline_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("baselines/tuiscotti-v1");
+    let legacy_snapshots_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("snapshots");
+
+    assert!(
+        !legacy_snapshots_dir.exists(),
+        "legacy snapshots/ corpus must be deleted post-cutover"
+    );
+
+    let map_bytes = std::fs::read(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("docs/verification/snapshot-migration-map.json"),
+    )
+    .expect("read migration map");
+    let map: serde_json::Value = serde_json::from_slice(&map_bytes).expect("parse migration map");
+    let root_mappings = map["root_mappings"].as_array().expect("root mappings array");
+    let rmaps: std::collections::BTreeMap<&str, &str> = root_mappings
+        .iter()
+        .map(|r| {
+            (
+                r["legacy_root"].as_str().unwrap(),
+                r["target_root"].as_str().unwrap(),
+            )
+        })
+        .collect();
 
     let legacy_cases: Vec<_> = manifest
         .cases
@@ -82,11 +113,14 @@ fn test_legacy_roots_match_snapshot_disk_tree() {
     assert_eq!(legacy_cases.len(), 302);
 
     for case in legacy_cases {
-        let root = case.id.strip_prefix("LEGACY:").unwrap();
-        let root_path = snapshots_dir.join(root);
+        let legacy_root = case.id.strip_prefix("LEGACY:").unwrap();
+        let target_root = rmaps.get(legacy_root).unwrap_or_else(|| {
+            panic!("legacy root `{legacy_root}` must be in migration map")
+        });
+        let root_path = baseline_dir.join(target_root);
         assert!(
             root_path.exists(),
-            "legacy snapshot directory for `{root}` must exist on disk: {}",
+            "target baseline directory for `{target_root}` must exist on disk: {}",
             root_path.display()
         );
     }
@@ -119,9 +153,9 @@ fn test_negative_manifest_mutations_fail_validation() {
         "dropped case must violate total_cases_count invariant"
     );
 
-    // 3. Fictitious legacy root must not exist in snapshots/
+    // 3. Fictitious legacy root must not exist in baselines/tuiscotti-v1/
     let fictitious_root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("snapshots")
+        .join("baselines/tuiscotti-v1")
         .join("nonexistent_app")
         .join("invalid_page");
     assert!(!fictitious_root.exists(), "fictitious legacy root must not exist");
