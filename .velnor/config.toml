@@ -8,7 +8,7 @@ schema = 1
 [workflow]
 name = "CI"
 policy = "consumer-v1"
-default_branch = "termrock-refactor"
+default_branch = "termrock-implementation"
 
 # Optional resource limits for generated jobs.
 # [resources]

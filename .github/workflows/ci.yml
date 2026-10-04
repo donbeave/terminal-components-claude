@@ -9,7 +9,7 @@ name: CI
       - ready_for_review
   push:
     branches:
-      - termrock-refactor
+      - termrock-implementation
   merge_group:
 permissions:
   contents: read
@@ -190,7 +190,7 @@ jobs:
     timeout-minutes: 10
     needs:
       - required
-    if: github.event_name == 'push' && github.ref == 'refs/heads/termrock-refactor'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/termrock-implementation'
     steps:
       - name: Acquire Velnor
         env:
