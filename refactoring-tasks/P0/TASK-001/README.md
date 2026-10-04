@@ -19,7 +19,7 @@ Dependencies: none. Canonical contracts: [architecture/overview.md](../../../doc
 
 ## Preconditions
 
-- **P-001:** The caller has supplied a committed descendant of annotated `visual-baseline` (`4a79c0a2d40fca46fc406b77157ce3b3f12ec16b`) on `termrock-refactor`.
+- **P-001:** The caller has supplied a committed descendant of annotated `visual-baseline` (`4a79c0a2d40fca46fc406b77157ce3b3f12ec16b`) on `termrock-implementation` (created from the accepted Stage A commit).
 - **P-002:** The linked canonical architecture, API, component, design, and verification documents are present.
 - **P-003:** The future implementation environment provides `rtk`, Mise, and `cargo nextest`.
 - **P-004:** Implementation starts from this repository's current root Cargo package; P0 establishes the in-repository workspace boundary without moving the applications or changing current package identity.
@@ -123,7 +123,7 @@ Then the ordered UPDATE, INSERT, and DELETE statements and documented boundary o
 ## Fixed decisions
 
 - **D-001:** Existing baseline outputs remain immutable `ExistingOracle` inputs; extracted evidence and future extensions stay separately labelled.
-- **D-002:** The work stays in this repository on `termrock-refactor`; it never creates a separate implementation repository.
+- **D-002:** The work stays in this repository on `termrock-implementation`; it never creates a separate implementation repository.
 - **D-003:** The package's verifier scope is enforced by narrow writable library/conformance paths and forbidden application/oracle paths.
 - **D-004:** The conformance package and toolchain pin live in this repository; the discarded separate-repository source layout is not a destination.
 

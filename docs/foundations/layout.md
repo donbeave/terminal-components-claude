@@ -2,7 +2,7 @@
 
 **Canonical owner:** geometry, measurement, clipping and responsive allocation for
 Termrock components. This is the target contract for the in-place refactor on
-`termrock-refactor`; it is not a claim about the current Rust implementation.
+`termrock-implementation`; it is not a claim about the current Rust implementation.
 
 **Specification record:** F05, legacy family C05. The visual evidence is the
 immutable `visual-baseline` commit

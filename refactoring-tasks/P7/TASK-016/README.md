@@ -13,13 +13,13 @@ The implementation satisfies the canonical Termrock API and architecture ownersh
 
 ## Context
 
-After composition, audit all public exports and shared ownership. Legacy source names may remain temporarily as internals, but future documentation and exports must describe Termrock's constrained API.
+After composition and incremental consumer adoption, audit all public exports and shared ownership. Legacy source names may remain temporarily as internals, but future documentation and exports must describe Termrock's constrained API.
 
 Dependencies: TASK-015. Canonical contracts: [api/public-api.md](../../../docs/api/public-api.md), [api/types.md](../../../docs/api/types.md), [api/authoring.md](../../../docs/api/authoring.md), [architecture/overview.md](../../../docs/architecture/overview.md), [implementation/plan.md](../../../docs/implementation/plan.md), [verification/conformance.md](../../../docs/verification/conformance.md).
 
 ## Preconditions
 
-- **P-001:** The caller has supplied a committed descendant of annotated `visual-baseline` (`4a79c0a2d40fca46fc406b77157ce3b3f12ec16b`) on `termrock-refactor`.
+- **P-001:** The caller has supplied a committed descendant of annotated `visual-baseline` (`4a79c0a2d40fca46fc406b77157ce3b3f12ec16b`) on `termrock-implementation`.
 - **P-002:** The linked canonical architecture, API, component, design, and verification documents are present.
 - **P-003:** The future implementation environment provides `rtk` and `cargo nextest`.
 
@@ -92,7 +92,7 @@ Then application source, snapshots, baseline tests, and product integrations are
 ## Fixed decisions
 
 - **D-001:** The repository becomes Termrock in place over time; this task closes the target API without claiming all source identifiers are already renamed.
-- **D-002:** The work stays in this repository on `termrock-refactor`; it never creates a separate implementation repository.
+- **D-002:** The work stays in this repository on `termrock-implementation`; it never creates a separate implementation repository.
 - **D-003:** The package's verifier scope is enforced by narrow writable library/conformance paths and forbidden application/oracle paths.
 
 ## Checklist

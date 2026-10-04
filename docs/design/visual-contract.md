@@ -17,7 +17,7 @@ and the [visual parity proof](../verification/visual-parity.md).
 Visual parity has three explicit evidence lanes:
 
 1. **ExistingOracle** is an approved artifact already present under the frozen
-   source tree, including the protected [snapshot tree](../../snapshots) and
+   source tree, including the protected [baseline tree](../../baselines/tuiscotti-v1/) and
    application output.
 2. **ExtractedOracle** is a newly isolated component or state captured from the
    unchanged baseline by a reviewed oracle adapter.

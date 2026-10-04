@@ -8,7 +8,7 @@
 
 **Scope:** the constrained surface for implementing a new reusable Termrock component or a narrowly scoped product artwork fixture. Standard components remain the preferred surface for application authors.
 
-This surface belongs to the future in-place Termrock library on `termrock-refactor` in this repository. It does not define a separate repository or a second application framework.
+This surface belongs to the future in-place Termrock library on `termrock-implementation` in this repository. It does not define a separate repository or a second application framework.
 
 See the [public API contract](../api/public-api.md), [API authoring contract](../api/authoring.md), [architecture overview](../architecture/overview.md), [runtime contract](../foundations/runtime.md), [component index](../components/README.md), and [conformance contract](../verification/conformance.md).
 

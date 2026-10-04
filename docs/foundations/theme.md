@@ -2,7 +2,7 @@
 
 **Canonical owner:** semantic surfaces, roles, recipe lookup, part patches,
 and terminal color-capability conversion.
-This is the target contract for the in-place refactor on `termrock-refactor`;
+This is the target contract for the in-place refactor on `termrock-implementation`;
 it does not describe a completed source rename.
 
 **Specification record:** F06, legacy family C06. The visual authority is the

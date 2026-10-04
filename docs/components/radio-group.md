@@ -3,7 +3,7 @@
 **Component ID:** W05\
 **Group:** Controls\
 **Phase:** P3\
-**Contract status:** canonical Termrock target; implementation is future work on `termrock-refactor`.
+**Contract status:** canonical Termrock target; implementation is future work on `termrock-implementation`.
 
 ## Purpose and scope
 

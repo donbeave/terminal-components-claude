@@ -2,7 +2,7 @@
 
 Canonical Termrock contract for W25. `MenuBar` is the one-row chrome wrapper
 around the shared [`Menu`](./menu.md) engine. This is a target contract for the
-in-place refactor on `termrock-refactor`; it does not rename current source or
+in-place refactor on `termrock-implementation`; it does not rename current source or
 redesign any frozen application.
 
 | Field | Value |

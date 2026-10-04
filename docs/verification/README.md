@@ -7,7 +7,7 @@ candidate output, or change an application, test, or snapshot.
 
 The frozen visual and observable-interaction authority is commit
 `4a79c0a2d40fca46fc406b77157ce3b3f12ec16b`, resolved by the annotated
-`visual-baseline` tag. The approved artifact tree under [`../../snapshots/`](../../snapshots/)
+`visual-baseline` tag. The approved artifact tree under [`../../baselines/tuiscotti-v1/`](../../baselines/tuiscotti-v1/)
 and the trusted drivers under [`../../tests/visual_baseline/`](../../tests/visual_baseline/)
 remain unchanged. `showcase`, `tablepro`, `jackin-preview`, and `holla` are
 reference consumers and conformance fixtures.

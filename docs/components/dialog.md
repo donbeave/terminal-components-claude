@@ -1,7 +1,7 @@
 # Dialog
 
 Canonical Termrock contract for W22. This page describes the target API on
-`termrock-refactor`; it does not rename the current implementation or change
+`termrock-implementation`; it does not rename the current implementation or change
 any baseline application.
 
 | Field | Value |

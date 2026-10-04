@@ -6,7 +6,7 @@
 
 This page defines the identity vocabulary shared by every Termrock component. It is a library contract, not an application or product subsystem. Components and task descriptions link here instead of defining their own ID, row-key, or revision rules.
 
-Termrock is produced by refactoring this repository in place on `termrock-refactor`, starting from the frozen visual baseline commit `4a79c0a2d40fca46fc406b77157ce3b3f12ec16b`. The current implementation uses `WidgetId` in [`src/core/id.rs`](../../src/core/id.rs); that is a legacy source name to be replaced during the implementation phase. The target public vocabulary is `Id`, `ItemKey`, `ColumnKey`, `FieldKey`, `ActionKey`, `PartRef`, and `Revision`.
+Termrock is produced by refactoring this repository in place on `termrock-implementation`, starting from the frozen visual baseline commit `4a79c0a2d40fca46fc406b77157ce3b3f12ec16b`. The current implementation uses `WidgetId` in [`src/core/id.rs`](../../src/core/id.rs); that is a legacy source name to be replaced during the implementation phase. The target public vocabulary is `Id`, `ItemKey`, `ColumnKey`, `FieldKey`, `ActionKey`, `PartRef`, and `Revision`.
 
 ## Source and oracle references
 

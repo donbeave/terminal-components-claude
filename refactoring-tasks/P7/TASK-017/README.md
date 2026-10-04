@@ -13,13 +13,13 @@ All applicable visual and interaction states pass exact comparison, and delibera
 
 ## Context
 
-Use the verification contracts to exercise only applicable state axes: focus, hover, capture, press timing, editing, disabled/read-only, scroll, overlays, resize, capabilities, motion, and degenerate geometry.
+Use the verification contracts to exercise only applicable state axes across showcase, tablepro, jackin-preview, and holla: focus, hover, capture, press timing, editing, disabled/read-only, scroll, overlays, resize, capabilities, motion, and degenerate geometry.
 
 Dependencies: TASK-016. Canonical contracts: [verification/README.md](../../../docs/verification/README.md), [verification/visual-parity.md](../../../docs/verification/visual-parity.md), [verification/interaction-parity.md](../../../docs/verification/interaction-parity.md), [verification/conformance.md](../../../docs/verification/conformance.md), [design/visual-contract.md](../../../docs/design/visual-contract.md), [design/interaction-contract.md](../../../docs/design/interaction-contract.md).
 
 ## Preconditions
 
-- **P-001:** The caller has supplied a committed descendant of annotated `visual-baseline` (`4a79c0a2d40fca46fc406b77157ce3b3f12ec16b`) on `termrock-refactor`.
+- **P-001:** The caller has supplied a committed descendant of annotated `visual-baseline` (`4a79c0a2d40fca46fc406b77157ce3b3f12ec16b`) on `termrock-implementation`.
 - **P-002:** The linked canonical architecture, API, component, design, and verification documents are present.
 - **P-003:** The future implementation environment provides `rtk` and `cargo nextest`.
 
@@ -92,7 +92,7 @@ Then application source, snapshots, baseline tests, and product integrations are
 ## Fixed decisions
 
 - **D-001:** Only `ExistingOracle` and approved extracted evidence can define expected output; candidate output can never bless itself.
-- **D-002:** The work stays in this repository on `termrock-refactor`; it never creates a separate implementation repository.
+- **D-002:** The work stays in this repository on `termrock-implementation`; it never creates a separate implementation repository.
 - **D-003:** The package's verifier scope is enforced by narrow writable library/conformance paths and forbidden application/oracle paths.
 
 ## Checklist

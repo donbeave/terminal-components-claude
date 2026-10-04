@@ -8,7 +8,7 @@
 
 **Scope:** an optional terminal edge adapter that maps host terminal events to Termrock input, presents prepared frames, and restores terminal state. The core library and components remain headless and usable without this feature.
 
-This adapter is future in-place implementation work on `termrock-refactor` in this repository. It is an optional library edge, not a separate terminal product or repository destination.
+This adapter is future in-place implementation work on `termrock-implementation` in this repository. It is an optional library edge, not a separate terminal product or repository destination.
 
 See the [runtime architecture](../foundations/runtime.md), [public API contract](../api/public-api.md), [interaction contract](../design/interaction-contract.md), [conformance contract](conformance.md), and [TerminalView boundary](../components/README.md).
 

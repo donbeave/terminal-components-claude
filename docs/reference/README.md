@@ -2,16 +2,21 @@
 
 This directory is the machine-readable companion to the canonical Termrock
 documentation. It was imported from `termrock-library-spec/` and adapted for
-the in-place refactor on `termrock-refactor`.
+the in-place refactor.
 
 ## Authority and destination
+
+Execution is divided into two canonical stages:
+1. **Stage A (Preparation on `termrock-refactor`):** baseline capture, verification, and CI qualification with `src/**` strictly read-only.
+2. **Stage B (Implementation on `termrock-implementation`):** in-place Rust Termrock library refactor, created from the accepted Stage A commit.
 
 The repository itself remains the implementation project. The target is:
 
 ```text
-repository: donbeave/terminal-components-claude
-branch:     termrock-refactor
-mode:       in-place refactor
+repository:     donbeave/terminal-components-claude
+preparation:    termrock-refactor
+implementation: termrock-implementation
+mode:           in-place refactor
 future identity: Termrock
 ```
 

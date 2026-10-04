@@ -6,17 +6,25 @@ tree already implements these boundaries.
 
 ## Project and authority
 
-The refactor starts from the immutable `visual-baseline` commit
-`4a79c0a2d40fca46fc406b77157ce3b3f12ec16b` and continues on
-`termrock-refactor`. This repository remains the project. The library/crate
-identity may become Termrock during implementation; this documentation phase
-does not rename packages, files, or source symbols.
+Execution follows a canonical two-stage model:
+
+1. **Stage A (Preparation on `termrock-refactor`):** starts from the immutable
+   `visual-baseline` commit `4a79c0a2d40fca46fc406b77157ce3b3f12ec16b`. Focuses
+   on snapshot, interaction, verification, and CI preparation without refactoring
+   production behavior (`src/**` strictly read-only).
+2. **Stage B (Implementation on `termrock-implementation`):** created only from
+   the accepted Stage A commit. The Rust Termrock library refactor is executed
+   exclusively on this branch. This repository remains the project; no separate
+   repository is created. The library/crate identity becomes Termrock during
+   implementation.
 
 `showcase`, `tablepro`, `jackin-preview`, and `holla` remain reference
 consumers and conformance fixtures. Their source, scenarios, observable
 interaction, and approved snapshots are the frozen visual target. Future
 library changes must preserve their output 1:1 unless a separate product
-change is approved.
+change is approved. Rather than deferring application adoption to the end,
+candidate components are integrated incrementally through bounded consumer-adoption
+checkpoints at each phase.
 
 Authority is divided by contract: this page owns the high-level architecture
 map; [API](../api/README.md) owns public signatures and caller rules;
@@ -139,10 +147,15 @@ modes, and motion policy. The visual details live in the
 contracts. Identity changes do not authorize restyling.
 
 Implementation proceeds in the P0–P7 sequence in the
-[implementation plan](../implementation/plan.md). Approved baseline output is
-immutable. Verification keeps `ExistingOracle`, `ExtractedOracle`, and
-`Extension` lanes separate, and candidate code cannot bless its own expected
-output. Exact captures and applicable interaction states are specified in
-[visual parity](../verification/visual-parity.md),
+[implementation plan](../implementation/plan.md) exclusively on
+`termrock-implementation`. Approved baseline output is immutable. Verification
+keeps `ExistingOracle`, `ExtractedOracle`, and `Extension` lanes separate, and
+candidate code cannot bless its own expected output. Consumer adoption occurs
+incrementally at each phase (P2 basic controls/chrome, P3 fields/editing/forms,
+P4 menus/dialogs/pickers, P5 grid/output, P6 terminal view, P7 full audit) into
+the four applications (`showcase`, `tablepro`, `jackin-preview`, `holla`),
+ensuring candidate components are validated in live compositions while keeping
+scenarios and visual output invariant. Exact captures and applicable interaction
+states are specified in [visual parity](../verification/visual-parity.md),
 [interaction parity](../verification/interaction-parity.md), and
 [conformance](../verification/conformance.md).

@@ -54,7 +54,7 @@ expected corpus. Product changes and tool changes are separate approvals.
 
 ## Artifact authority and write boundaries
 
-The approved grouped store under [`../../snapshots/`](../../snapshots/) is
+The approved grouped store under [`../../baselines/tuiscotti-v1/`](../../baselines/tuiscotti-v1/) is
 expected input. The current frozen checkout contains 7,550 artifacts of each
 kind (`.ansi`, `.txt`, `.png`, `.html`), 30,200 files total. Scratch actuals,
 diffs, and reports belong under `target/` and never become expected output by

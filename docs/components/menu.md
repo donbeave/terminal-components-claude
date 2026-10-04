@@ -2,7 +2,7 @@
 
 Canonical Termrock contract for W23. `Menu` is the one command-list engine
 used by [`ContextMenu`](./context-menu.md) and [`MenuBar`](./menu-bar.md).
-This page describes the future API on `termrock-refactor`; current source and
+This page describes the future API on `termrock-implementation`; current source and
 the four baseline applications remain unchanged in this documentation phase.
 
 | Field | Value |

@@ -19,7 +19,7 @@ Dependencies: TASK-001, TASK-002. Canonical contracts: [architecture/overview.md
 
 ## Preconditions
 
-- **P-001:** The caller has supplied a committed descendant of annotated `visual-baseline` (`4a79c0a2d40fca46fc406b77157ce3b3f12ec16b`) on `termrock-refactor`.
+- **P-001:** The caller has supplied a committed descendant of annotated `visual-baseline` (`4a79c0a2d40fca46fc406b77157ce3b3f12ec16b`) on `termrock-implementation`.
 - **P-002:** The linked canonical architecture, API, component, design, and verification documents are present.
 - **P-003:** The future implementation environment provides `rtk` and `cargo nextest`.
 
@@ -92,7 +92,7 @@ Then application source, snapshots, baseline tests, and product integrations are
 ## Fixed decisions
 
 - **D-001:** The runtime owns focus, hit, capture, time, and layers; components report semantic intent through typed responses.
-- **D-002:** The work stays in this repository on `termrock-refactor`; it never creates a separate implementation repository.
+- **D-002:** The work stays in this repository on `termrock-implementation`; it never creates a separate implementation repository.
 - **D-003:** The package's verifier scope is enforced by narrow writable library/conformance paths and forbidden application/oracle paths.
 
 ## Checklist

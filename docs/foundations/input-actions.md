@@ -6,7 +6,7 @@
 
 This page defines how Termrock turns terminal events into typed component actions and shared command metadata. It owns the contract between caller, component update code, and runtime dispatch. Components may describe their key-specific behavior, but they do not invent alternate event/result protocols.
 
-Termrock is the in-place future of this repository's `termrock-refactor` branch. The frozen oracle is commit `4a79c0a2d40fca46fc406b77157ce3b3f12ec16b`. Current source uses `Outcome` and `Input` in [`src/core/event.rs`](../../src/core/event.rs), and `keyhint`/`hintbar` render legacy hint data in [`src/widgets/keyhint.rs`](../../src/widgets/keyhint.rs) and [`src/widgets/hintbar.rs`](../../src/widgets/hintbar.rs). Those names describe the migration starting point; the target public response and binding vocabulary is below. `RenderCtx` is likewise a current implementation name, not a target event API.
+Termrock is the in-place future of this repository's `termrock-implementation` branch. The frozen oracle is commit `4a79c0a2d40fca46fc406b77157ce3b3f12ec16b`. Current source uses `Outcome` and `Input` in [`src/core/event.rs`](../../src/core/event.rs), and `keyhint`/`hintbar` render legacy hint data in [`src/widgets/keyhint.rs`](../../src/widgets/keyhint.rs) and [`src/widgets/hintbar.rs`](../../src/widgets/hintbar.rs). Those names describe the migration starting point; the target public response and binding vocabulary is below. `RenderCtx` is likewise a current implementation name, not a target event API.
 
 ## Source and oracle references
 

@@ -6,7 +6,7 @@
 
 This page defines the one shared layer mechanism used by Dialog, Picker, Select, Menu, ContextMenu, Completion, HelpOverlay, and other overlay components. It is not a second widget renderer and it does not own product commands or application state.
 
-Termrock will be built by refactoring this repository in place on `termrock-refactor` from the frozen visual baseline commit `4a79c0a2d40fca46fc406b77157ce3b3f12ec16b`. Current source evidence is [`src/ui/popup.rs`](../../src/ui/popup.rs), [`src/widgets/dialog.rs`](../../src/widgets/dialog.rs), [`src/widgets/menu.rs`](../../src/widgets/menu.rs), and the barrier helpers in [`src/ui/ctx.rs`](../../src/ui/ctx.rs). Current `WidgetId`/`RenderCtx` names are migration names; they do not define the future public API.
+Termrock will be built by refactoring this repository in place on `termrock-implementation` from the frozen visual baseline commit `4a79c0a2d40fca46fc406b77157ce3b3f12ec16b`. Current source evidence is [`src/ui/popup.rs`](../../src/ui/popup.rs), [`src/widgets/dialog.rs`](../../src/widgets/dialog.rs), [`src/widgets/menu.rs`](../../src/widgets/menu.rs), and the barrier helpers in [`src/ui/ctx.rs`](../../src/ui/ctx.rs). Current `WidgetId`/`RenderCtx` names are migration names; they do not define the future public API.
 
 ## Source and oracle references
 

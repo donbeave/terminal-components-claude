@@ -2,7 +2,7 @@
 
 ## Mission
 
-Refactor the existing implementation in this repository into a minimal reusable Rust TUI library named Termrock. The work begins from frozen commit `4a79c0a2d40fca46fc406b77157ce3b3f12ec16b` and continues in place on `termrock-refactor`. This repository is the future Termrock project; no new or clean-room repository is part of the plan.
+Refactor the existing implementation in this repository into a minimal reusable Rust TUI library named Termrock across two canonical stages: Stage A preparation on `termrock-refactor` (with `src/**` strictly read-only) and Stage B implementation on `termrock-implementation` (created from the accepted Stage A commit). The work begins from frozen commit `4a79c0a2d40fca46fc406b77157ce3b3f12ec16b`. This repository is the future Termrock project; no new or clean-room repository is part of the plan.
 
 ## Current phase
 

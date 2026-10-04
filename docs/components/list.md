@@ -1,6 +1,6 @@
 # List
 
-Canonical Termrock contract for the W12 collection component. The contract describes the future API on `termrock-refactor`; it does not rename the current implementation yet.
+Canonical Termrock contract for the W12 collection component. The contract describes the future API on `termrock-implementation`; it does not rename the current implementation yet.
 
 | Field | Value |
 |---|---|

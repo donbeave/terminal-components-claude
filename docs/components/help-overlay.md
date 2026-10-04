@@ -2,7 +2,7 @@
 
 Canonical Termrock contract for W26. `HelpOverlay` is a read-only, scrollable
 modal composition over shared Dialog, TextViewport and KeyHint infrastructure.
-It describes the target API on `termrock-refactor`; current app-local help
+It describes the target API on `termrock-implementation`; current app-local help
 surfaces and frozen output remain unchanged.
 
 | Field | Value |

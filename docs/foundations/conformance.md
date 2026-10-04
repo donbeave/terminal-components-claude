@@ -9,7 +9,7 @@ future Termrock conformance registry. It is test infrastructure, not a
 production plugin registry, component framework, or acceptance policy.
 
 The conformance package will qualify the in-place Termrock refactor on
-`termrock-refactor`. It uses the preserved applications and frozen baseline
+`termrock-implementation`. It uses the preserved applications and frozen baseline
 without changing their source or expected output during registry operation.
 
 ## Contract ownership

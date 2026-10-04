@@ -1,6 +1,6 @@
 # Termrock
 
-This repository will become the Termrock Rust terminal UI library in place. The refactor starts from the frozen `visual-baseline` commit and proceeds on `termrock-refactor`; the repository, existing Rust source, and four applications are the project and starting implementation.
+This repository will become the Termrock Rust terminal UI library in place. Following Stage A preparation on `termrock-refactor`, the refactor proceeds on `termrock-implementation` from the frozen `visual-baseline` commit; the repository, existing Rust source, and four applications are the project and starting implementation.
 
 The current source still uses the Cargo package `junie-tui`, the library crate `junie_tui`, and some legacy API names. They remain implementation names until a later implementation change. This documentation update does not rename the repository, Cargo package, crate, source paths, or applications.
 

@@ -3,7 +3,7 @@
 Canonical Termrock contract for W24. `ContextMenu` is a thin anchored
 composition over the shared [`Menu`](./menu.md) engine; it does not create a
 second item interaction mechanism. This page describes the future API on
-`termrock-refactor`; the current applications remain unchanged.
+`termrock-implementation`; the current applications remain unchanged.
 
 | Field | Value |
 |---|---|

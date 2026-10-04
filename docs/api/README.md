@@ -1,6 +1,6 @@
 # Termrock API
 
-This directory is the canonical public API contract for the in-place Termrock refactor. It describes the proposed API that the `termrock-refactor` branch will implement progressively from the frozen `visual-baseline` commit. The signatures are design declarations until the P1 API freeze; they do not claim that the current Rust crate already exposes these names.
+This directory is the canonical public API contract for the in-place Termrock refactor. Following Stage A preparation on `termrock-refactor`, the API is implemented progressively on the fixed implementation branch `termrock-implementation` from the frozen `visual-baseline` commit `4a79c0a2d40fca46fc406b77157ce3b3f12ec16b`. The signatures are design declarations until the P1 API freeze; they do not claim that the current Rust crate already exposes these names.
 
 ## Read in this order
 
@@ -15,7 +15,7 @@ The API is coordinated with the [architecture overview](../architecture/overview
 
 This is a target contract, not an implementation report. The current source still contains legacy names such as `junie_tui`, `WidgetId`, `Outcome`, and `RenderCtx`. They are implementation evidence during the refactor, not future public compatibility requirements. No source or crate rename has happened in the documentation-only phase.
 
-The API is for this repository and its future in-place Termrock library. No second repository, clean-room implementation, or application project is part of this contract. `showcase`, `tablepro`, `jackin-preview`, and `holla` remain parity consumers of the library; their frozen output is governed by [visual verification](../verification/visual-parity.md).
+The API is for this repository and its future in-place Termrock library executed on `termrock-implementation`. No second repository, clean-room implementation, or application project is part of this contract. `showcase`, `tablepro`, `jackin-preview`, and `holla` adopt these public components incrementally at each phase; their frozen output is governed by [visual verification](../verification/visual-parity.md).
 
 The pinned visual source is commit `4a79c0a2d40fca46fc406b77157ce3b3f12ec16b`. It owns appearance and observable interaction. API choices may simplify ownership and composition, but they do not authorize a visual redesign.
 

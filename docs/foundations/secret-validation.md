@@ -8,7 +8,7 @@
 
 **Scope:** shared field, form, validation, and conformance infrastructure. Product authentication, persistence, credential retrieval, and policy decisions remain caller responsibilities.
 
-This contract is implemented by the future in-place refactor on `termrock-refactor` in this repository. It is not a destination for a separate repository or a product-specific credential subsystem.
+This contract is implemented by the future in-place refactor on `termrock-implementation` in this repository. It is not a destination for a separate repository or a product-specific credential subsystem.
 
 See the [public API contract](../api/public-api.md), [shared text contract](text.md), [component index](../components/README.md), and [conformance contract](../verification/conformance.md).
 

@@ -2,7 +2,7 @@
 
 Canonical Termrock contract for W27. `Wizard` is a generic step navigation and
 retention helper with a body slot. It is a target Termrock component for the
-in-place refactor on `termrock-refactor`; it is not a product workflow.
+in-place refactor on `termrock-implementation`; it is not a product workflow.
 
 | Field | Value |
 |---|---|
