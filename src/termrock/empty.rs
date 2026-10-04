@@ -2,7 +2,7 @@
 
 use ratatui::style::{Modifier, Style};
 
-use crate::termrock::button::Button;
+use crate::termrock::button::{Button, ButtonVariant};
 use crate::termrock::identity::{ActionKey, Id, Part};
 use crate::termrock::layout::{Constraints, Rect, Size};
 use crate::termrock::response::{ActivationOrigin, Flow, Invalidate, Response};
@@ -24,11 +24,37 @@ pub enum Readiness<'a> {
 pub struct ActionMeta<'a> {
     pub key: ActionKey,
     pub label: &'a str,
+    pub variant: ButtonVariant,
 }
 
 impl<'a> ActionMeta<'a> {
     pub const fn new(key: ActionKey, label: &'a str) -> Self {
-        Self { key, label }
+        Self {
+            key,
+            label,
+            variant: ButtonVariant::Primary,
+        }
+    }
+
+    pub const fn with_variant(mut self, variant: ButtonVariant) -> Self {
+        self.variant = variant;
+        self
+    }
+
+    pub const fn submit(label: &'a str) -> Self {
+        Self {
+            key: ActionKey::new("submit"),
+            label,
+            variant: ButtonVariant::Primary,
+        }
+    }
+
+    pub const fn cancel(label: &'a str) -> Self {
+        Self {
+            key: ActionKey::new("cancel"),
+            label,
+            variant: ButtonVariant::Ghost,
+        }
     }
 }
 
@@ -232,7 +258,7 @@ impl<'a> Empty<'a> {
         if let Some(act) = self.action {
             curr_y += 1; // blank line
             if curr_y < area.y.saturating_add(area.height) {
-                let btn = Button::new(self.id.sub("action"), act.label);
+                let btn = Button::new(self.id.sub("action"), act.label).variant(act.variant);
                 let measure_cx = MeasureCx::new(
                     Constraints::loose(Size::new(area.width, 1)),
                     ui.theme,

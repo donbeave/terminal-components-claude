@@ -385,6 +385,11 @@ impl TextEditorCore {
         self.caret
     }
 
+    pub fn set_caret(&mut self, pos: usize) {
+        self.caret = Self::ceil_boundary(&self.text, pos.min(self.text.len()));
+        self.anchor = None;
+    }
+
     pub fn selection(&self) -> Option<Range<usize>> {
         let a = self.anchor?;
         if a == self.caret {
