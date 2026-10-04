@@ -1,5 +1,7 @@
 //! Conformance Suite: typed case registry reconciliation and integrity verification.
 
+#[path = "conformance/drivers.rs"]
+mod drivers;
 #[path = "conformance/registry.rs"]
 mod registry;
 
@@ -96,8 +98,8 @@ fn test_case_registry_integrity_and_authority_lanes() {
             AuthorityLane::ExtractedOracle => {
                 extracted_count += 1;
                 assert_eq!(
-                    case.approval_state, "planned",
-                    "unextracted component case `{}` must be planned",
+                    case.approval_state, "approved",
+                    "extracted component case `{}` must be approved by executable driver receipts",
                     case.id
                 );
             }
@@ -105,7 +107,7 @@ fn test_case_registry_integrity_and_authority_lanes() {
                 extension_count += 1;
                 assert_eq!(
                     case.approval_state, "planned",
-                    "extension case `{}` must be planned",
+                    "extension case `{}` must be planned for Stage B P6",
                     case.id
                 );
             }
@@ -113,6 +115,7 @@ fn test_case_registry_integrity_and_authority_lanes() {
     }
 
     assert!(existing_count > 0);
+    assert_eq!(extracted_count, 216);
     assert_eq!(
         extension_count, 6,
         "only W44-01..W44-06 terminal-view cases are extensions"
@@ -120,6 +123,55 @@ fn test_case_registry_integrity_and_authority_lanes() {
     eprintln!(
         "Registry authority lane distribution: ExistingOracle={}, ExtractedOracle={}, Extension={}",
         existing_count, extracted_count, extension_count
+    );
+}
+
+#[test]
+fn test_execute_all_component_drivers() {
+    let manifest = RequiredCasesManifest::load();
+    let cases_map = manifest.cases_by_id();
+    let mut executed_extracted = 0;
+    let mut verified_extensions = 0;
+
+    for case in cases_map.values() {
+        if case.id.starts_with('W') {
+            let receipt = drivers::run_case_driver(&case.id)
+                .unwrap_or_else(|e| panic!("driver execution failed for {}: {e}", case.id));
+            assert_eq!(receipt.status, "passed");
+            assert_eq!(receipt.case_id, case.id);
+            assert!(!receipt.observations_verified.is_empty());
+            assert!(receipt.execution_duration_us > 0);
+
+            match case.authority_lane {
+                AuthorityLane::ExtractedOracle => {
+                    executed_extracted += 1;
+                    assert!(receipt.stage_b_owner.is_none());
+                }
+                AuthorityLane::Extension => {
+                    verified_extensions += 1;
+                    assert_eq!(
+                        receipt.stage_b_owner,
+                        Some("Stage B Phase P6 (TerminalView Integration)".to_string()),
+                        "Extension case {} must have Stage B Phase P6 ownership",
+                        case.id
+                    );
+                }
+                _ => {}
+            }
+        }
+    }
+
+    assert_eq!(
+        executed_extracted, 216,
+        "must execute exactly 216 extracted component drivers"
+    );
+    assert_eq!(
+        verified_extensions, 6,
+        "must verify exactly 6 extension cases"
+    );
+    eprintln!(
+        "Successfully executed {} ExtractedOracle component drivers and qualified {} Extension cases",
+        executed_extracted, verified_extensions
     );
 }
 

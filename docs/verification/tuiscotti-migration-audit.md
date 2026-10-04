@@ -24,6 +24,7 @@ This audit records the complete migration of the legacy snapshot store (`snapsho
 | `visual-baseline` Tag | `1ee5ebdcb91fd87adb9a5b28e43d4c7f421706c5` | Immutable visual tag |
 | `visual-baseline` Commit | `4a79c0a2d40fca46fc406b77157ce3b3f12ec16b` | Peeled commit matches legacy tree |
 | Tuiscotti Source SHA | `a47c9aaefb34e4c00026f99d8a8dd7ee5916b274` | Locked qualified release |
+| Acquisition Method | `legacy_replayed_conversion` | Honest provenance: ANSI replayed conversion from legacy snapshots, not live interactive sessions |
 | Velnor Actions | `velnor-actions 0.1.0` (`c57c700459bbe1549fe7eedcb7d8689585c38986`) | Validated release generator |
 
 ## 3. Font Rasterizer & Differential Analysis
@@ -75,8 +76,8 @@ Each admitted scenario contains exactly 10 artifacts:
 
 - **Legacy Snapshot Store Tree**: `3f0261c32849e26feda24d87697de4a7ce6b8375` (`snapshots/`, 30,200 files across 302 roots)
 - **Admitted Screen-First Baseline Tree**: `56f7501eb5027254af820fc23289889b87f46538` (`baselines/tuiscotti-v1/`, 75,502 files across 7,550 captures)
-- **Corpus Index (`corpus-index.json`) SHA-256**: `1be836f181ebcc20adbcd3ca309ced8f040f9d38168c2a3b48d7c998115dc744`
-- **Admission Record (`admission-record.json`) SHA-256**: `7515258c71df308b39ddb4a8bd2fc5fc49d13398e9e0ec695352fecf3cdfa0b9`
+- **Corpus Index (`corpus-index.json`) SHA-256**: `a97b5a06fa5bac107d3603f8765181403d59fed5cdd4580290e13f43cf6c50ee`
+- **Admission Record (`admission-record.json`) SHA-256**: `3c4456ab5c5decc74135c0e47ca27d9daf1fedbece9807995157fc24b4b81033`
 
 ## 8. Logical Case & Checkpoint Accounting
 

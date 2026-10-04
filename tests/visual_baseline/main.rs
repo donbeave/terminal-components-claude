@@ -44,6 +44,9 @@ mod tablepro;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
+use rayon::prelude::*;
+use serde::Deserialize;
+use sha2::{Digest, Sha256};
 use tuiscotti::grouped::{self, GroupedStore};
 use tuiscotti::{Profile, VENDORED_FACES};
 
@@ -60,9 +63,248 @@ const STORE_EXTS: [&str; 10] = [
     "manifest.json",
 ];
 
+const MANIFEST_ARTIFACT_KEYS: [&str; 9] = [
+    "ansi",
+    "ascii",
+    "ascii_loss_json",
+    "frame_json",
+    "html",
+    "observations_json",
+    "png",
+    "png_fidelity_json",
+    "txt",
+];
+
+#[derive(Debug, Deserialize)]
+struct CorpusIndex {
+    #[serde(default)]
+    manifest_hashes: BTreeMap<String, String>,
+    total_artifacts: usize,
+    total_captures: usize,
+    total_screens: usize,
+}
+
+#[derive(Debug, Deserialize)]
+struct ScenarioManifest {
+    schema_version: u32,
+    complete: bool,
+    dimensions: ManifestDimensions,
+    artifacts: BTreeMap<String, ArtifactEntry>,
+    ansi_sha256: String,
+    frame_sha256: String,
+    html_sha256: String,
+    png_sha256: String,
+    txt_sha256: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct ManifestDimensions {
+    cols: u16,
+    rows: u16,
+}
+
+#[derive(Debug, Deserialize)]
+struct ArtifactEntry {
+    file: String,
+    bytes: usize,
+    sha256: String,
+}
+
+fn sha256_hex(bytes: &[u8]) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(bytes);
+    format!("{:x}", hasher.finalize())
+}
+
+fn parse_geometry(geom: &str) -> Option<(u16, u16)> {
+    let (cols, rows) = geom.split_once('x')?;
+    let cols: u16 = cols.parse().ok()?;
+    let rows: u16 = rows.parse().ok()?;
+    Some((cols, rows))
+}
+
+fn verify_corpus_index(approved_root: &Path) -> Result<(CorpusIndex, Vec<u8>), String> {
+    let index_path = approved_root.join("corpus-index.json");
+    if !index_path.is_file() {
+        return Err("missing corpus-index.json".to_string());
+    }
+    let bytes = std::fs::read(&index_path).map_err(|e| format!("read corpus-index.json: {e}"))?;
+    let index: CorpusIndex =
+        serde_json::from_slice(&bytes).map_err(|e| format!("parse corpus-index.json: {e}"))?;
+    if index.total_artifacts != 75500 {
+        return Err(format!(
+            "expected total_artifacts == 75500, got {}",
+            index.total_artifacts
+        ));
+    }
+    if index.total_captures != 7550 {
+        return Err(format!(
+            "expected total_captures == 7550, got {}",
+            index.total_captures
+        ));
+    }
+    if index.total_screens != 302 {
+        return Err(format!(
+            "expected total_screens == 302, got {}",
+            index.total_screens
+        ));
+    }
+    Ok((index, bytes))
+}
+
+fn verify_admission(approved_root: &Path, corpus_index_bytes: &[u8]) -> Result<(), String> {
+    let admission_path = approved_root.join("admission-record.json");
+    if !admission_path.is_file() {
+        return Err("missing admission-record.json".to_string());
+    }
+    let bytes =
+        std::fs::read(&admission_path).map_err(|e| format!("read admission-record.json: {e}"))?;
+    let admission: serde_json::Value =
+        serde_json::from_slice(&bytes).map_err(|e| format!("parse admission-record.json: {e}"))?;
+
+    let expected_corpus_sha256 = sha256_hex(corpus_index_bytes);
+    let recorded_sha256 = admission
+        .get("corpus_index_sha256")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| "admission-record.json missing corpus_index_sha256".to_string())?;
+
+    if recorded_sha256 != expected_corpus_sha256 {
+        return Err(format!(
+            "corpus_index_sha256 mismatch: recorded {recorded_sha256} != actual {expected_corpus_sha256}"
+        ));
+    }
+
+    let acquisition_method = admission
+        .get("acquisition_method")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| "admission-record.json missing acquisition_method".to_string())?;
+    if acquisition_method != "legacy_replayed_conversion" {
+        return Err(format!(
+            "unexpected acquisition_method: expected 'legacy_replayed_conversion', got '{acquisition_method}'"
+        ));
+    }
+
+    let working_branch = admission
+        .get("working_branch")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| "admission-record.json missing working_branch".to_string())?;
+    if working_branch != "termrock-refactor" {
+        return Err(format!(
+            "unexpected working_branch: expected 'termrock-refactor', got '{working_branch}'"
+        ));
+    }
+
+    Ok(())
+}
+
+fn verify_scenario_manifest(
+    approved_root: &Path,
+    scenario_name: &str,
+    expected_manifest_hash: Option<&str>,
+) -> Result<(), String> {
+    let manifest_path = approved_root.join(format!("{scenario_name}.manifest.json"));
+    if !manifest_path.is_file() {
+        return Err(format!("missing manifest: {}", manifest_path.display()));
+    }
+    let manifest_bytes = std::fs::read(&manifest_path)
+        .map_err(|e| format!("read manifest {}: {e}", manifest_path.display()))?;
+
+    if let Some(expected_hash) = expected_manifest_hash {
+        let actual_hash = sha256_hex(&manifest_bytes);
+        if actual_hash != expected_hash {
+            return Err(format!(
+                "manifest hash mismatch for {scenario_name}: expected {expected_hash}, got {actual_hash}"
+            ));
+        }
+    }
+
+    let manifest: ScenarioManifest = serde_json::from_slice(&manifest_bytes)
+        .map_err(|e| format!("parse manifest {scenario_name}: {e}"))?;
+
+    if manifest.schema_version != 1 {
+        return Err(format!(
+            "unsupported schema_version {} in {scenario_name}",
+            manifest.schema_version
+        ));
+    }
+    if !manifest.complete {
+        return Err(format!("manifest complete is false in {scenario_name}"));
+    }
+
+    let mut parts = scenario_name.rsplit('/');
+    let _color = parts
+        .next()
+        .ok_or_else(|| format!("invalid scenario name: {scenario_name}"))?;
+    let size = parts
+        .next()
+        .ok_or_else(|| format!("invalid scenario name: {scenario_name}"))?;
+    let (expected_cols, expected_rows) = parse_geometry(size)
+        .ok_or_else(|| format!("cannot parse geometry from size '{size}' in {scenario_name}"))?;
+
+    if manifest.dimensions.cols != expected_cols || manifest.dimensions.rows != expected_rows {
+        return Err(format!(
+            "dimension mismatch for {scenario_name}: expected {}x{}, got {}x{}",
+            expected_cols, expected_rows, manifest.dimensions.cols, manifest.dimensions.rows
+        ));
+    }
+
+    for key in MANIFEST_ARTIFACT_KEYS {
+        let entry = manifest.artifacts.get(key).ok_or_else(|| {
+            format!("manifest for {scenario_name} missing artifact entry '{key}'")
+        })?;
+
+        let artifact_path = approved_root.join(&entry.file);
+        if !artifact_path.is_file() {
+            return Err(format!(
+                "artifact file missing: {}",
+                artifact_path.display()
+            ));
+        }
+
+        let bytes = std::fs::read(&artifact_path)
+            .map_err(|e| format!("read artifact {}: {e}", artifact_path.display()))?;
+
+        if bytes.len() != entry.bytes {
+            return Err(format!(
+                "byte length mismatch for {}: expected {}, got {}",
+                entry.file,
+                entry.bytes,
+                bytes.len()
+            ));
+        }
+
+        let digest = sha256_hex(&bytes);
+        if digest != entry.sha256 {
+            return Err(format!(
+                "sha256 mismatch for {}: expected {}, got {}",
+                entry.file, entry.sha256, digest
+            ));
+        }
+
+        let expected_root_hash = match key {
+            "ansi" => Some(("ansi", &manifest.ansi_sha256)),
+            "frame_json" => Some(("frame", &manifest.frame_sha256)),
+            "html" => Some(("html", &manifest.html_sha256)),
+            "png" => Some(("png", &manifest.png_sha256)),
+            "txt" => Some(("txt", &manifest.txt_sha256)),
+            _ => None,
+        };
+        if let Some((name, expected)) =
+            expected_root_hash.filter(|(_, expected)| **expected != entry.sha256)
+        {
+            return Err(format!(
+                "root {name}_sha256 mismatch in {scenario_name}: manifest has {expected}, entry has {}",
+                entry.sha256
+            ));
+        }
+    }
+
+    Ok(())
+}
+
 /// Cheap non-PTY gate: committed `baselines/tuiscotti-v1` names match the suite, each
 /// scenario is screen-first `app/screen/.../geometry/color` with exactly ten artifacts,
-/// and the legacy `snapshots/` corpus is gone.
+/// cryptographic hashes are fully verified fail-closed, and legacy stores are gone.
 #[test]
 fn store_integrity() {
     let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
@@ -161,6 +403,145 @@ fn store_integrity() {
     assert!(
         approved.join("admission-record.json").is_file(),
         "admission-record.json must exist"
+    );
+
+    let (corpus_index, corpus_index_bytes) = verify_corpus_index(&approved)
+        .unwrap_or_else(|e| panic!("corpus-index verification failed: {e}"));
+
+    verify_admission(&approved, &corpus_index_bytes)
+        .unwrap_or_else(|e| panic!("admission-record verification failed: {e}"));
+
+    let failures: Vec<String> = store_names
+        .par_iter()
+        .filter_map(|name| {
+            let expected_hash = corpus_index.manifest_hashes.get(name).map(|s| s.as_str());
+            if let Err(e) = verify_scenario_manifest(&approved, name, expected_hash) {
+                Some(format!("{name}: {e}"))
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    assert!(
+        failures.is_empty(),
+        "store scenario verification failed for {} scenarios: {:?}",
+        failures.len(),
+        &failures[..failures.len().min(10)]
+    );
+}
+
+fn copy_scenario_to_tempdir(src_approved: &Path, scenario_name: &str) -> tempfile::TempDir {
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let exts = [
+        "manifest.json",
+        "frame.json",
+        "ansi",
+        "txt",
+        "png",
+        "html",
+        "ascii",
+        "ascii.loss.json",
+        "png.fidelity.json",
+        "observations.json",
+    ];
+    for ext in exts {
+        let file_name = format!("{scenario_name}.{ext}");
+        let src_file = src_approved.join(&file_name);
+        let dst_file = tmp.path().join(&file_name);
+        if let Some(parent) = dst_file.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        std::fs::copy(&src_file, &dst_file).expect("copy artifact");
+    }
+    tmp
+}
+
+#[test]
+fn corrupted_artifact_byte_fails_verification() {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let approved = manifest_dir.join("baselines/tuiscotti-v1");
+    let scenario = "jackin/settings/mounts/72x20/16";
+    let tmp = copy_scenario_to_tempdir(&approved, scenario);
+
+    let png_path = tmp.path().join(format!("{scenario}.png"));
+    let mut bytes = std::fs::read(&png_path).expect("read png");
+    bytes[0] ^= 0xff;
+    std::fs::write(&png_path, bytes).expect("write corrupted png");
+
+    let result = verify_scenario_manifest(tmp.path(), scenario, None);
+    assert!(
+        result.is_err(),
+        "verification must fail when artifact byte is corrupted"
+    );
+    let err = result.unwrap_err();
+    assert!(
+        err.contains("sha256 mismatch"),
+        "expected sha256 mismatch error, got: {err}"
+    );
+}
+
+#[test]
+fn altered_manifest_hash_fails_verification() {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let approved = manifest_dir.join("baselines/tuiscotti-v1");
+    let scenario = "jackin/settings/mounts/72x20/16";
+    let tmp = copy_scenario_to_tempdir(&approved, scenario);
+
+    let bogus_hash = "0000000000000000000000000000000000000000000000000000000000000000";
+    let result = verify_scenario_manifest(tmp.path(), scenario, Some(bogus_hash));
+    assert!(
+        result.is_err(),
+        "verification must fail when manifest hash is altered"
+    );
+    let err = result.unwrap_err();
+    assert!(
+        err.contains("manifest hash mismatch"),
+        "expected manifest hash mismatch error, got: {err}"
+    );
+}
+
+#[test]
+fn missing_companion_artifact_fails_verification() {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let approved = manifest_dir.join("baselines/tuiscotti-v1");
+    let scenario = "jackin/settings/mounts/72x20/16";
+    let tmp = copy_scenario_to_tempdir(&approved, scenario);
+
+    let companion_path = tmp.path().join(format!("{scenario}.ascii.loss.json"));
+    std::fs::remove_file(&companion_path).expect("remove companion file");
+
+    let result = verify_scenario_manifest(tmp.path(), scenario, None);
+    assert!(
+        result.is_err(),
+        "verification must fail when companion artifact is missing"
+    );
+    let err = result.unwrap_err();
+    assert!(
+        err.contains("artifact file missing"),
+        "expected artifact file missing error, got: {err}"
+    );
+}
+
+#[test]
+fn mismatched_corpus_index_digest_fails_verification() {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let approved = manifest_dir.join("baselines/tuiscotti-v1");
+    let tmp = tempfile::tempdir().expect("tempdir");
+
+    let admission_path = tmp.path().join("admission-record.json");
+    std::fs::copy(approved.join("admission-record.json"), &admission_path).expect("copy admission");
+
+    let tampered_corpus_index_bytes = b"{\"tampered\": true}";
+    let result = verify_admission(tmp.path(), tampered_corpus_index_bytes);
+    assert!(
+        result.is_err(),
+        "verification must fail when corpus index digest mismatches"
+    );
+    let err = result.unwrap_err();
+    assert!(
+        err.contains("corpus_index_sha256 mismatch"),
+        "expected corpus_index_sha256 mismatch error, got: {err}"
     );
 }
 

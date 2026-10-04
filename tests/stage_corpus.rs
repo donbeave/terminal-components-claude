@@ -366,7 +366,7 @@ fn test_stage_entire_tuiscotti_corpus_and_audit() {
 
             let done = completed_count.fetch_add(1, Ordering::Relaxed) + 1;
             if done.is_multiple_of(1000) || done == 7550 {
-                println!("  Staged and admitted {done}/7550 captures...");
+                println!("  Staged candidate {done}/7550 captures...");
             }
         },
     );
@@ -374,11 +374,20 @@ fn test_stage_entire_tuiscotti_corpus_and_audit() {
     let elapsed = start.elapsed();
     let metrics = metrics.into_inner().unwrap();
     println!(
-        "Completed staging 7550 captures in {:.2}s!",
+        "Phase 1: Completed candidate staging of 7550 captures in {:.2}s!",
         elapsed.as_secs_f64()
     );
 
-    // Generate Corpus Index
+    // Phase 2: Compute Manifest Hashes & Generate Corpus Index
+    println!("Phase 2: Computing manifest SHA-256 bindings for all 7550 captures...");
+    let mut manifest_hashes: BTreeMap<String, String> = BTreeMap::new();
+    for entry in &entries {
+        let manifest_file = target_base.join(format!("{}.manifest.json", entry.target_path));
+        let manifest_bytes = std::fs::read(&manifest_file).expect("read candidate manifest");
+        manifest_hashes.insert(entry.target_path.clone(), sha256_hex(&manifest_bytes));
+    }
+    assert_eq!(manifest_hashes.len(), 7550);
+
     let mut app_counts: BTreeMap<String, (usize, usize)> = BTreeMap::new();
     for m in &metrics {
         let entry = app_counts.entry(m.app.clone()).or_insert((0, 0));
@@ -399,15 +408,14 @@ fn test_stage_entire_tuiscotti_corpus_and_audit() {
         "total_captures": 7550,
         "total_artifacts": 75500,
         "applications": app_counts,
+        "manifest_hashes": manifest_hashes,
     });
     let corpus_index_path = target_base.join("corpus-index.json");
-    std::fs::write(
-        &corpus_index_path,
-        serde_json::to_string_pretty(&corpus_index).unwrap(),
-    )
-    .expect("write corpus index");
+    let corpus_index_json = serde_json::to_string_pretty(&corpus_index).unwrap();
+    std::fs::write(&corpus_index_path, &corpus_index_json).expect("write corpus index");
+    let corpus_index_sha256 = sha256_hex(corpus_index_json.as_bytes());
 
-    // Compute Metrics for Audit
+    // Phase 3: Formal Admission & Provenance Binding
     let total_captures = metrics.len();
     let text_matched_count = metrics.iter().filter(|m| m.text_matched).count();
     let ansi_matched_count = metrics.iter().filter(|m| m.ansi_matched).count();
@@ -429,7 +437,6 @@ fn test_stage_entire_tuiscotti_corpus_and_audit() {
         .count();
     let lt_95 = metrics.iter().filter(|m| m.png_score < 0.95).count();
 
-    // Admission Record
     let admission_record = serde_json::json!({
         "schema": "termrock-spec/tuiscotti-admission-record-v1",
         "admission_timestamp": now_iso8601(),
@@ -438,6 +445,9 @@ fn test_stage_entire_tuiscotti_corpus_and_audit() {
         "reference_app_sha": "7bd6a331721737514a2477c894d922cb262ef07b",
         "historical_oracle_commit": "4a79c0a2d40fca46fc406b77157ce3b3f12ec16b",
         "tuiscotti_pin": "a47c9aaefb34e4c00026f99d8a8dd7ee5916b274",
+        "acquisition_method": "legacy_replayed_conversion",
+        "acquisition_note": "Acquisition was replayed ANSI from legacy snapshots rather than live interactive sessions.",
+        "corpus_index_sha256": corpus_index_sha256,
         "admission_summary": {
             "total_captures_admitted": 7550,
             "primary_data_artifacts": 45300,
@@ -451,11 +461,9 @@ fn test_stage_entire_tuiscotti_corpus_and_audit() {
         }
     });
     let admission_path = target_base.join("admission-record.json");
-    std::fs::write(
-        &admission_path,
-        serde_json::to_string_pretty(&admission_record).unwrap(),
-    )
-    .expect("write admission record");
+    let admission_json = serde_json::to_string_pretty(&admission_record).unwrap();
+    std::fs::write(&admission_path, &admission_json).expect("write admission record");
+    let _admission_sha256 = sha256_hex(admission_json.as_bytes());
 
     // Migration Audit Document
     let audit_md = format!(

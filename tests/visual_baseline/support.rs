@@ -666,6 +666,26 @@ pub fn boot(session: &mut Session, needle: &str) {
         .unwrap_or_else(|e| panic!("boot idle failed: {e:#}"));
 }
 
+fn normalize_chord(step: &str) -> String {
+    let parts: Vec<&str> = step.split('-').collect();
+    if parts.len() > 1 {
+        let modifiers = [
+            "ctrl", "control", "ctl", "alt", "opt", "meta", "shift", "super", "cmd", "win",
+            "windows", "command",
+        ];
+        let mut has_mod = false;
+        for p in &parts[..parts.len() - 1] {
+            if modifiers.contains(&p.to_ascii_lowercase().as_str()) {
+                has_mod = true;
+            }
+        }
+        if has_mod {
+            return parts.join("+");
+        }
+    }
+    step.to_string()
+}
+
 pub fn drive(session: &mut Session, steps: &[&str]) {
     for step in steps {
         if let Some(ms) = step.strip_prefix("sleep:") {
@@ -689,7 +709,8 @@ pub fn drive(session: &mut Session, steps: &[&str]) {
             session.inner.send_text(text).expect("type_text");
             std::thread::sleep(Duration::from_millis(120));
         } else {
-            session.inner.press(step).expect("send_key");
+            let chord = normalize_chord(step);
+            session.inner.press(&chord).expect("send_key");
             std::thread::sleep(Duration::from_millis(120));
         }
     }
