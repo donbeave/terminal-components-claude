@@ -159,6 +159,18 @@ impl fmt::Display for ItemKey {
     }
 }
 
+impl From<u64> for ItemKey {
+    fn from(val: u64) -> Self {
+        Self::new(val)
+    }
+}
+
+impl From<&str> for ItemKey {
+    fn from(s: &str) -> Self {
+        Self::from_str(s)
+    }
+}
+
 /// Stable identity for grid columns.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Default)]
 pub struct ColumnKey(pub u64);

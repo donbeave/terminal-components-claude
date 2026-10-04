@@ -83,6 +83,14 @@ impl Rect {
         self.width == 0 || self.height == 0
     }
 
+    pub const fn right(&self) -> u16 {
+        self.x.saturating_add(self.width)
+    }
+
+    pub const fn bottom(&self) -> u16 {
+        self.y.saturating_add(self.height)
+    }
+
     pub fn contains(&self, pos: Position) -> bool {
         pos.x >= self.x
             && pos.x < self.x.saturating_add(self.width)
