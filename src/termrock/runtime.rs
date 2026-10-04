@@ -141,6 +141,8 @@ pub struct Cx<'a> {
     pub cursor_request: Option<(Id, Position)>,
     pub new_focus: Option<Option<Id>>,
     pub new_capture: Option<Option<Id>>,
+    pub feedback_requests: Vec<(Id, Duration)>,
+    pub published_geometry: Option<&'a HashMap<Id, Rect>>,
 }
 
 impl<'a> Cx<'a> {
@@ -174,6 +176,18 @@ impl<'a> Cx<'a> {
 
     pub fn release_capture(&mut self) {
         self.new_capture = Some(None);
+    }
+
+    pub fn trigger_feedback(&mut self, id: Id, duration: Duration) {
+        self.feedback_requests.push((id, duration));
+    }
+
+    pub fn contains_point(&self, id: &Id, pos: Position) -> bool {
+        if let Some(geom) = self.published_geometry {
+            geom.get(id).is_some_and(|r| r.contains(pos))
+        } else {
+            false
+        }
     }
 
     pub fn request_invalidate(&mut self, invalidate: Invalidate) {
@@ -227,6 +241,11 @@ pub struct Ui<'a> {
     pub focus_candidates: Vec<Id>,
     pub cursor_intent: Option<(Id, Position)>,
     pub layer_stack: &'a mut LayerStack,
+    pub buffer: Option<&'a mut ratatui::buffer::Buffer>,
+    pub focus: Option<Id>,
+    pub hovered: Option<Id>,
+    pub pressed: Option<Id>,
+    pub feedback: HashMap<Id, Moment>,
 }
 
 impl<'a> Ui<'a> {
@@ -241,11 +260,91 @@ impl<'a> Ui<'a> {
             focus_candidates: Vec::new(),
             cursor_intent: None,
             layer_stack,
+            buffer: None,
+            focus: None,
+            hovered: None,
+            pressed: None,
+            feedback: HashMap::new(),
         }
     }
 
     pub fn clip_area(&self) -> Rect {
         self.clip_stack.last().copied().unwrap_or(self.viewport)
+    }
+
+    pub fn with_buffer(mut self, buffer: &'a mut ratatui::buffer::Buffer) -> Self {
+        self.buffer = Some(buffer);
+        self
+    }
+
+    pub fn is_focused(&self, id: &Id) -> bool {
+        self.focus.as_ref() == Some(id)
+    }
+
+    pub fn is_hovered(&self, id: &Id) -> bool {
+        self.hovered.as_ref() == Some(id)
+    }
+
+    pub fn is_pressed(&self, id: &Id) -> bool {
+        self.pressed.as_ref() == Some(id)
+    }
+
+    pub fn is_feedback(&self, id: &Id) -> bool {
+        self.feedback.contains_key(id)
+    }
+
+    pub fn fill_rect(&mut self, area: Rect, style: ratatui::style::Style) {
+        let clipped = self.clip_area().intersect(area);
+        if clipped.is_empty() {
+            return;
+        }
+        if let Some(buf) = self.buffer.as_deref_mut() {
+            let max_x = clipped
+                .x
+                .saturating_add(clipped.width)
+                .min(buf.area().width);
+            let max_y = clipped
+                .y
+                .saturating_add(clipped.height)
+                .min(buf.area().height);
+            for y in clipped.y..max_y {
+                for x in clipped.x..max_x {
+                    let cell = &mut buf[(x, y)];
+                    cell.set_symbol(" ");
+                    cell.set_style(style);
+                }
+            }
+        }
+    }
+
+    pub fn set_string(&mut self, x: u16, y: u16, s: &str, style: ratatui::style::Style) {
+        let clip = self.clip_area();
+        if clip.is_empty() || y < clip.y || y >= clip.y.saturating_add(clip.height) {
+            return;
+        }
+        if let Some(buf) = self.buffer.as_deref_mut() {
+            if y >= buf.area().height {
+                return;
+            }
+            use unicode_segmentation::UnicodeSegmentation;
+            use unicode_width::UnicodeWidthStr;
+            let mut curr_x = x;
+            let clip_right = clip.x.saturating_add(clip.width);
+            let buf_width = buf.area().width;
+            for g in s.graphemes(true) {
+                let gw = UnicodeWidthStr::width(g) as u16;
+                if curr_x >= clip.x
+                    && curr_x.saturating_add(gw) <= clip_right
+                    && curr_x.saturating_add(gw) <= buf_width
+                {
+                    buf.set_string(curr_x, y, g, style);
+                }
+                curr_x = curr_x.saturating_add(gw);
+                if curr_x >= clip_right {
+                    break;
+                }
+            }
+        }
     }
 
     pub fn with_surface<R>(&mut self, surface: Surface, body: impl FnOnce(&mut Ui<'_>) -> R) -> R {
@@ -334,6 +433,7 @@ pub struct Runtime<S: Scene> {
     frame_sequence: u64,
     pub last_presented_token: Option<FrameToken>,
     pub suppress_hover: bool,
+    pub active_feedback: HashMap<Id, Moment>,
 }
 
 impl<S: Scene> Runtime<S> {
@@ -351,6 +451,7 @@ impl<S: Scene> Runtime<S> {
             frame_sequence: 0,
             last_presented_token: None,
             suppress_hover: false,
+            active_feedback: HashMap::new(),
         }
     }
 
@@ -494,6 +595,10 @@ impl<S: Scene> Runtime<S> {
             _ => {}
         }
 
+        // Expire feedback whose deadline has passed
+        self.active_feedback
+            .retain(|_, expiry| moment.as_millis() < expiry.as_millis());
+
         let mut cx = Cx {
             cause: &cause,
             moment,
@@ -505,6 +610,8 @@ impl<S: Scene> Runtime<S> {
             cursor_request: None,
             new_focus: None,
             new_capture: None,
+            feedback_requests: Vec::new(),
+            published_geometry: Some(&self.published_geometry),
         };
 
         self.scene.update(&mut cx, cause.clone());
@@ -514,6 +621,10 @@ impl<S: Scene> Runtime<S> {
         }
         if let Some(capture_req) = cx.new_capture {
             self.pointer_capture = capture_req;
+        }
+        for (id, dur) in cx.feedback_requests {
+            self.active_feedback
+                .insert(id, moment.saturating_add_millis(dur.as_millis() as u64));
         }
 
         Ok(UpdateReport {
@@ -526,6 +637,52 @@ impl<S: Scene> Runtime<S> {
     /// Render a frame and publish geometry transactionally.
     pub fn draw(&mut self, area: Rect) -> Result<PaintedFrame, RuntimeError> {
         let mut ui = Ui::new(&self.theme, area, &mut self.layer_stack);
+        ui.focus = self.focus.clone();
+        ui.hovered = if self.suppress_hover {
+            None
+        } else {
+            self.hovered.clone()
+        };
+        ui.pressed = self.pointer_capture.clone();
+        ui.feedback = self.active_feedback.clone();
+
+        self.scene.draw(&mut ui, area);
+
+        // Transactional publication: commit geometry and focus ring
+        self.published_geometry = ui.hit_regions;
+        self.focus_ring = ui.focus_candidates;
+
+        // Auto-initialize focus if none set and ring has items
+        if self.focus.is_none() && !self.focus_ring.is_empty() {
+            self.focus = self.focus_ring.first().cloned();
+        }
+
+        self.frame_sequence = self.frame_sequence.wrapping_add(1);
+        let token = FrameToken(self.frame_sequence);
+
+        Ok(PaintedFrame {
+            token,
+            viewport: area,
+            cursor: ui.cursor_intent,
+            published_regions: self.published_geometry.len(),
+        })
+    }
+
+    /// Render a frame into a Ratatui buffer and publish geometry transactionally.
+    pub fn draw_into(
+        &mut self,
+        area: Rect,
+        buffer: &mut ratatui::buffer::Buffer,
+    ) -> Result<PaintedFrame, RuntimeError> {
+        let mut ui = Ui::new(&self.theme, area, &mut self.layer_stack).with_buffer(buffer);
+        ui.focus = self.focus.clone();
+        ui.hovered = if self.suppress_hover {
+            None
+        } else {
+            self.hovered.clone()
+        };
+        ui.pressed = self.pointer_capture.clone();
+        ui.feedback = self.active_feedback.clone();
 
         self.scene.draw(&mut ui, area);
 
@@ -556,6 +713,15 @@ impl<S: Scene> Runtime<S> {
         }
         self.last_presented_token = Some(token);
         Ok(())
+    }
+
+    /// Check if active feedback is active for the given ID at the specified moment.
+    pub fn is_feedback(&self, id: &Id, current: Moment) -> bool {
+        if let Some(expiry) = self.active_feedback.get(id) {
+            current.as_millis() < expiry.as_millis()
+        } else {
+            false
+        }
     }
 }
 
